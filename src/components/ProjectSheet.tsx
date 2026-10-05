@@ -14,7 +14,7 @@ interface Props {
   onSaveTemplate: (project: Project) => void;
   entered: boolean;
   incoming?: boolean;
-  swipePhase?: "idle" | "drag" | "commit";
+  swipePhase?: "idle" | "drag" | "commit" | "cancel";
   swipeDirection?: -1 | 1 | null;
   swipeX?: number;
   interactive?: boolean;
@@ -126,11 +126,6 @@ export function ProjectSheet({
     if (!el || !interactive) return;
 
     const restore = () => {
-      el.style.transition = "transform 320ms cubic-bezier(0.16,1,0.3,1)";
-      el.style.transform = "translate3d(0,0,0)";
-      window.setTimeout(() => {
-        if (el) el.style.transition = "";
-      }, 340);
       onSwipeCancel?.();
     };
 
@@ -365,29 +360,48 @@ export function ProjectSheet({
     },
   });
 
-  const width = sheetRef.current?.getBoundingClientRect().width || window.innerWidth;
-  const travel = Math.max(window.innerWidth, width);
+  const sheetGap = window.innerWidth < 650 ? 12 : 24;
+  const measuredWidth = sheetRef.current?.getBoundingClientRect().width;
+  const travel = Math.max(1, (measuredWidth || window.innerWidth) + sheetGap);
+  const progress = Math.min(1, Math.abs(swipeX) / travel);
+
   const sheetTransform = incoming
-    ? swipeDirection === -1
-      ? `translate3d(${travel + swipeX}px,0,0) scale(1)`
-      : `translate3d(${-travel + swipeX}px,0,0) scale(1)`
-    : `translate3d(${swipeX}px,0,0) scale(1)`;
+    ? swipePhase === "commit" || swipePhase === "cancel"
+      ? swipePhase === "commit"
+        ? "translate3d(0,0,0) scale(1)"
+        : swipeDirection === -1
+          ? `translate3d(calc(100% + ${sheetGap}px),0,0) scale(1)`
+          : `translate3d(calc(-100% - ${sheetGap}px),0,0) scale(1)`
+      : swipeDirection === -1
+        ? `translate3d(calc(100% + ${sheetGap}px + ${swipeX}px),0,0) scale(1)`
+        : `translate3d(calc(-100% - ${sheetGap}px + ${swipeX}px),0,0) scale(1)`
+    : swipePhase === "commit"
+      ? swipeDirection === -1
+        ? `translate3d(calc(-100% - ${sheetGap}px),0,0) scale(1)`
+        : `translate3d(calc(100% + ${sheetGap}px),0,0) scale(1)`
+      : swipePhase === "cancel"
+        ? "translate3d(0,0,0) scale(1)"
+        : `translate3d(${swipeX}px,0,0) scale(1)`;
 
   const sheetTransition =
-    swipePhase === "commit"
-      ? "transform 0.32s cubic-bezier(0.16,1,0.3,1)"
-      : swipePhase === "drag"
-        ? "none"
-        : "none";
+    swipePhase === "commit" || swipePhase === "cancel"
+      ? "transform 0.36s cubic-bezier(0.16,1,0.3,1)"
+      : "none";
 
-  const progress = Math.min(1, Math.abs(swipeX) / travel);
   const incomingShade = incoming
-    ? swipePhase === "drag"
-      ? Math.max(0.08, 1 - progress * 0.95)
-      : swipePhase === "commit"
-        ? 0
-        : 1
+    ? swipePhase === "commit"
+      ? 0
+      : swipePhase === "cancel"
+        ? 1
+        : Math.max(0, 1 - progress * 1.05)
     : 0;
+  const outgoingShade = incoming
+    ? 0
+    : swipePhase === "commit"
+      ? 0.55
+      : swipePhase === "cancel"
+        ? 0
+        : Math.min(0.55, progress * 1.1);
   return (
     <>
       <div
@@ -433,6 +447,19 @@ export function ProjectSheet({
             ))}
           </div>
         </div>
+        {!incoming && swipePhase !== "idle" && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 z-20 rounded-15 s:rounded-20 bg-[#b7b7b7]"
+            style={{
+              opacity: outgoingShade,
+              transition:
+                swipePhase === "commit" || swipePhase === "cancel"
+                  ? "opacity 0.36s cubic-bezier(0.16,1,0.3,1)"
+                  : "none",
+            }}
+          />
+        )}
         {incoming && swipePhase !== "idle" && (
           <div
             aria-hidden="true"
@@ -440,8 +467,8 @@ export function ProjectSheet({
             style={{
               opacity: incomingShade,
               transition:
-                swipePhase === "commit"
-                  ? "opacity 0.32s cubic-bezier(0.16,1,0.3,1)"
+                swipePhase === "commit" || swipePhase === "cancel"
+                  ? "opacity 0.36s cubic-bezier(0.16,1,0.3,1)"
                   : "none",
             }}
           />
