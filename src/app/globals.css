@@ -126,3 +126,9 @@ html.paper-stish-viewer body {
   background: #efede2;
   color: #073b91;
 }
+
+@media (min-width: 650px) {
+  .birthday-message {
+    font-size: clamp(1.45rem, 2.7vw, 2rem) !important;
+  }
+}
