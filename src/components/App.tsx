@@ -20,6 +20,7 @@ export function App() {
   const [projectSlug, setProjectSlug] = useState<string | null>(null);
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [sheetEntered, setSheetEntered] = useState(false);
+  const [sheetTransition, setSheetTransition] = useState<"idle" | "exit-left" | "reset-right" | "enter-center">("idle");
   const [myEntered, setMyEntered] = useState(false);
   const [importEntered, setImportEntered] = useState(false);
   const [editorEntered, setEditorEntered] = useState(false);
@@ -184,15 +185,26 @@ export function App() {
   }, [folio, projectSlug]);
 
   const switchProject = useCallback(async (slug: string) => {
-    if (busy.current) return;
+    if (busy.current || slug === projectSlug) return;
     busy.current = true;
-    setSheetEntered(false);
-    await wait(280);
+
+    // Match the reference transition: current sheet exits left, the next
+    // sheet is reset off-screen right without animation, then enters.
+    setSheetTransition("exit-left");
+    await wait(360);
+
     setProjectSlug(slug);
-    await wait(80);
-    setSheetEntered(true);
+    setSheetTransition("reset-right");
+    await wait(20);
+
+    requestAnimationFrame(() => {
+      setSheetTransition("enter-center");
+    });
+
+    await wait(520);
+    setSheetTransition("idle");
     busy.current = false;
-  }, []);
+  }, [projectSlug]);
 
   const duplicateTemplate = useCallback((template: (typeof FEATURED)[number]) => {
     const id = `project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -265,6 +277,7 @@ export function App() {
           onNext={(slug) => switchProject(slug)}
           onDuplicate={duplicateTemplate}
           onSaveTemplate={saveTemplate}
+          transition={sheetTransition}
         />
       )}
 
