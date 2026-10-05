@@ -6,6 +6,10 @@ interface BirthdayTemplateProps {
   photoUrl?: string | null;
   editable?: boolean;
   recipientName?: string;
+  message?: string;
+  onRecipientNameChange?: (value: string) => void;
+  onMessageChange?: (value: string) => void;
+  onPhotoChange?: (file: File | undefined) => void;
 }
 
 const MESSAGE =
@@ -36,6 +40,11 @@ export function BirthdayTemplate({
     inputRef.current?.click();
   };
 
+  const displayMessage = message || MESSAGE;
+  const renderedMessage = recipientName
+    ? `happy birthday, ${recipientName} !!\\n${displayMessage.replace("happy birthday !!\\n", "")}`
+    : displayMessage;
+
   return (
     <main
       className="birthday-template relative min-h-[100svh] w-full overflow-y-auto"
@@ -45,7 +54,16 @@ export function BirthdayTemplate({
         color: "#073a91",
       }}
     >
-      <input ref={inputRef} type="file" accept="image/*" className="hidden" />
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(event) => {
+          onPhotoChange?.(event.target.files?.[0]);
+          event.currentTarget.value = "";
+        }}
+      />
 
       <div className="mx-auto flex min-h-[100svh] w-full max-w-[56rem] flex-col px-[7vw] pb-16 pt-[4.5vw] sm:px-16 sm:pb-20 sm:pt-14">
         <div
@@ -155,6 +173,9 @@ export function BirthdayTemplate({
           <p
             contentEditable={editable}
             suppressContentEditableWarning
+            onInput={(event) => {
+              onMessageChange?.(event.currentTarget.innerText);
+            }}
             className="whitespace-pre-line text-center outline-none"
             style={{
               fontFamily:
@@ -166,9 +187,7 @@ export function BirthdayTemplate({
               textWrap: "balance",
             }}
           >
-            {recipientName
-              ? `happy birthday, ${recipientName} !!\n${MESSAGE.replace("happy birthday !!\n", "")}`
-              : MESSAGE}
+            {renderedMessage}
           </p>
         </section>
       </div>
