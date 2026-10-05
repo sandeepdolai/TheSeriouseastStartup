@@ -258,7 +258,7 @@ export function TemplateEditor({
       </header>
 
       <div className="min-h-0 flex-1 overflow-hidden">
-        <div className="grid h-full min-h-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="grid h-full min-h-0 grid-cols-1">
           <section className="min-h-0 overflow-y-auto overscroll-contain bg-[#111] px-10 py-15 s:px-20 s:py-20">
             <div className="mx-auto w-full max-w-[760px]">
               {templateReady ? (
@@ -284,7 +284,7 @@ export function TemplateEditor({
             </div>
           </section>
 
-          <aside className="hidden min-h-0 overflow-y-auto border-l border-white/8 bg-[#101010] lg:block">
+          <aside className="hidden">
             <div className="p-18">
               <p className="text-13 tracking-[-0.03em]">Edit website</p>
               <p className="mt-4 text-10 leading-14 text-white/40">
