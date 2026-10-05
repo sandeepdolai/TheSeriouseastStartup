@@ -88,7 +88,11 @@ export function TemplateEditor({ projectId, templateSlug, onClose }: TemplateEdi
 
   const choosePhoto = (file: File | undefined) => {
     if (!file) return;
-    setPhotoUrl(URL.createObjectURL(file));
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") setPhotoUrl(reader.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const template = templateSlug === "birthday-template";
