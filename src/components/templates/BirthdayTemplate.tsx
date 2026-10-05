@@ -225,6 +225,9 @@ export function BirthdayTemplate({
               fontSize: "clamp(1rem, 2.55vw, 1.7rem)",
               letterSpacing: "0.005em",
               lineHeight: 1.47,
+              ...(typeof window !== "undefined" && window.innerWidth >= 650
+                ? { fontSize: "clamp(1.45rem, 2.7vw, 2rem)" }
+                : {}),
             }}
             title={editable ? "Double-click to edit" : undefined}
           >
