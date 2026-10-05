@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useRef,
+  type HTMLAttributes,
+} from "react";
 
 export const BIRTHDAY_DEFAULT_MESSAGE = [
   "happy birthday !!",
@@ -58,28 +63,26 @@ function Tape() {
   );
 }
 
-function Handwritten({
-  children,
-  className = "",
-  style,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      {...props}
-      className={className}
-      style={{
-        fontFamily:
-          '"Comic Sans MS", "Bradley Hand", "Segoe Print", cursive',
-        fontWeight: 700,
-        color: "#073b91",
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
+const Handwritten = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
+  function Handwritten({ children, className = "", style, ...props }, ref) {
+    return (
+      <div
+        ref={ref}
+        {...props}
+        className={className}
+        style={{
+          fontFamily:
+            '"Comic Sans MS", "Bradley Hand", "Segoe Print", cursive',
+          fontWeight: 700,
+          color: "#073b91",
+          ...style,
+        }}
+      >
+        {children}
+      </div>
+    );
+  },
+);
 
 export function BirthdayTemplate({
   heading = "★ HAPPY BIRTHDAY !!",
