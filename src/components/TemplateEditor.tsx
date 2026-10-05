@@ -5,11 +5,24 @@ import {
   BIRTHDAY_DEFAULT_MESSAGE,
   BirthdayTemplate,
 } from "./templates/BirthdayTemplate";
+import {
+  createTemplateId,
+  encodePublishedPayload,
+  slugPart,
+} from "@/lib/publish";
 
 interface TemplateEditorProps {
   projectId: string;
   templateSlug: string;
   onClose: () => void;
+}
+
+interface PublishedRecord {
+  username: string;
+  viewerName: string;
+  templateId: string;
+  url: string;
+  publishedAt: string;
 }
 
 interface ProjectRecord {
@@ -20,6 +33,7 @@ interface ProjectRecord {
     heading?: string;
     message?: string;
     photoUrl?: string | null;
+    published?: PublishedRecord | null;
   };
 }
 
@@ -33,6 +47,12 @@ export function TemplateEditor({
   const [message, setMessage] = useState(BIRTHDAY_DEFAULT_MESSAGE);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [username, setUsername] = useState("");
+  const [viewerName, setViewerName] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const [published, setPublished] = useState<PublishedRecord | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     try {
@@ -48,8 +68,12 @@ export function TemplateEditor({
       setHeading(current.data?.heading ?? "★ HAPPY BIRTHDAY !!");
       setMessage(current.data?.message ?? BIRTHDAY_DEFAULT_MESSAGE);
       setPhotoUrl(current.data?.photoUrl ?? null);
+      setPublished(current.data?.published ?? null);
+
+      const savedUsername = localStorage.getItem("paper-stish-username");
+      if (savedUsername) setUsername(savedUsername);
     } catch {
-      // Local-first prototype: preserve the editor even if stored data is malformed.
+      // Local-first editor remains usable if stored data is malformed.
     }
   }, [projectId]);
 
@@ -69,10 +93,11 @@ export function TemplateEditor({
                 heading,
                 message,
                 photoUrl,
+                published,
               },
               updatedAt,
             }
-          : item
+          : item,
       );
 
       localStorage.setItem("paper-stish-projects", JSON.stringify(next));
@@ -80,14 +105,20 @@ export function TemplateEditor({
         current
           ? {
               ...current,
-              data: { heading, message, photoUrl },
+              data: {
+                ...(current.data ?? {}),
+                heading,
+                message,
+                photoUrl,
+                published,
+              },
             }
-          : current
+          : current,
       );
       setSaved(true);
       window.setTimeout(() => setSaved(false), 1400);
     } catch {
-      // Keep the UI responsive if browser storage rejects the write.
+      // Keep the editor responsive when browser storage rejects a write.
     }
   };
 
@@ -99,6 +130,92 @@ export function TemplateEditor({
       if (typeof reader.result === "string") setPhotoUrl(reader.result);
     };
     reader.readAsDataURL(file);
+  };
+
+  const publish = () => {
+    const cleanUsername = slugPart(username, "");
+    const cleanViewerName = slugPart(viewerName, "");
+
+    if (!cleanUsername || !cleanViewerName || publishing) return;
+
+    try {
+      setPublishing(true);
+      localStorage.setItem("paper-stish-username", username.trim());
+
+      const templateId = createTemplateId();
+      const publishedAt = new Date().toISOString();
+      const payload = encodePublishedPayload({
+        version: 1,
+        templateSlug,
+        title: project?.title ?? "Paper Stish",
+        heading,
+        message,
+        photoUrl,
+        publishedAt,
+      });
+
+      const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+      const path =
+        basePath +
+        "/" +
+        cleanUsername +
+        "/" +
+        cleanViewerName +
+        "/" +
+        templateId;
+      const url =
+        window.location.origin +
+        path +
+        "#data=" +
+        payload;
+
+      const record: PublishedRecord = {
+        username: cleanUsername,
+        viewerName: cleanViewerName,
+        templateId,
+        url,
+        publishedAt,
+      };
+
+      setPublished(record);
+
+      const raw = localStorage.getItem("paper-stish-projects");
+      const projects = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(projects)) {
+        const next = projects.map((item) =>
+          item?.id === projectId
+            ? {
+                ...item,
+                data: {
+                  ...(item.data ?? {}),
+                  heading,
+                  message,
+                  photoUrl,
+                  published: record,
+                },
+                updatedAt: publishedAt,
+              }
+            : item,
+        );
+        localStorage.setItem("paper-stish-projects", JSON.stringify(next));
+      }
+    } catch {
+      // Keep the editor usable if the browser rejects a large publish payload.
+    } finally {
+      window.setTimeout(() => setPublishing(false), 300);
+    }
+  };
+
+  const copyPublishedLink = async () => {
+    if (!published?.url) return;
+
+    try {
+      await navigator.clipboard.writeText(published.url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    } catch {
+      // Clipboard permissions are browser-controlled.
+    }
   };
 
   const templateReady = templateSlug === "birthday-template";
@@ -122,13 +239,22 @@ export function TemplateEditor({
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={save}
-          className="rounded-full bg-white px-18 py-10 text-12 tracking-[-0.02em] text-black transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98]"
-        >
-          {saved ? "Saved" : "Save"}
-        </button>
+        <div className="flex items-center gap-8">
+          <button
+            type="button"
+            onClick={save}
+            className="rounded-full border border-white/12 bg-white/5 px-16 py-10 text-12 tracking-[-0.02em] text-white transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98]"
+          >
+            {saved ? "Saved" : "Save"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setPublishOpen(true)}
+            className="rounded-full bg-white px-16 py-10 text-12 tracking-[-0.02em] text-black transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98]"
+          >
+            Publish
+          </button>
+        </div>
       </header>
 
       <div className="min-h-0 flex-1 overflow-hidden">
@@ -238,7 +364,138 @@ export function TemplateEditor({
           </label>
         </div>
       </div>
+
+      {publishOpen && (
+        <div
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/55 px-15 backdrop-blur-[10px]"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setPublishOpen(false);
+          }}
+        >
+          <div className="w-full max-w-[470px] rounded-[22px] border border-white/10 bg-[#121212] p-18 shadow-2xl">
+            {!published ? (
+              <>
+                <div className="flex items-start justify-between gap-15">
+                  <div>
+                    <p className="text-20 tracking-[-0.05em]">Publish website</p>
+                    <p className="mt-6 text-11 leading-15 text-white/42">
+                      Choose the names used in the personal website link.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPublishOpen(false)}
+                    className="flex size-32 items-center justify-center rounded-full bg-white/7 text-white/65"
+                    aria-label="Close publish dialog"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="mt-20 grid gap-13">
+                  <label className="grid gap-7">
+                    <span className="text-10 text-white/45">Your name</span>
+                    <input
+                      autoFocus
+                      value={username}
+                      onChange={(event) => setUsername(event.target.value)}
+                      placeholder="alex"
+                      className="w-full rounded-[13px] border border-white/10 bg-white/5 px-12 py-11 text-13 text-white outline-none focus:border-white/25"
+                    />
+                  </label>
+
+                  <label className="grid gap-7">
+                    <span className="text-10 text-white/45">Person this is for</span>
+                    <input
+                      value={viewerName}
+                      onChange={(event) => setViewerName(event.target.value)}
+                      placeholder="olivia"
+                      className="w-full rounded-[13px] border border-white/10 bg-white/5 px-12 py-11 text-13 text-white outline-none focus:border-white/25"
+                    />
+                  </label>
+                </div>
+
+                <div className="mt-18 rounded-[15px] border border-white/8 bg-white/[0.025] p-12">
+                  <p className="text-10 text-white/38">Your link will look like</p>
+                  <p className="mt-5 break-all font-mono text-11 leading-16 text-white/75">
+                    {window.location.origin}/
+                    {slugPart(username, "your-name")}/
+                    {slugPart(viewerName, "their-name")}/
+                    1xxxxxxxx
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={
+                    publishing ||
+                    !slugPart(username, "") ||
+                    !slugPart(viewerName, "")
+                  }
+                  onClick={publish}
+                  className="mt-15 w-full rounded-full bg-white py-12 text-12 text-black disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  {publishing ? "Publishing…" : "Publish website"}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex items-start justify-between gap-15">
+                  <div>
+                    <p className="text-20 tracking-[-0.05em]">Your website is ready</p>
+                    <p className="mt-6 text-11 leading-15 text-white/42">
+                      This link opens the finished website directly.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPublishOpen(false)}
+                    className="flex size-32 items-center justify-center rounded-full bg-white/7 text-white/65"
+                    aria-label="Close publish dialog"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="mt-18 rounded-[15px] border border-white/8 bg-white/[0.025] p-12">
+                  <p className="break-all font-mono text-11 leading-17 text-white/75">
+                    {published.url}
+                  </p>
+                </div>
+
+                <div className="mt-13 grid grid-cols-2 gap-9">
+                  <button
+                    type="button"
+                    onClick={copyPublishedLink}
+                    className="rounded-full bg-white py-11 text-11 text-black"
+                  >
+                    {copied ? "Copied" : "Copy link"}
+                  </button>
+                  <a
+                    href={published.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-center rounded-full border border-white/12 py-11 text-11 text-white"
+                  >
+                    Open website
+                  </a>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPublished(null);
+                    setViewerName("");
+                  }}
+                  className="mt-10 w-full py-8 text-10 text-white/35"
+                >
+                  Publish another link
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
-
