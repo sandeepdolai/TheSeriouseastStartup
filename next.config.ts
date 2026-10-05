@@ -4,6 +4,9 @@ const isGitHubPages = process.env.GITHUB_ACTIONS === "true";
 const repoName = process.env.GITHUB_REPOSITORY?.split("/")[1] || "TheSeriouseastStartup";
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_BASE_PATH: isGitHubPages ? `/${repoName}` : "",
+  },
   ...(isGitHubPages
     ? {
         output: "export",
