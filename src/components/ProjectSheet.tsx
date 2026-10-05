@@ -271,10 +271,10 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
             <button
               type="button"
               onClick={() => onSaveTemplate(project)}
-              className="relative inline-flex items-center rounded-full h-[2em] aspect-square justify-center px-2 bg-[#eee] text-black pointer-events-auto transition-transform duration-300 hover:scale-105"
+              className="relative inline-flex items-center rounded-full h-[2em] px-[1.25em] bg-[#eee] text-black pointer-events-auto transition-colors duration-300 hover:bg-[#e2e2e2]"
               aria-label={"Save " + project.title + " to My Templates"}
             >
-              <SaveIcon className="size-[1.05em]" />
+              <span className="label whitespace-nowrap">Save</span>
             </button>
           </div>
         </div>
