@@ -13,10 +13,15 @@ interface Props {
   onDuplicate: (project: Project) => void;
   onSaveTemplate: (project: Project) => void;
   entered: boolean;
-  transition?: "idle" | "exit-left" | "exit-right" | "reset-left" | "reset-right" | "enter-center";
-  initialX?: number;
+  incoming?: boolean;
+  swipePhase?: "idle" | "drag" | "commit";
+  swipeDirection?: -1 | 1 | null;
+  swipeX?: number;
   interactive?: boolean;
-  onSwipe?: (direction: -1 | 1, startX: number) => void;
+  onSwipeStart?: (direction: -1 | 1) => void;
+  onSwipeMove?: (x: number) => void;
+  onSwipeCancel?: () => void;
+  onSwipeCommit?: (direction: -1 | 1) => void;
 }
 
 const OVERSCAN = 0.25;
@@ -77,7 +82,24 @@ const MEDIA_ASPECTS: Record<string, number[]> = {
   griflan: [1162 / 720, 1022 / 720, 1280 / 642],
 };
 
-export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, onSaveTemplate, entered, transition = "idle", initialX = 0, interactive = false, onSwipe }: Props) {
+export function ProjectSheet({
+  project,
+  onClose,
+  onPrev,
+  onNext,
+  onDuplicate,
+  onSaveTemplate,
+  entered,
+  incoming = false,
+  swipePhase = "idle",
+  swipeDirection = null,
+  swipeX = 0,
+  interactive = false,
+  onSwipeStart,
+  onSwipeMove,
+  onSwipeCancel,
+  onSwipeCommit,
+}: Props) {{
   const idx = FEATURED.findIndex((p) => p.slug === project.slug);
   const prev = FEATURED[(idx - 1 + FEATURED.length) % FEATURED.length];
   const next = FEATURED[(idx + 1) % FEATURED.length];
@@ -88,65 +110,32 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
   const itemsRef = useRef<{ el: HTMLElement; base: { top: number; bottom: number } }[]>([]);
   const totalRef = useRef(0);
   const [revealed, setRevealed] = useState(false);
-  const [wipeVisible, setWipeVisible] = useState(false);
   const swipeRef = useRef({
     active: false,
     horizontal: false,
     startX: 0,
     startY: 0,
-    lastX: 0,
     lastTime: 0,
+    lastX: 0,
     velocityX: 0,
     pointerId: -1,
   });
-
-  useEffect(() => {
-    if (transition === "exit-left" || transition === "exit-right") {
-      setWipeVisible(false);
-      const raf = requestAnimationFrame(() => setWipeVisible(true));
-      return () => cancelAnimationFrame(raf);
-    }
-    if (
-      transition === "reset-left" ||
-      transition === "reset-right" ||
-      transition === "enter-center"
-    ) {
-      setWipeVisible(true);
-      return;
-    }
-    setWipeVisible(false);
-  }, [transition]);
 
   useEffect(() => {
     const el = sheetRef.current;
     if (!el || !interactive) return;
 
     const restore = () => {
-      el.style.transition = "transform 320ms cubic-bezier(0.22,0.75,0.2,1)";
-      el.style.transform = "translate3d(0px,0px,0px) scale(1)";
-      window.setTimeout(() => {
-        if (!swipeRef.current.active && el) {
-          el.style.transition = "";
-        }
-      }, 340);
-    };
-
-    const release = (direction: -1 | 1) => {
-      const width = el.getBoundingClientRect().width || window.innerWidth;
-      const target =
-        direction < 0
-          ? -(window.innerWidth + width * 0.08)
-          : window.innerWidth + width * 0.08;
-
       el.style.transition = "transform 320ms cubic-bezier(0.16,1,0.3,1)";
-      el.style.transform = `translate3d(${target}px,0px,0px) scale(1)`;
-
-      const startX = swipeRef.current.startX;
-      window.setTimeout(() => onSwipe?.(direction, startX), 325);
+      el.style.transform = "translate3d(0,0,0)";
+      window.setTimeout(() => {
+        if (el) el.style.transition = "";
+      }, 340);
+      onSwipeCancel?.();
     };
 
     const onPointerDown = (event: PointerEvent) => {
-      if (transition !== "idle") return;
+      if (swipePhase !== "idle") return;
       if (event.pointerType === "mouse" && event.button !== 0) return;
 
       const target = event.target as HTMLElement | null;
@@ -162,11 +151,7 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
       s.velocityX = 0;
       s.pointerId = event.pointerId;
 
-      try {
-        el.setPointerCapture(event.pointerId);
-      } catch {}
-
-      el.style.transition = "none";
+      try { el.setPointerCapture(event.pointerId); } catch {}
     };
 
     const onPointerMove = (event: PointerEvent) => {
@@ -177,7 +162,6 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
       const dy = event.clientY - s.startY;
       const now = performance.now();
       const dt = Math.max(8, now - s.lastTime);
-
       s.velocityX = (event.clientX - s.lastX) / dt;
       s.lastX = event.clientX;
       s.lastTime = now;
@@ -193,16 +177,16 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
         }
 
         s.horizontal = true;
+        onSwipeStart?.(dx < 0 ? -1 : 1);
       }
 
       event.preventDefault();
 
-      const width = el.getBoundingClientRect().width || window.innerWidth;
-      const limit = window.innerWidth * 0.92;
-      const resistance = Math.abs(dx) > width * 0.45 ? 0.78 : 0.92;
-      const x = Math.max(-limit, Math.min(limit, dx * resistance));
-
-      el.style.transform = `translate3d(${x}px,0px,0px) scale(1)`;
+      // The reference keeps the incoming sheet exactly one sheet-width
+      // behind the finger-driven outgoing sheet, creating the continuous
+      // "two cards handing off" motion.
+      const bounded = Math.max(-window.innerWidth, Math.min(window.innerWidth, dx));
+      onSwipeMove?.(bounded);
     };
 
     const onPointerUp = (event: PointerEvent) => {
@@ -213,12 +197,11 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
       try { el.releasePointerCapture(event.pointerId); } catch {}
 
       const dx = event.clientX - s.startX;
-      const width = el.getBoundingClientRect().width || window.innerWidth;
-      const threshold = Math.max(76, Math.min(160, width * 0.22));
-      const fastEnough = Math.abs(dx) > 58 && Math.abs(s.velocityX) > 0.8;
+      const threshold = Math.max(76, Math.min(160, el.getBoundingClientRect().width * 0.22));
+      const quickFlick = Math.abs(dx) > 58 && Math.abs(s.velocityX) > 0.8;
 
-      if (s.horizontal && (Math.abs(dx) >= threshold || fastEnough)) {
-        release(dx < 0 ? -1 : 1);
+      if (s.horizontal && (Math.abs(dx) >= threshold || quickFlick)) {
+        onSwipeCommit?.(dx < 0 ? -1 : 1);
       } else {
         restore();
       }
@@ -247,7 +230,7 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
       el.removeEventListener("pointerup", onPointerUp);
       el.removeEventListener("pointercancel", onPointerCancel);
     };
-  }, [interactive, onSwipe, transition]);
+  }, [interactive, onSwipeStart, onSwipeMove, onSwipeCancel, onSwipeCommit, swipePhase]);
 
   useEffect(() => {
     if (!entered) return;
@@ -376,6 +359,7 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
   }, []);
 
   const aspects = MEDIA_ASPECTS[project.slug] || project.media.map(() => 16 / 9);
+
   const reveal = (d: number) => ({
     style: {
       opacity: revealed ? 1 : 0,
@@ -384,20 +368,29 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
     },
   });
 
-  const outgoingTransform = transition === "exit-left"
-    ? (wipeVisible ? "translateX(calc(-100% - 9rem)) scale(1)" : `translate3d(${initialX}px,0,0) scale(1)`)
-    : transition === "exit-right"
-      ? (wipeVisible ? "translateX(calc(100% + 9rem)) scale(1)" : `translate3d(${initialX}px,0,0) scale(1)`)
-      : transition === "reset-right"
-        ? "translateX(calc(100% + 9rem)) scale(1)"
-        : transition === "reset-left"
-          ? "translateX(calc(-100% - 9rem)) scale(1)"
-          : transition === "enter-center"
-        ? "translateX(0) scale(1)"
-        : entered
-          ? "translateX(0) scale(1)"
-          : "scale(0.96)";
+  const width = sheetRef.current?.getBoundingClientRect().width || window.innerWidth;
+  const travel = Math.max(window.innerWidth, width);
+  const sheetTransform = incoming
+    ? swipeDirection === -1
+      ? `translate3d(${travel + swipeX}px,0,0) scale(1)`
+      : `translate3d(${-travel + swipeX}px,0,0) scale(1)`
+    : `translate3d(${swipeX}px,0,0) scale(1)`;
 
+  const sheetTransition =
+    swipePhase === "commit"
+      ? "transform 0.32s cubic-bezier(0.16,1,0.3,1)"
+      : swipePhase === "drag"
+        ? "none"
+        : "none";
+
+  const progress = Math.min(1, Math.abs(swipeX) / travel);
+  const incomingShade = incoming
+    ? swipePhase === "drag"
+      ? Math.max(0.08, 1 - progress * 0.95)
+      : swipePhase === "commit"
+        ? 0
+        : 1
+    : 0;
   return (
     <>
       <div
@@ -407,23 +400,11 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
         className="fixed inset-y-15 s:inset-y-20 inset-x-20 s:inset-x-50 z-20 flex flex-col s:flex-row s:items-start gap-y-40 s:gap-x-100 overflow-hidden rounded-15 s:rounded-20 px-10 s:pt-40 s:pl-40 s:pr-120 bg-white will-change-transform"
         style={{
           opacity: entered ? 1 : 0,
-          transform: outgoingTransform,
-          backgroundColor:
-            transition === "reset-right" ||
-            transition === "reset-left" ||
-            transition === "enter-center"
-              ? "#b7b7b7"
-              : "#fff",
+          transform: sheetTransform,
+          transition: sheetTransition,
+          backgroundColor: "#fff",
           touchAction: interactive ? "pan-y" : undefined,
-          cursor: interactive ? "grab" : undefined,
-          transition:
-            (transition === "reset-right" || transition === "reset-left")
-              ? "none"
-              : transition === "exit-left" || transition === "exit-right"
-                ? "transform 0.32s cubic-bezier(0.16,1,0.3,1)"
-                : transition === "enter-center"
-                  ? "transform 0.38s cubic-bezier(0.16,1,0.3,1), background-color 0.30s cubic-bezier(0.16,1,0.3,1)"
-                  : "opacity 0.45s cubic-bezier(0.16,1,0.3,1), transform 0.55s cubic-bezier(0.16,1,0.3,1)",
+          cursor: interactive ? (swipePhase === "drag" ? "grabbing" : "grab") : undefined,
         }}
       >
         <div className="relative z-10 flex flex-col items-start s:flex-1 pt-40 s:pt-0 px-15 s:px-0">
@@ -455,13 +436,16 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
             ))}
           </div>
         </div>
-        {transition !== "idle" && transition !== "exit-left" && transition !== "exit-right" && (
+        {incoming && swipePhase !== "idle" && (
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 z-20 rounded-15 s:rounded-20 bg-[#b7b7b7] will-change-transform"
+            className="pointer-events-none absolute inset-0 z-20 rounded-15 s:rounded-20 bg-[#b7b7b7]"
             style={{
-              opacity: transition === "enter-center" ? 0 : 1,
-              transition: transition === "enter-center" ? "opacity 0.30s cubic-bezier(0.16,1,0.3,1) 0.08s" : "none",
+              opacity: incomingShade,
+              transition:
+                swipePhase === "commit"
+                  ? "opacity 0.32s cubic-bezier(0.16,1,0.3,1)"
+                  : "none",
             }}
           />
         )}
