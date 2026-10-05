@@ -32,6 +32,9 @@ export function BirthdayTemplate({
   photoUrl = null,
   editable = false,
   recipientName,
+  message,
+  onMessageChange,
+  onPhotoChange,
 }: BirthdayTemplateProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
