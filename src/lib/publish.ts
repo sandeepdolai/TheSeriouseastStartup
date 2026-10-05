@@ -70,9 +70,10 @@ export function slugPart(value: string, fallback: string) {
 }
 
 export function createTemplateId() {
-  return (
-    "1" +
-    Date.now().toString(36) +
-    Math.random().toString(36).slice(2, 7)
-  );
+  const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let suffix = "";
+  for (let i = 0; i < 2; i += 1) {
+    suffix += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return "1" + suffix;
 }
