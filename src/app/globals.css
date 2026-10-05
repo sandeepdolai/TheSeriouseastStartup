@@ -23,14 +23,6 @@
   --font-sans: sans, ui-sans-serif, system-ui, sans-serif;
 }
 
-@font-face {
-  font-display: swap;
-  font-family: sans;
-  font-style: normal;
-  font-weight: 200 1000;
-  src: url(/fonts/ABCDiatypePlusVariable.woff2) format("woff2-variations");
-}
-
 :root {
   --size: 390;
 }
