@@ -1,62 +1,125 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
+
+export const BIRTHDAY_DEFAULT_MESSAGE = [
+  "happy birthday !!",
+  "to my favorite person,",
+  "the one who always makes",
+  "my heart feel safe and happy.",
+  "thank you for staying,",
+  "for understanding me, and",
+  "for loving me with all your heart.",
+  "i’m beyond grateful to have you",
+  "in my life. i love you, and i hope",
+  "this year brings you more joy,",
+  "more strength, and everything",
+  "you’ve been praying for.",
+  "happy birthday, my love.",
+  "<33",
+].join("\n");
 
 interface BirthdayTemplateProps {
+  heading?: string;
+  message?: string;
   photoUrl?: string | null;
   editable?: boolean;
-  recipientName?: string;
-  message?: string;
-  onRecipientNameChange?: (value: string) => void;
+  onHeadingChange?: (value: string) => void;
   onMessageChange?: (value: string) => void;
   onPhotoChange?: (file: File | undefined) => void;
 }
 
-const MESSAGE =
-  "happy birthday !!\n" +
-  "to my favorite person,\n" +
-  "the one who always makes\n" +
-  "my heart feel safe and happy.\n" +
-  "thank you for staying,\n" +
-  "for understanding me, and\n" +
-  "for loving me with all your heart.\n" +
-  "i’m beyond grateful to have you\n" +
-  "in my life. i love you, and i hope\n" +
-  "this year brings you more joy,\n" +
-  "more strength, and everything\n" +
-  "you’ve been praying for.\n" +
-  "happy birthday, my love.\n" +
-  "<33";
+function PaperTexture() {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 opacity-[0.26]"
+      style={{
+        backgroundImage:
+          "radial-gradient(circle at 12% 18%, rgba(50,42,25,.11) 0 .7px, transparent .9px), radial-gradient(circle at 74% 62%, rgba(50,42,25,.08) 0 .65px, transparent .9px), radial-gradient(circle at 35% 88%, rgba(255,255,255,.3) 0 1px, transparent 1.2px)",
+        backgroundSize: "9px 9px, 13px 13px, 17px 17px",
+        mixBlendMode: "multiply",
+      }}
+    />
+  );
+}
+
+function Tape() {
+  return (
+    <span
+      aria-hidden="true"
+      className="absolute left-[-4%] top-[-2.5%] h-[9vw] max-h-20 w-[18vw] max-w-40 rotate-[-18deg] opacity-55"
+      style={{
+        background:
+          "linear-gradient(90deg, rgba(219,216,204,.68), rgba(195,192,182,.55), rgba(226,223,211,.7))",
+        boxShadow: "0 1px 5px rgba(0,0,0,.03)",
+      }}
+    />
+  );
+}
+
+function Handwritten({
+  children,
+  className = "",
+  style,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      {...props}
+      className={className}
+      style={{
+        fontFamily:
+          '"Comic Sans MS", "Bradley Hand", "Segoe Print", cursive',
+        fontWeight: 700,
+        color: "#073b91",
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
 export function BirthdayTemplate({
+  heading = "★ HAPPY BIRTHDAY !!",
+  message = BIRTHDAY_DEFAULT_MESSAGE,
   photoUrl = null,
   editable = false,
-  recipientName,
-  message,
+  onHeadingChange,
   onMessageChange,
   onPhotoChange,
 }: BirthdayTemplateProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const headingRef = useRef<HTMLDivElement>(null);
+  const messageRef = useRef<HTMLDivElement>(null);
 
-  const openPhotoPicker = () => {
-    if (!editable) return;
-    inputRef.current?.click();
+  useEffect(() => {
+    if (document.activeElement !== headingRef.current && headingRef.current) {
+      headingRef.current.innerText = heading;
+    }
+  }, [heading]);
+
+  useEffect(() => {
+    if (document.activeElement !== messageRef.current && messageRef.current) {
+      messageRef.current.innerText = message;
+    }
+  }, [message]);
+
+  const choosePhoto = () => {
+    if (editable) inputRef.current?.click();
   };
 
-  const renderedMessage =
-    message || (recipientName
-      ? `happy birthday, ${recipientName} !!\\n${MESSAGE.replace("happy birthday !!\\n", "")}`
-      : MESSAGE);
-
   return (
-    <main
-      className="birthday-template relative min-h-[100svh] w-full overflow-y-auto"
+    <article
+      className="relative min-h-full w-full overflow-x-hidden"
       style={{
         background:
-          "radial-gradient(circle at 20% 10%, rgba(255,255,255,.55), transparent 28%), linear-gradient(180deg, #f1f0e5 0%, #ebe9dc 100%)",
-        color: "#073a91",
+          "linear-gradient(180deg, #f1f0e5 0%, #eeece0 48%, #ebe9dc 100%)",
       }}
     >
+      <PaperTexture />
+
       <input
         ref={inputRef}
         type="file"
@@ -68,132 +131,124 @@ export function BirthdayTemplate({
         }}
       />
 
-      <div className="mx-auto flex min-h-[100svh] w-full max-w-[56rem] flex-col px-[7vw] pb-16 pt-[4.5vw] sm:px-16 sm:pb-20 sm:pt-14">
-        <div
-          className="relative self-end select-none"
+      <div className="relative mx-auto w-full max-w-[760px] px-[6.5vw] pb-28 pt-[5vw] sm:px-16 sm:pb-36 sm:pt-16">
+        <Handwritten
+          ref={headingRef}
+          contentEditable={editable}
+          suppressContentEditableWarning
+          onInput={(event) =>
+            onHeadingChange?.(event.currentTarget.innerText)
+          }
+          className="ml-auto w-max max-w-full select-text text-right outline-none"
           style={{
             transform: "rotate(5deg)",
-            fontFamily:
-              '"Comic Sans MS", "Bradley Hand", "Segoe Print", cursive',
-            fontWeight: 700,
-            fontSize: "clamp(1.4rem, 4.3vw, 3.2rem)",
+            fontSize: "clamp(1.55rem, 5vw, 3.7rem)",
             letterSpacing: "-0.055em",
-            lineHeight: 0.95,
+            lineHeight: 0.94,
           }}
+          title={editable ? "Double-click to edit" : undefined}
         >
-          <span className="mr-2 inline-block" aria-hidden="true">
-            ★
-          </span>
-          HAPPY BIRTHDAY !!
-        </div>
+          {heading}
+        </Handwritten>
 
-        <section className="relative mt-[10vw] sm:mt-20">
-          <div
-            className="absolute -left-[4.4vw] top-[-2vw] h-[5vw] w-[15vw] max-w-[9rem] -rotate-[18deg] opacity-50"
-            style={{
-              background:
-                "linear-gradient(90deg, rgba(223,220,208,.72), rgba(201,198,187,.55), rgba(226,223,211,.7))",
-              filter: "blur(.15px)",
-            }}
-            aria-hidden="true"
-          />
+        <section className="relative mt-[10vw] sm:mt-24">
+          <Tape />
 
           <button
             type="button"
-            onClick={openPhotoPicker}
-            className="group relative block w-full overflow-hidden rounded-[1.05rem] text-left"
+            onClick={choosePhoto}
+            className="group relative block w-full overflow-hidden rounded-[1.1rem] text-left"
             style={{
-              aspectRatio: "1.08 / 0.72",
+              aspectRatio: "1.64 / 1",
               background:
-                "radial-gradient(circle at 30% 20%, rgba(255,255,255,.08), transparent 35%), radial-gradient(circle at 80% 75%, rgba(255,255,255,.06), transparent 38%), #2a2a2a",
+                "radial-gradient(circle at 30% 22%, rgba(255,255,255,.085), transparent 34%), radial-gradient(circle at 76% 74%, rgba(255,255,255,.06), transparent 38%), #2a2a2a",
               boxShadow:
-                "inset 0 0 0 1px rgba(255,255,255,.05), 0 18px 40px rgba(0,0,0,.08)",
+                "0 20px 50px rgba(0,0,0,.08), inset 0 0 0 1px rgba(255,255,255,.05)",
               cursor: editable ? "pointer" : "default",
             }}
           >
-            <div
-              className="absolute inset-0 opacity-[0.24]"
+            <span
+              aria-hidden="true"
+              className="absolute inset-0 opacity-[0.26]"
               style={{
                 backgroundImage:
-                  "radial-gradient(circle at 15% 30%, #fff 0 0.7px, transparent 0.8px), radial-gradient(circle at 72% 68%, #fff 0 0.65px, transparent 0.75px)",
+                  "radial-gradient(circle at 15% 30%, #fff 0 .7px, transparent .8px), radial-gradient(circle at 72% 68%, #fff 0 .65px, transparent .75px)",
                 backgroundSize: "7px 7px, 11px 11px",
                 mixBlendMode: "screen",
               }}
-              aria-hidden="true"
             />
 
             {photoUrl ? (
               <img
                 src={photoUrl}
                 alt=""
-                className="absolute inset-0 size-full object-cover"
+                className="absolute inset-0 h-full w-full object-cover"
               />
             ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white">
-                <span className="text-[clamp(2.2rem,6vw,4rem)] font-light leading-none">
+              <span className="absolute inset-0 flex flex-col items-center justify-center text-center text-white">
+                <span className="text-[clamp(2.2rem,7vw,4.5rem)] font-light leading-none">
                   +
                 </span>
-                <span
-                  className="mt-1.5 font-serif text-[clamp(1.45rem,3.5vw,2.55rem)] tracking-[-0.04em]"
-                >
+                <span className="mt-2 font-serif text-[clamp(1.25rem,3.3vw,2.45rem)] tracking-[-0.04em]">
                   Add your photo
                 </span>
-              </div>
+                {editable && (
+                  <span className="mt-2 rounded-full bg-white/10 px-10 py-4 font-sans text-[10px] tracking-[.08em] text-white/55">
+                    PHOTO #1
+                  </span>
+                )}
+              </span>
             )}
 
             <span
-              className="absolute inset-0 bg-white/0 transition-colors duration-500 group-hover:bg-white/[0.035]"
               aria-hidden="true"
+              className="absolute inset-0 bg-white/0 transition-colors duration-500 group-hover:bg-white/[0.035]"
             />
           </button>
         </section>
 
-        <section className="relative mt-[7vw] flex-1 pb-8 sm:mt-14">
-          <span
-            className="absolute -left-1 top-[42%] hidden text-[clamp(1.5rem,3.6vw,2.5rem)] sm:block"
-            style={{
-              transform: "rotate(-8deg)",
-              fontFamily:
-                '"Comic Sans MS", "Bradley Hand", "Segoe Print", cursive',
-            }}
-            aria-hidden="true"
-          >
-            ★
-          </span>
-
-          <span
-            className="absolute right-[3%] top-[11%] text-[clamp(1.1rem,3vw,2rem)]"
-            style={{
-              transform: "rotate(8deg)",
-              fontFamily:
-                '"Comic Sans MS", "Bradley Hand", "Segoe Print", cursive',
-            }}
-            aria-hidden="true"
-          >
-            ✦
-          </span>
-
-          <p
+        <section className="relative mt-[7vw] sm:mt-16">
+          <Handwritten
+            ref={messageRef}
             contentEditable={editable}
             suppressContentEditableWarning
-            onInput={(event) => {
-              onMessageChange?.(event.currentTarget.innerText);
-            }}
-            className="whitespace-pre-line text-center outline-none"
+            onInput={(event) =>
+              onMessageChange?.(event.currentTarget.innerText)
+            }
+            className="select-text whitespace-pre-line text-center outline-none"
             style={{
-              fontFamily:
-                '"Comic Sans MS", "Bradley Hand", "Segoe Print", cursive',
-              fontWeight: 700,
-              fontSize: "clamp(1rem, 2.25vw, 1.7rem)",
+              fontSize: "clamp(1rem, 2.55vw, 1.7rem)",
               letterSpacing: "-0.045em",
-              lineHeight: 1.45,
-              textWrap: "balance",
+              lineHeight: 1.47,
+            }}
+            title={editable ? "Double-click to edit" : undefined}
+          >
+            {message}
+          </Handwritten>
+
+          <Handwritten
+            aria-hidden="true"
+            className="absolute left-0 top-[34%] hidden select-none sm:block"
+            style={{
+              transform: "rotate(-8deg)",
+              fontSize: "clamp(1.5rem, 3.2vw, 2.4rem)",
             }}
           >
-            {renderedMessage}
-          </p>
+            ★
+          </Handwritten>
+
+          <Handwritten
+            aria-hidden="true"
+            className="absolute right-[2%] top-[4%] select-none"
+            style={{
+              transform: "rotate(8deg)",
+              fontSize: "clamp(1.1rem, 3vw, 2rem)",
+            }}
+          >
+            ✦
+          </Handwritten>
         </section>
       </div>
-    </main>
+    </article>
   );
 }
