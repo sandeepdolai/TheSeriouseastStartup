@@ -13,14 +13,18 @@ import { ProfileOverlay } from "./Overlays";
 
 type View = "home" | "my" | "project" | "import" | "editor";
 type Overlay = "profile" | null;
+type SheetPhase = "idle" | "reset-right" | "enter-center";
+type OutgoingPhase = "idle" | "exit-left";
 
 export function App() {
   const folio = useFolio();
   const [view, setView] = useState<View>("home");
   const [projectSlug, setProjectSlug] = useState<string | null>(null);
+  const [previousProjectSlug, setPreviousProjectSlug] = useState<string | null>(null);
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [sheetEntered, setSheetEntered] = useState(false);
-  const [sheetTransition, setSheetTransition] = useState<"idle" | "exit-left" | "reset-right" | "enter-center">("idle");
+  const [sheetTransition, setSheetTransition] = useState<SheetPhase>("idle");
+  const [outgoingTransition, setOutgoingTransition] = useState<OutgoingPhase>("idle");
   const [myEntered, setMyEntered] = useState(false);
   const [importEntered, setImportEntered] = useState(false);
   const [editorEntered, setEditorEntered] = useState(false);
@@ -33,6 +37,7 @@ export function App() {
   const carouselApi = useRef<{ center: (slug: string) => void }>({ center: () => {} });
 
   const project = FEATURED.find((p) => p.slug === projectSlug) ?? null;
+  const previousProject = FEATURED.find((p) => p.slug === previousProjectSlug) ?? null;
 
   useEffect(() => {
     const mq = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
@@ -139,12 +144,14 @@ export function App() {
           mounted = true;
           setView("project");
           setProjectSlug(slug);
+          setPreviousProjectSlug(null);
           setSheetEntered(true);
         }
       });
       if (!mounted) {
         setView("project");
         setProjectSlug(slug);
+        setPreviousProjectSlug(null);
         setSheetEntered(true);
       }
       entry.mesh.visible = false;
@@ -153,6 +160,7 @@ export function App() {
       folio.closeHole();
       setView("project");
       setProjectSlug(slug);
+      setPreviousProjectSlug(null);
       setSheetEntered(false);
       await wait(60);
       setSheetEntered(true);
@@ -168,6 +176,7 @@ export function App() {
     await wait(260);
     setView("home");
     setProjectSlug(null);
+    setPreviousProjectSlug(null);
     setReturning(slug);
     const entry = slug ? folio.cards.find((c) => c.slug === slug) : null;
     if (entry) {
@@ -185,23 +194,30 @@ export function App() {
   }, [folio, projectSlug]);
 
   const switchProject = useCallback(async (slug: string) => {
-    if (busy.current || slug === projectSlug) return;
+    if (busy.current || slug === projectSlug || !projectSlug) return;
     busy.current = true;
 
-    // Match the reference transition: current sheet exits left, the next
-    // sheet is reset off-screen right without animation, then enters.
-    setSheetTransition("exit-left");
-    await wait(360);
-
+    // Keep both sheets mounted. The reference does not replace one page with
+    // another: the current sheet travels left while the next sheet travels in
+    // from the right. This also avoids the visible blank frame on mobile.
+    setPreviousProjectSlug(projectSlug);
+    setOutgoingTransition("idle");
     setProjectSlug(slug);
+    setSheetEntered(true);
     setSheetTransition("reset-right");
-    await wait(20);
 
-    requestAnimationFrame(() => {
-      setSheetTransition("enter-center");
-    });
+    // Let the browser paint the two starting positions before beginning the
+    // movement. requestAnimationFrame keeps the handoff frame-synchronised.
+    await nextFrame();
+    setOutgoingTransition("exit-left");
+    setSheetTransition("enter-center");
 
-    await wait(520);
+    // The reference transition is roughly 12 frames at 30fps. We deliberately
+    // run it as a continuous CSS compositor animation rather than timer steps,
+    // so a 30fps recording does not become a 30fps animation.
+    await wait(440);
+    setOutgoingTransition("idle");
+    setPreviousProjectSlug(null);
     setSheetTransition("idle");
     busy.current = false;
   }, [projectSlug]);
@@ -268,8 +284,23 @@ export function App() {
 
       {view === "editor" && <Editor entered={editorEntered} ratio={editorRatio} importedFileName={editorFileName} onClose={closeEditor} />}
 
+      {view === "project" && previousProject && (
+        <ProjectSheet
+          key={`outgoing-${previousProject.slug}`}
+          project={previousProject}
+          entered
+          onClose={closeProject}
+          onPrev={() => {}}
+          onNext={() => {}}
+          onDuplicate={duplicateTemplate}
+          onSaveTemplate={saveTemplate}
+          transition={outgoingTransition === "exit-left" ? "exit-left" : "idle"}
+        />
+      )}
+
       {view === "project" && project && (
         <ProjectSheet
+          key={`current-${project.slug}`}
           project={project}
           entered={sheetEntered}
           onClose={closeProject}
@@ -297,6 +328,10 @@ export function App() {
 
 function wait(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
+}
+
+function nextFrame() {
+  return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 }
 
 function readLocalArray(key: string): Array<Record<string, unknown>> {
