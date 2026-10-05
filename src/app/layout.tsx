@@ -36,7 +36,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="antialiased bg-black text-white">{children}</body>
+      <head>
+          <style>{`
+            @font-face {
+              font-display: swap;
+              font-family: sans;
+              font-style: normal;
+              font-weight: 200 1000;
+              src: url(${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/fonts/ABCDiatypePlusVariable.woff2) format("woff2-variations");
+            }
+          `}</style>
+        </head>
+        <body className="antialiased bg-black text-white">{children}</body>
     </html>
   );
 }
