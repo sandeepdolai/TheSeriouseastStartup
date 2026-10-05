@@ -10,7 +10,7 @@ export interface CardTexture {
 
 /** loads an mp4 as a looping video texture (or image texture for stills) */
 export async function loadCardTexture(src: string): Promise<CardTexture> {
-  if (/\.(jpe?g|png|webp|avif)$/i.test(src)) {
+  if (/\.(jpe?g|png|webp|avif|svg)$/i.test(src) || src.startsWith("data:image/")) {
     const tex = await new THREE.TextureLoader().loadAsync(src);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.minFilter = THREE.LinearFilter;
