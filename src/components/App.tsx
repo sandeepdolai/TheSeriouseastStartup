@@ -338,7 +338,7 @@ export function App() {
         />
       )}
 
-      <ProfileOverlay open={overlay === "profile"} onMyTemplates={goSaved} />
+      <ProfileOverlay open={overlay === "profile"} onMyProjects={goMy} onMyTemplates={goSaved} />
 
       <Hud
         view={view}
