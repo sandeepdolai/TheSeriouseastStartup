@@ -16,7 +16,8 @@ export interface Project {
   media: string[];
 }
 
-const P = "/projects/";
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+const P = `${BASE_PATH}/projects/`;
 
 export const FEATURED: Project[] = [
   {
@@ -172,7 +173,7 @@ export interface IndexItem {
 
 /** The /full index — every project by name (featured get case studies) */
 export const FULL_INDEX: IndexItem[] = [
-  { title: "The Lookback", href: "/projects/the-lookback", external: false },
+  { title: "The Lookback", href: `${BASE_PATH}/projects/the-lookback`, external: false },
   { title: "DoThings", href: "https://dothingsnyc.com/", external: true },
   { title: "53 West 53", href: "https://53w53.com/", external: true },
   { title: "Ross Mason®", href: "https://iamrossmason.com/", external: true },
@@ -181,15 +182,15 @@ export const FULL_INDEX: IndexItem[] = [
   { title: "111 West 57th Street", href: "https://111w57.com/", external: true },
   { title: "Better Off®", href: "https://betteroff.studio/", external: true },
   { title: "Techspeed", href: "https://techspeed.com/", external: true },
-  { title: "Nathan Riley", href: "/projects/nathan-riley", external: false },
-  { title: "Dogelon Mars", href: "/projects/dogelon-mars", external: false },
-  { title: "Discoveryland", href: "/projects/discoveryland", external: false },
-  { title: "Griflan", href: "/projects/griflan", external: false },
-  { title: "Book of Happiness", href: "/projects/book-of-happiness", external: false },
+  { title: "Nathan Riley", href: `${BASE_PATH}/projects/nathan-riley`, external: false },
+  { title: "Dogelon Mars", href: `${BASE_PATH}/projects/dogelon-mars`, external: false },
+  { title: "Discoveryland", href: `${BASE_PATH}/projects/discoveryland`, external: false },
+  { title: "Griflan", href: `${BASE_PATH}/projects/griflan`, external: false },
+  { title: "Book of Happiness", href: `${BASE_PATH}/projects/book-of-happiness`, external: false },
   { title: "Chris Wilcock", href: "https://www.chriswilcock.co/", external: true },
   { title: "David Lubofsky", href: "https://www.davidlubofsky.com/", external: true },
-  { title: "Casa Di Solare", href: "/projects/casa-di-solare", external: false },
-  { title: "Gil Huybrecht", href: "/projects/gil-huybrecht", external: false },
+  { title: "Casa Di Solare", href: `${BASE_PATH}/projects/casa-di-solare`, external: false },
+  { title: "Gil Huybrecht", href: `${BASE_PATH}/projects/gil-huybrecht`, external: false },
   { title: "Fivepathways", href: "https://fivepathways.com/", external: true },
   { title: "Energy Park", href: "https://energy-park.outpost.design/", external: true },
   { title: "Outpost", href: "https://outpost.design/", external: true },
