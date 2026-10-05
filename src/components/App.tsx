@@ -47,7 +47,6 @@ export function App() {
       (index + (direction < 0 ? 1 : -1) + FEATURED.length) % FEATURED.length
     ].slug;
   }, []);
-  const previousProject = FEATURED.find((p) => p.slug === previousProjectSlug) ?? null;
 
   useEffect(() => {
     const mq = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
