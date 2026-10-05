@@ -13,8 +13,8 @@ import { ProfileOverlay } from "./Overlays";
 
 type View = "home" | "my" | "project" | "import" | "editor";
 type Overlay = "profile" | null;
-type SheetPhase = "idle" | "reset-right" | "enter-center";
-type OutgoingPhase = "idle" | "exit-left";
+type SheetPhase = "idle" | "reset-left" | "reset-right" | "enter-center";
+type OutgoingPhase = "idle" | "exit-left" | "exit-right";
 
 export function App() {
   const folio = useFolio();
@@ -25,6 +25,7 @@ export function App() {
   const [sheetEntered, setSheetEntered] = useState(false);
   const [sheetTransition, setSheetTransition] = useState<SheetPhase>("idle");
   const [outgoingTransition, setOutgoingTransition] = useState<OutgoingPhase>("idle");
+  const [outgoingStartX, setOutgoingStartX] = useState(0);
   const [myEntered, setMyEntered] = useState(false);
   const [importEntered, setImportEntered] = useState(false);
   const [editorEntered, setEditorEntered] = useState(false);
@@ -193,33 +194,27 @@ export function App() {
     busy.current = false;
   }, [folio, projectSlug]);
 
-  const switchProject = useCallback(async (slug: string) => {
+  const switchProject = useCallback(async (slug: string, direction: -1 | 1, startX = 0) => {
     if (busy.current || slug === projectSlug || !projectSlug) return;
     busy.current = true;
 
-    // Keep both sheets mounted. The reference does not replace one page with
-    // another: the current sheet travels left while the next sheet travels in
-    // from the right. This also avoids the visible blank frame on mobile.
     setPreviousProjectSlug(projectSlug);
     setOutgoingTransition("idle");
+    setOutgoingStartX(startX);
     setProjectSlug(slug);
     setSheetEntered(true);
-    setSheetTransition("reset-right");
+    setSheetTransition(direction < 0 ? "reset-right" : "reset-left");
 
-    // Let the browser paint the two starting positions before beginning the
-    // movement. requestAnimationFrame keeps the handoff frame-synchronised.
     await nextFrame();
-    setOutgoingTransition("exit-left");
+    setOutgoingTransition(direction < 0 ? "exit-left" : "exit-right");
     setSheetTransition("enter-center");
 
-    // The reference transition is roughly 12 frames at 30fps. We deliberately
-    // run it as a continuous CSS compositor animation rather than timer steps,
-    // so a 30fps recording does not become a 30fps animation.
     await wait(440);
     setOutgoingTransition("idle");
     setPreviousProjectSlug(null);
     setSheetTransition("idle");
     busy.current = false;
+    void startX;
   }, [projectSlug]);
 
   const duplicateTemplate = useCallback((template: (typeof FEATURED)[number]) => {
@@ -294,7 +289,8 @@ export function App() {
           onNext={() => {}}
           onDuplicate={duplicateTemplate}
           onSaveTemplate={saveTemplate}
-          transition={outgoingTransition === "exit-left" ? "exit-left" : "idle"}
+          transition={outgoingTransition === "exit-left" ? "exit-left" : outgoingTransition === "exit-right" ? "exit-right" : "idle"}
+          initialX={outgoingStartX}
         />
       )}
 
@@ -304,10 +300,16 @@ export function App() {
           project={project}
           entered={sheetEntered}
           onClose={closeProject}
-          onPrev={(slug) => switchProject(slug)}
-          onNext={(slug) => switchProject(slug)}
+          onPrev={(slug) => switchProject(slug, 1)}
+          onNext={(slug) => switchProject(slug, -1)}
           onDuplicate={duplicateTemplate}
           onSaveTemplate={saveTemplate}
+          onSwipe={(direction, startX) => switchProject(
+            direction < 0 ? FEATURED[(FEATURED.findIndex((p) => p.slug === project.slug) + 1) % FEATURED.length].slug : FEATURED[(FEATURED.findIndex((p) => p.slug === project.slug) - 1 + FEATURED.length) % FEATURED.length].slug,
+            direction,
+            startX,
+          )}
+          interactive
           transition={sheetTransition}
         />
       )}
