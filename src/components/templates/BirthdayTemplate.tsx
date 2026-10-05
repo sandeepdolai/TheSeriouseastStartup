@@ -43,10 +43,10 @@ export function BirthdayTemplate({
     inputRef.current?.click();
   };
 
-  const displayMessage = message || MESSAGE;
-  const renderedMessage = recipientName
-    ? `happy birthday, ${recipientName} !!\\n${displayMessage.replace("happy birthday !!\\n", "")}`
-    : displayMessage;
+  const renderedMessage =
+    message || (recipientName
+      ? `happy birthday, ${recipientName} !!\\n${MESSAGE.replace("happy birthday !!\\n", "")}`
+      : MESSAGE);
 
   return (
     <main
