@@ -195,7 +195,7 @@ export function App() {
   }, []);
 
   const duplicateTemplate = useCallback((template: (typeof FEATURED)[number]) => {
-    const id = \`project-\${Date.now()}-\${Math.random().toString(36).slice(2, 8)}\`;
+    const id = `project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const projects = readLocalArray("paper-stish-projects");
     projects.unshift({
       id,
@@ -212,7 +212,7 @@ export function App() {
     const templates = readLocalArray("paper-stish-templates");
     if (templates.some((item) => item.templateSlug === template.slug)) return;
     templates.unshift({
-      id: \`template-\${template.slug}\`,
+      id: `template-${template.slug}`,
       title: template.title,
       thumbnail: template.media[0],
       templateSlug: template.slug,
