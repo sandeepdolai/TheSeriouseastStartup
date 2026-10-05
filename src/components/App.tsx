@@ -250,7 +250,7 @@ export function App() {
         apiRef={carouselApi}
       />
 
-      {view === "my" && <MyProjects entered={myEntered} onCreate={openEditor} />}
+      {view === "my" && <MyProjects entered={myEntered} />}
 
       {view === "import" && <ImportView entered={importEntered} onClose={goHome} onImport={(fileName) => openEditor("1:1", fileName)} />}
 
