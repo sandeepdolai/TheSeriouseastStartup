@@ -418,7 +418,7 @@ export function TemplateEditor({
                 <div className="mt-18 rounded-[15px] border border-white/8 bg-white/[0.025] p-12">
                   <p className="text-10 text-white/38">Your link will look like</p>
                   <p className="mt-5 break-all font-mono text-11 leading-16 text-white/75">
-                    {window.location.origin}/
+                    {typeof window !== "undefined" ? window.location.origin : ""}/
                     {slugPart(username, "your-name")}/
                     {slugPart(viewerName, "their-name")}/
                     1xxxxxxxx
