@@ -5,12 +5,13 @@ import { useFolio } from "@/gl/react";
 import { FEATURED } from "@/lib/projects";
 import { HomeCarousel } from "./HomeCarousel";
 import { Hud } from "./Hud";
-import { MyProjects, type EditorRatio } from "./MyProjects";
+import { MyProjects } from "./MyProjects";
 import { SavedTemplates } from "./SavedTemplates";
+import { TemplateEditor } from "./TemplateEditor";
 import { ProjectSheet } from "./ProjectSheet";
 import { ProfileOverlay } from "./Overlays";
 
-type View = "home" | "my" | "project" | "saved";
+type View = "home" | "my" | "project" | "saved" | "editor";
 type Overlay = "profile" | null;
 
 export function App() {
@@ -21,6 +22,8 @@ export function App() {
   const [sheetEntered, setSheetEntered] = useState(false);
   const [myEntered, setMyEntered] = useState(false);
   const [savedEntered, setSavedEntered] = useState(false);
+  const [editorProjectId, setEditorProjectId] = useState<string | null>(null);
+  const [editorTemplateSlug, setEditorTemplateSlug] = useState<string | null>(null);
   const [carouselHidden, setCarouselHidden] = useState(false);
   const [returning, setReturning] = useState<string | null>(null);
 
@@ -199,6 +202,37 @@ export function App() {
     }, 360);
   }, [swipe]);
 
+
+  const openTemplateEditor = useCallback(async (projectId: string, templateSlug: string) => {
+    if (busy.current) return;
+    busy.current = true;
+    setEditorProjectId(projectId);
+    setEditorTemplateSlug(templateSlug);
+    folio.openHole(window.innerWidth / 2, window.innerHeight / 2);
+    await wait(500);
+    setView("editor");
+    setMyEntered(false);
+    setSavedEntered(false);
+    folio.closeHole();
+    await wait(220);
+    busy.current = false;
+  }, [folio]);
+
+  const closeTemplateEditor = useCallback(async () => {
+    if (busy.current) return;
+    busy.current = true;
+    folio.openHole(window.innerWidth / 2, window.innerHeight / 2);
+    await wait(420);
+    setView("my");
+    setEditorProjectId(null);
+    setEditorTemplateSlug(null);
+    setMyEntered(false);
+    folio.closeHole();
+    await wait(220);
+    setMyEntered(true);
+    busy.current = false;
+  }, [folio]);
+
   const duplicateTemplate = useCallback((template: (typeof FEATURED)[number]) => {
     const id = `project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const projects = readLocalArray("paper-stish-projects");
@@ -210,8 +244,8 @@ export function App() {
       createdAt: new Date().toISOString(),
     });
     localStorage.setItem("paper-stish-projects", JSON.stringify(projects));
-    void wipeTo("my");
-  }, [wipeTo]);
+    void openTemplateEditor(id, template.slug);
+  }, [openTemplateEditor]);
 
   const saveTemplate = useCallback((template: (typeof FEATURED)[number]) => {
     const templates = readLocalArray("paper-stish-templates");
@@ -230,8 +264,9 @@ export function App() {
     if (busy.current) return;
     if (overlay) closeOverlay();
     else if (view === "project") closeProject();
+    else if (view === "editor") closeTemplateEditor();
     else if (view === "my" || view === "saved") wipeTo("home");
-  }, [view, overlay, closeOverlay, closeProject, wipeTo]);
+  }, [view, overlay, closeOverlay, closeProject, closeTemplateEditor, wipeTo]);
 
   const goMy = useCallback(() => {
     if (busy.current || view !== "home" || overlay) return;
@@ -255,9 +290,24 @@ export function App() {
         apiRef={carouselApi}
       />
 
-      {view === "my" && <MyProjects entered={myEntered} />}
+      {view === "my" && (
+        <MyProjects
+          entered={myEntered}
+          onOpenProject={(projectId, templateSlug) => {
+            if (templateSlug) void openTemplateEditor(projectId, templateSlug);
+          }}
+        />
+      )}
 
       {view === "saved" && <SavedTemplates entered={savedEntered} />}
+
+      {view === "editor" && editorProjectId && editorTemplateSlug && (
+        <TemplateEditor
+          projectId={editorProjectId}
+          templateSlug={editorTemplateSlug}
+          onClose={closeTemplateEditor}
+        />
+      )}
 
       {view === "project" && project && swipe.active && swipe.targetSlug && (
         <ProjectSheet
