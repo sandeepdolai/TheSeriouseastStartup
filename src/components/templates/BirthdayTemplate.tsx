@@ -1,7 +1,5 @@
 "use client";
 
-import "https://fonts.googleapis.com/css2?family=Gochi+Hand&family=Patrick+Hand&display=swap";
-
 import {
   forwardRef,
   useEffect,
