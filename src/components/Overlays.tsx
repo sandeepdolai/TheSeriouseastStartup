@@ -178,18 +178,9 @@ export function ProfileOverlay({ open }: OverlayProps) {
         </div>
 
         <div className="px-25 pb-22 text-center s:px-30 s:pb-25">
-          <p className="mb-8 text-10 font-medium tracking-[-0.01em] text-[#000080]">
-            <span>Privacy</span>
-            <span className="text-white/35"> • </span>
-            <span>Terms Of Service</span>
-            <span className="text-white/35"> • </span>
-            <span>Support</span>
-          </p>
+          <p className="label opacity-35 mb-8">Privacy • Terms Of Service • Support</p>
           <p className="text-10 font-medium tracking-[-0.01em] text-white/35">
-            Anyone can make something beautiful for someone they love.
-          </p>
-          <p className="mt-2 text-10 font-medium tracking-[-0.01em] text-white/35">
-            — The Paper Stish Promise
+            Making someone else happy is one of the best feelings.
           </p>
         </div>
       </div>
