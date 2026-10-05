@@ -13,19 +13,13 @@ import { ProfileOverlay } from "./Overlays";
 
 type View = "home" | "my" | "project" | "import" | "editor";
 type Overlay = "profile" | null;
-type SheetPhase = "idle" | "reset-left" | "reset-right" | "enter-center";
-type OutgoingPhase = "idle" | "exit-left" | "exit-right";
 
 export function App() {
   const folio = useFolio();
   const [view, setView] = useState<View>("home");
   const [projectSlug, setProjectSlug] = useState<string | null>(null);
-  const [previousProjectSlug, setPreviousProjectSlug] = useState<string | null>(null);
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [sheetEntered, setSheetEntered] = useState(false);
-  const [sheetTransition, setSheetTransition] = useState<SheetPhase>("idle");
-  const [outgoingTransition, setOutgoingTransition] = useState<OutgoingPhase>("idle");
-  const [outgoingStartX, setOutgoingStartX] = useState(0);
   const [myEntered, setMyEntered] = useState(false);
   const [importEntered, setImportEntered] = useState(false);
   const [editorEntered, setEditorEntered] = useState(false);
@@ -38,6 +32,21 @@ export function App() {
   const carouselApi = useRef<{ center: (slug: string) => void }>({ center: () => {} });
 
   const project = FEATURED.find((p) => p.slug === projectSlug) ?? null;
+  const [swipe, setSwipe] = useState<{
+    active: boolean;
+    phase: "idle" | "drag" | "commit";
+    direction: -1 | 1 | null;
+    targetSlug: string | null;
+    x: number;
+  }>({ active: false, phase: "idle", direction: null, targetSlug: null, x: 0 });
+
+  const adjacentSlug = useCallback((slug: string, direction: -1 | 1) => {
+    const index = FEATURED.findIndex((item) => item.slug === slug);
+    if (index < 0) return null;
+    return FEATURED[
+      (index + (direction < 0 ? 1 : -1) + FEATURED.length) % FEATURED.length
+    ].slug;
+  }, []);
   const previousProject = FEATURED.find((p) => p.slug === previousProjectSlug) ?? null;
 
   useEffect(() => {
@@ -145,15 +154,13 @@ export function App() {
           mounted = true;
           setView("project");
           setProjectSlug(slug);
-          setPreviousProjectSlug(null);
-          setSheetEntered(true);
+                    setSheetEntered(true);
         }
       });
       if (!mounted) {
         setView("project");
         setProjectSlug(slug);
-        setPreviousProjectSlug(null);
-        setSheetEntered(true);
+                setSheetEntered(true);
       }
       entry.mesh.visible = false;
       entry.flying = false;
@@ -161,8 +168,7 @@ export function App() {
       folio.closeHole();
       setView("project");
       setProjectSlug(slug);
-      setPreviousProjectSlug(null);
-      setSheetEntered(false);
+            setSheetEntered(false);
       await wait(60);
       setSheetEntered(true);
     }
@@ -177,8 +183,7 @@ export function App() {
     await wait(260);
     setView("home");
     setProjectSlug(null);
-    setPreviousProjectSlug(null);
-    setReturning(slug);
+        setReturning(slug);
     const entry = slug ? folio.cards.find((c) => c.slug === slug) : null;
     if (entry) {
       entry.mesh.visible = true;
@@ -194,28 +199,40 @@ export function App() {
     busy.current = false;
   }, [folio, projectSlug]);
 
-  const switchProject = useCallback(async (slug: string, direction: -1 | 1, startX = 0) => {
-    if (busy.current || slug === projectSlug || !projectSlug) return;
-    busy.current = true;
-
-    setPreviousProjectSlug(projectSlug);
-    setOutgoingTransition("idle");
-    setOutgoingStartX(startX);
+  const switchProject = useCallback((slug: string) => {
+    if (busy.current || slug === projectSlug) return;
     setProjectSlug(slug);
+    setSwipe({ active: false, phase: "idle", direction: null, targetSlug: null, x: 0 });
     setSheetEntered(true);
-    setSheetTransition(direction < 0 ? "reset-right" : "reset-left");
-
-    await nextFrame();
-    setOutgoingTransition(direction < 0 ? "exit-left" : "exit-right");
-    setSheetTransition("enter-center");
-
-    await wait(440);
-    setOutgoingTransition("idle");
-    setPreviousProjectSlug(null);
-    setSheetTransition("idle");
-    busy.current = false;
-    void startX;
   }, [projectSlug]);
+
+  const beginSheetSwipe = useCallback((direction: -1 | 1) => {
+    if (busy.current || !projectSlug || swipe.active) return;
+    const targetSlug = adjacentSlug(projectSlug, direction);
+    if (!targetSlug) return;
+    setSwipe({ active: true, phase: "drag", direction, targetSlug, x: 0 });
+  }, [adjacentSlug, projectSlug, swipe.active]);
+
+  const moveSheetSwipe = useCallback((x: number) => {
+    if (!swipe.active) return;
+    setSwipe((s) => ({ ...s, x }));
+  }, [swipe.active]);
+
+  const cancelSheetSwipe = useCallback(() => {
+    setSwipe({ active: false, phase: "idle", direction: null, targetSlug: null, x: 0 });
+  }, []);
+
+  const commitSheetSwipe = useCallback((direction: -1 | 1) => {
+    if (!swipe.active || swipe.direction !== direction || !swipe.targetSlug || busy.current) return;
+    busy.current = true;
+    const targetSlug = swipe.targetSlug;
+    setSwipe((s) => ({ ...s, phase: "commit", x: direction < 0 ? -window.innerWidth : window.innerWidth }));
+    window.setTimeout(() => {
+      setProjectSlug(targetSlug);
+      setSwipe({ active: false, phase: "idle", direction: null, targetSlug: null, x: 0 });
+      busy.current = false;
+    }, 330);
+  }, [swipe]);
 
   const duplicateTemplate = useCallback((template: (typeof FEATURED)[number]) => {
     const id = `project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -279,18 +296,20 @@ export function App() {
 
       {view === "editor" && <Editor entered={editorEntered} ratio={editorRatio} importedFileName={editorFileName} onClose={closeEditor} />}
 
-      {view === "project" && previousProject && (
+      {view === "project" && project && swipe.active && swipe.targetSlug && (
         <ProjectSheet
-          key={`outgoing-${previousProject.slug}`}
-          project={previousProject}
+          key={`incoming-${swipe.targetSlug}`}
+          project={FEATURED.find((item) => item.slug === swipe.targetSlug)!}
           entered
+          incoming
+          swipePhase={swipe.phase}
+          swipeDirection={swipe.direction!}
+          swipeX={swipe.x}
           onClose={closeProject}
-          onPrev={() => {}}
-          onNext={() => {}}
+          onPrev={(slug) => switchProject(slug)}
+          onNext={(slug) => switchProject(slug)}
           onDuplicate={duplicateTemplate}
           onSaveTemplate={saveTemplate}
-          transition={outgoingTransition === "exit-left" ? "exit-left" : outgoingTransition === "exit-right" ? "exit-right" : "idle"}
-          initialX={outgoingStartX}
         />
       )}
 
@@ -299,18 +318,19 @@ export function App() {
           key={`current-${project.slug}`}
           project={project}
           entered={sheetEntered}
+          swipePhase={swipe.phase}
+          swipeDirection={swipe.direction}
+          swipeX={swipe.x}
+          onSwipeStart={beginSheetSwipe}
+          onSwipeMove={moveSheetSwipe}
+          onSwipeCancel={cancelSheetSwipe}
+          onSwipeCommit={commitSheetSwipe}
           onClose={closeProject}
-          onPrev={(slug) => switchProject(slug, 1)}
-          onNext={(slug) => switchProject(slug, -1)}
+          onPrev={(slug) => switchProject(slug)}
+          onNext={(slug) => switchProject(slug)}
           onDuplicate={duplicateTemplate}
           onSaveTemplate={saveTemplate}
-          onSwipe={(direction, startX) => switchProject(
-            direction < 0 ? FEATURED[(FEATURED.findIndex((p) => p.slug === project.slug) + 1) % FEATURED.length].slug : FEATURED[(FEATURED.findIndex((p) => p.slug === project.slug) - 1 + FEATURED.length) % FEATURED.length].slug,
-            direction,
-            startX,
-          )}
           interactive
-          transition={sheetTransition}
         />
       )}
 
