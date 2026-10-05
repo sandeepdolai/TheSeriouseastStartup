@@ -113,7 +113,14 @@ function ProfileAction({
   );
 }
 
-export function ProfileOverlay({ open, onMyTemplates }: OverlayProps & { onMyTemplates?: () => void }) {
+export function ProfileOverlay({
+  open,
+  onMyProjects,
+  onMyTemplates,
+}: OverlayProps & {
+  onMyProjects?: () => void;
+  onMyTemplates?: () => void;
+}) {
   const { ref, visible } = useReveal(open);
 
   return (
@@ -158,7 +165,7 @@ export function ProfileOverlay({ open, onMyTemplates }: OverlayProps & { onMyTem
           </div>
 
           <div data-reveal className="mt-10 flex flex-col gap-8">
-            <ProfileAction icon={<UserIcon />}>My Projects</ProfileAction>
+            <ProfileAction icon={<UserIcon />} onClick={onMyProjects}>My Projects</ProfileAction>
             <ProfileAction onClick={onMyTemplates}>My Templates</ProfileAction>
             <ProfileAction>Manage subscription</ProfileAction>
           </div>
