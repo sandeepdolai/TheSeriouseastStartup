@@ -34,7 +34,7 @@ export function App() {
   const project = FEATURED.find((p) => p.slug === projectSlug) ?? null;
   const [swipe, setSwipe] = useState<{
     active: boolean;
-    phase: "idle" | "drag" | "commit";
+    phase: "idle" | "drag" | "commit" | "cancel";
     direction: -1 | 1 | null;
     targetSlug: string | null;
     x: number;
@@ -218,19 +218,23 @@ export function App() {
   }, [swipe.active]);
 
   const cancelSheetSwipe = useCallback(() => {
-    setSwipe({ active: false, phase: "idle", direction: null, targetSlug: null, x: 0 });
-  }, []);
+    if (!swipe.active || busy.current) return;
+    setSwipe((s) => ({ ...s, phase: "cancel" }));
+    window.setTimeout(() => {
+      setSwipe({ active: false, phase: "idle", direction: null, targetSlug: null, x: 0 });
+    }, 360);
+  }, [swipe.active]);
 
   const commitSheetSwipe = useCallback((direction: -1 | 1) => {
-    if (!swipe.active || swipe.direction !== direction || !swipe.targetSlug || busy.current) return;
+    if (!swipe.active || swipe.phase !== "drag" || swipe.direction !== direction || !swipe.targetSlug || busy.current) return;
     busy.current = true;
     const targetSlug = swipe.targetSlug;
-    setSwipe((s) => ({ ...s, phase: "commit", x: direction < 0 ? -window.innerWidth : window.innerWidth }));
+    setSwipe((s) => ({ ...s, phase: "commit" }));
     window.setTimeout(() => {
       setProjectSlug(targetSlug);
       setSwipe({ active: false, phase: "idle", direction: null, targetSlug: null, x: 0 });
       busy.current = false;
-    }, 330);
+    }, 360);
   }, [swipe]);
 
   const duplicateTemplate = useCallback((template: (typeof FEATURED)[number]) => {
