@@ -153,13 +153,13 @@ export function App() {
           mounted = true;
           setView("project");
           setProjectSlug(slug);
-                    setSheetEntered(true);
+          setSheetEntered(true);
         }
       });
       if (!mounted) {
         setView("project");
         setProjectSlug(slug);
-                setSheetEntered(true);
+        setSheetEntered(true);
       }
       entry.mesh.visible = false;
       entry.flying = false;
@@ -167,7 +167,7 @@ export function App() {
       folio.closeHole();
       setView("project");
       setProjectSlug(slug);
-            setSheetEntered(false);
+      setSheetEntered(false);
       await wait(60);
       setSheetEntered(true);
     }
@@ -182,7 +182,7 @@ export function App() {
     await wait(260);
     setView("home");
     setProjectSlug(null);
-        setReturning(slug);
+    setReturning(slug);
     const entry = slug ? folio.cards.find((c) => c.slug === slug) : null;
     if (entry) {
       entry.mesh.visible = true;
@@ -278,9 +278,10 @@ export function App() {
   }, [view, overlay, wipeTo]);
 
   const goSaved = useCallback(() => {
-    if (busy.current || overlay || (view !== "home" && view !== "my")) return;
+    if (busy.current || (view !== "home" && view !== "my")) return;
+    if (overlay) closeOverlay();
     wipeTo("saved");
-  }, [view, overlay, wipeTo]);
+  }, [view, overlay, closeOverlay, wipeTo]);
 
   return (
     <>
@@ -337,7 +338,7 @@ export function App() {
         />
       )}
 
-      <ProfileOverlay open={overlay === "profile"} />
+      <ProfileOverlay open={overlay === "profile"} onMyTemplates={goSaved} />
 
       <Hud
         view={view}
@@ -353,10 +354,6 @@ export function App() {
 
 function wait(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
-}
-
-function nextFrame() {
-  return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 }
 
 function readLocalArray(key: string): Array<Record<string, unknown>> {
