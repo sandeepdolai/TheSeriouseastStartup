@@ -10,6 +10,8 @@ interface Props {
   onClose: () => void;
   onPrev: (slug: string) => void;
   onNext: (slug: string) => void;
+  onDuplicate: (project: Project) => void;
+  onSaveTemplate: (project: Project) => void;
   entered: boolean;
 }
 
@@ -24,10 +26,20 @@ function wrap(min: number, max: number, value: number) {
   return ((((value - min) % range) + range) % range) + min;
 }
 
-function ArrowIcon({ className }: { className?: string }) {
+function DuplicateIcon({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2.2">
-      <path d="M7 17L17 7M9 7h8v8" strokeLinecap="round" strokeLinejoin="round" />
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2.1">
+      <rect x="8" y="8" width="11" height="11" rx="1.8" />
+      <path d="M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SaveIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2.1">
+      <path d="M5 3h11l3 3v15H5z" strokeLinejoin="round" />
+      <path d="M8 3v6h8V3M8 21v-6h8v6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -36,19 +48,6 @@ function CloseIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2.2">
       <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function TrophyIcon() {
-  return (
-    <svg viewBox="0 0 40 28" className="h-28 w-40 text-[#d9a441]" fill="none" stroke="currentColor" strokeWidth="2">
-      <path
-        d="M10 5h20v6a10 10 0 0 1-20 0V5z"
-        strokeLinejoin="round"
-      />
-      <path d="M10 7H5a5 5 0 0 0 5 5M30 7h5a5 5 0 0 1-5 5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M20 21v-3M14 24h12" strokeLinecap="round" />
     </svg>
   );
 }
@@ -65,7 +64,7 @@ const MEDIA_ASPECTS: Record<string, number[]> = {
   griflan: [1162 / 720, 1022 / 720, 1280 / 642],
 };
 
-export function ProjectSheet({ project, onClose, onPrev, onNext, entered }: Props) {
+export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, onSaveTemplate, entered }: Props) {
   const idx = FEATURED.findIndex((p) => p.slug === project.slug);
   const prev = FEATURED[(idx - 1 + FEATURED.length) % FEATURED.length];
   const next = FEATURED[(idx + 1) % FEATURED.length];
@@ -247,57 +246,7 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, entered }: Prop
           >
             {project.description}
           </div>
-          <div className="mt-30 s:mt-45 flex items-start gap-12" {...reveal(0.34)}>
-            {project.link && (
-              <a
-                className="relative inline-flex items-center rounded-full h-[2em] aspect-square justify-center px-2 bg-black text-white pointer-events-auto transition-transform duration-300 hover:scale-105"
-                data-gl="pill"
-                href={project.link}
-                target="_blank"
-                rel="noopener"
-                aria-label={`Visit ${project.title}`}
-              >
-                <ArrowIcon className="size-[1.05em]" />
-              </a>
-            )}
-            <div className="flex flex-wrap gap-4 s:gap-2">
-              {project.tags.map((tag) =>
-                tag.url ? (
-                  <a
-                    key={tag.title}
-                    className="relative inline-flex items-center rounded-full h-[2em] px-[1.25em] bg-[#eee] text-black pointer-events-auto transition-colors duration-300 hover:bg-[#e2e2e2]"
-                    data-gl="pill"
-                    href={tag.url}
-                    target="_blank"
-                    rel="noopener"
-                  >
-                    <span className="label whitespace-nowrap">{tag.title}</span>
-                  </a>
-                ) : (
-                  <span
-                    key={tag.title}
-                    className="relative inline-flex items-center rounded-full h-[2em] px-[1.25em] bg-[#eee] text-black"
-                    data-gl="pill"
-                  >
-                    <span className="label whitespace-nowrap">{tag.title}</span>
-                  </span>
-                )
-              )}
-              {project.awards > 0 && (
-                <span
-                  className="pointer-events-none flex self-center gap-2"
-                  role="img"
-                  aria-label={`${project.awards} awards`}
-                >
-                  {Array.from({ length: project.awards }).map((_, i) => (
-                    <TrophyIcon key={i} />
-                  ))}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="relative w-full flex-1 min-h-0 overflow-hidden s:w-auto s:flex-none s:h-full">
+ min-h-0 overflow-hidden s:w-auto s:flex-none s:h-full">
           <div
             ref={mediaRef}
             className="flex w-full flex-col items-center gap-y-30 s:gap-y-60 s:w-700 s:shrink-0 pb-80 has-hover:pb-0 will-change-transform"
