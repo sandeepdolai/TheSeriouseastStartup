@@ -9,7 +9,9 @@ interface PageProps {
   }>;
 }
 
-export const dynamic = "force-dynamic";
+export function generateStaticParams() {
+  return [];
+}
 
 export async function generateMetadata({
   params,
