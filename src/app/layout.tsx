@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Jesper Landberg",
+  title: "Paper Stish",
   description:
     "Jesper Landberg, Swedish design engineer, named Awwwards Independent of the Year in 2022 and 2024, building visually rich, motion-driven websites.",
   keywords: [
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Jesper Landberg" }],
   openGraph: {
-    title: "Jesper Landberg",
+    title: "Paper Stish",
     description:
       "Design engineer building visually rich, motion-driven websites. 77 awards — 30× Awwwards, 40× FWA, 3× Webby, 2× Lovie.",
     type: "website",
