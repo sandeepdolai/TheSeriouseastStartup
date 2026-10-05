@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 interface Props {
   entered: boolean;
+  onOpenProject?: (projectId: string, templateSlug: string) => void;
 }
 
 export type EditorRatio = "9:16" | "16:9" | "4:5" | "1:1";
@@ -17,7 +18,7 @@ interface LocalProject {
 
 const STORAGE_KEY = "paper-stish-projects";
 
-export function MyProjects({ entered }: Props) {
+export function MyProjects({ entered, onOpenProject }: Props) {
   const [projects, setProjects] = useState<LocalProject[]>([]);
 
   useEffect(() => {
@@ -58,6 +59,7 @@ export function MyProjects({ entered }: Props) {
               <button
                 key={project.id}
                 type="button"
+                onClick={() => onOpenProject?.(project.id, (project as LocalProject & { templateSlug?: string }).templateSlug ?? "")}
                 className="group relative w-full s:h-[43.5svh] s:max-h-[55rem] s:w-auto flex-none cursor-pointer overflow-hidden rounded-15 s:rounded-20 text-left"
                 style={{
                   aspectRatio: "2048 / 1172",
