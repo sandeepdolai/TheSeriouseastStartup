@@ -62,7 +62,7 @@ export function MyProjects({ entered }: Props) {
                 style={{
                   aspectRatio: "2048 / 1172",
                   animation: entered
-                    ? \`my-project-pop 1.25s cubic-bezier(0.16,1,0.3,1) \${0.1 + index * 0.04}s both\`
+                    ? `my-project-pop 1.25s cubic-bezier(0.16,1,0.3,1) ${0.1 + index * 0.04}s both`
                     : undefined,
                 }}
               >
