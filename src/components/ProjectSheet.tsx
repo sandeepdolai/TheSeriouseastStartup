@@ -52,6 +52,19 @@ function CloseIcon({ className }: { className?: string }) {
   );
 }
 
+function TrophyIcon() {
+  return (
+    <svg viewBox="0 0 40 28" className="h-28 w-40 text-[#d9a441]" fill="none" stroke="currentColor" strokeWidth="2">
+      <path
+        d="M10 5h20v6a10 10 0 0 1-20 0V5z"
+        strokeLinejoin="round"
+      />
+      <path d="M10 7H5a5 5 0 0 0 5 5M30 7h5a5 5 0 0 1-5 5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20 21v-3M14 24h12" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 /** media aspect ratios from the reference project pages */
 const MEDIA_ASPECTS: Record<string, number[]> = {
   "nathan-riley": [2048 / 1172, 1787 / 900, 1798 / 905, 1792 / 904],
@@ -246,7 +259,26 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
           >
             {project.description}
           </div>
- min-h-0 overflow-hidden s:w-auto s:flex-none s:h-full">
+          <div className="mt-30 s:mt-45 flex items-start gap-8" {...reveal(0.34)}>
+            <button
+              type="button"
+              onClick={() => onDuplicate(project)}
+              className="relative inline-flex items-center rounded-full h-[2em] aspect-square justify-center px-2 bg-black text-white pointer-events-auto transition-transform duration-300 hover:scale-105"
+              aria-label={"Duplicate " + project.title}
+            >
+              <DuplicateIcon className="size-[1.05em]" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onSaveTemplate(project)}
+              className="relative inline-flex items-center rounded-full h-[2em] aspect-square justify-center px-2 bg-[#eee] text-black pointer-events-auto transition-transform duration-300 hover:scale-105"
+              aria-label={"Save " + project.title + " to My Templates"}
+            >
+              <SaveIcon className="size-[1.05em]" />
+            </button>
+          </div>
+        </div>
+        <div className="relative w-full flex-1 min-h-0 overflow-hidden s:w-auto s:flex-none s:h-full">
           <div
             ref={mediaRef}
             className="flex w-full flex-col items-center gap-y-30 s:gap-y-60 s:w-700 s:shrink-0 pb-80 has-hover:pb-0 will-change-transform"
