@@ -1,5 +1,7 @@
 "use client";
 
+import "https://fonts.googleapis.com/css2?family=Gochi+Hand&family=Patrick+Hand&display=swap";
+
 import {
   forwardRef,
   useEffect,
@@ -71,9 +73,8 @@ const Handwritten = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
         {...props}
         className={className}
         style={{
-          fontFamily:
-            '"Comic Sans MS", "Bradley Hand", "Segoe Print", cursive',
-          fontWeight: 700,
+          fontFamily: '"Patrick Hand", "Comic Sans MS", cursive',
+          fontWeight: 400,
           color: "#073b91",
           ...style,
         }}
@@ -146,7 +147,9 @@ export function BirthdayTemplate({
           style={{
             transform: "rotate(5deg)",
             fontSize: "clamp(1.55rem, 5vw, 3.7rem)",
-            letterSpacing: "-0.055em",
+            fontFamily: '"Gochi Hand", "Patrick Hand", cursive',
+            fontWeight: 400,
+            letterSpacing: "-0.025em",
             lineHeight: 0.94,
           }}
           title={editable ? "Double-click to edit" : undefined}
@@ -220,8 +223,10 @@ export function BirthdayTemplate({
             }
             className="select-text whitespace-pre-line text-center outline-none"
             style={{
+              fontFamily: '"Patrick Hand", "Comic Sans MS", cursive',
+              fontWeight: 400,
               fontSize: "clamp(1rem, 2.55vw, 1.7rem)",
-              letterSpacing: "-0.045em",
+              letterSpacing: "0.005em",
               lineHeight: 1.47,
             }}
             title={editable ? "Double-click to edit" : undefined}
