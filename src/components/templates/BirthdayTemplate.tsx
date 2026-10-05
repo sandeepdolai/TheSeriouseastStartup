@@ -116,8 +116,7 @@ export function BirthdayTemplate({
     <article
       className="relative min-h-full w-full overflow-x-hidden"
       style={{
-        background:
-          "linear-gradient(180deg, #f1f0e5 0%, #eeece0 48%, #ebe9dc 100%)",
+        background: "#efede2",
       }}
     >
       <PaperTexture />
