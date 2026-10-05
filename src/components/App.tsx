@@ -194,6 +194,33 @@ export function App() {
     busy.current = false;
   }, []);
 
+  const duplicateTemplate = useCallback((template: (typeof FEATURED)[number]) => {
+    const id = \`project-\${Date.now()}-\${Math.random().toString(36).slice(2, 8)}\`;
+    const projects = readLocalArray("paper-stish-projects");
+    projects.unshift({
+      id,
+      title: template.title,
+      thumbnail: template.media[0],
+      templateSlug: template.slug,
+      createdAt: new Date().toISOString(),
+    });
+    localStorage.setItem("paper-stish-projects", JSON.stringify(projects));
+    void openEditor("1:1");
+  }, [openEditor]);
+
+  const saveTemplate = useCallback((template: (typeof FEATURED)[number]) => {
+    const templates = readLocalArray("paper-stish-templates");
+    if (templates.some((item) => item.templateSlug === template.slug)) return;
+    templates.unshift({
+      id: \`template-\${template.slug}\`,
+      title: template.title,
+      thumbnail: template.media[0],
+      templateSlug: template.slug,
+      savedAt: new Date().toISOString(),
+    });
+    localStorage.setItem("paper-stish-templates", JSON.stringify(templates));
+  }, []);
+
   const goHome = useCallback(() => {
     if (busy.current) return;
     if (overlay) closeOverlay();
@@ -236,6 +263,8 @@ export function App() {
           onClose={closeProject}
           onPrev={(slug) => switchProject(slug)}
           onNext={(slug) => switchProject(slug)}
+          onDuplicate={duplicateTemplate}
+          onSaveTemplate={saveTemplate}
         />
       )}
 
@@ -255,4 +284,14 @@ export function App() {
 
 function wait(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
+}
+
+function readLocalArray(key: string): Array<Record<string, unknown>> {
+  try {
+    const raw = localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
