@@ -1,7 +1,6 @@
 "use client";
 
-/* eslint-disable react-hooks/set-state-in-effect */
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ease, tween } from "@/gl/react";
 
 interface OverlayProps {
@@ -43,10 +42,6 @@ function useReveal(open: boolean) {
     } else if (shown || visible) {
       setShown(false);
 
-      // Reverse the same reveal language on close instead of hiding the
-      // content immediately. This keeps the existing Paper Stish transition
-      // feeling continuous and prevents the action buttons from hanging on
-      // screen for a frame after the hole closes.
       parts
         .slice()
         .reverse()
@@ -97,18 +92,19 @@ function SparkIcon() {
   );
 }
 
-function CloseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-20" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
-    <path d="m6 6 12 12M18 6 6 18" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function ProfileAction({ children, icon }: { children: React.ReactNode; icon?: React.ReactNode }) {
+function ProfileAction({
+  children,
+  icon,
+  onClick,
+}: {
+  children: React.ReactNode;
+  icon?: React.ReactNode;
+  onClick?: () => void;
+}) {
   return (
     <button
       type="button"
+      onClick={onClick}
       className="pointer-events-auto flex h-52 w-full items-center justify-center gap-10 rounded-full border border-white/12 px-20 text-white transition-all duration-300 ease-out hover:border-white/25 hover:bg-white/[0.06] active:scale-[0.99]"
     >
       {icon}
@@ -117,7 +113,7 @@ function ProfileAction({ children, icon }: { children: React.ReactNode; icon?: R
   );
 }
 
-export function ProfileOverlay({ open }: OverlayProps) {
+export function ProfileOverlay({ open, onMyTemplates }: OverlayProps & { onMyTemplates?: () => void }) {
   const { ref, visible } = useReveal(open);
 
   return (
@@ -163,7 +159,7 @@ export function ProfileOverlay({ open }: OverlayProps) {
 
           <div data-reveal className="mt-10 flex flex-col gap-8">
             <ProfileAction icon={<UserIcon />}>My Projects</ProfileAction>
-            <ProfileAction>My Templates</ProfileAction>
+            <ProfileAction onClick={onMyTemplates}>My Templates</ProfileAction>
             <ProfileAction>Manage subscription</ProfileAction>
           </div>
 
