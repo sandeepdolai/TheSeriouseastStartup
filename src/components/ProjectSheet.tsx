@@ -13,7 +13,10 @@ interface Props {
   onDuplicate: (project: Project) => void;
   onSaveTemplate: (project: Project) => void;
   entered: boolean;
-  transition?: "idle" | "exit-left" | "reset-right" | "enter-center";
+  transition?: "idle" | "exit-left" | "exit-right" | "reset-left" | "reset-right" | "enter-center";
+  initialX?: number;
+  interactive?: boolean;
+  onSwipe?: (direction: -1 | 1, startX: number) => void;
 }
 
 const OVERSCAN = 0.25;
@@ -74,7 +77,7 @@ const MEDIA_ASPECTS: Record<string, number[]> = {
   griflan: [1162 / 720, 1022 / 720, 1280 / 642],
 };
 
-export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, onSaveTemplate, entered, transition = "idle" }: Props) {
+export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, onSaveTemplate, entered, transition = "idle", initialX = 0, interactive = false, onSwipe }: Props) {
   const idx = FEATURED.findIndex((p) => p.slug === project.slug);
   const prev = FEATURED[(idx - 1 + FEATURED.length) % FEATURED.length];
   const next = FEATURED[(idx + 1) % FEATURED.length];
@@ -86,19 +89,165 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
   const totalRef = useRef(0);
   const [revealed, setRevealed] = useState(false);
   const [wipeVisible, setWipeVisible] = useState(false);
+  const swipeRef = useRef({
+    active: false,
+    horizontal: false,
+    startX: 0,
+    startY: 0,
+    lastX: 0,
+    lastTime: 0,
+    velocityX: 0,
+    pointerId: -1,
+  });
 
   useEffect(() => {
-    if (transition === "exit-left") {
+    if (transition === "exit-left" || transition === "exit-right") {
       setWipeVisible(false);
       const raf = requestAnimationFrame(() => setWipeVisible(true));
       return () => cancelAnimationFrame(raf);
     }
-    if (transition === "reset-right" || transition === "enter-center") {
+    if (
+      transition === "reset-left" ||
+      transition === "reset-right" ||
+      transition === "enter-center"
+    ) {
       setWipeVisible(true);
       return;
     }
     setWipeVisible(false);
   }, [transition]);
+
+  useEffect(() => {
+    const el = sheetRef.current;
+    if (!el || !interactive) return;
+
+    const restore = () => {
+      el.style.transition = "transform 320ms cubic-bezier(0.22,0.75,0.2,1)";
+      el.style.transform = "translate3d(0px,0px,0px) scale(1)";
+      window.setTimeout(() => {
+        if (!swipeRef.current.active && el) {
+          el.style.transition = "";
+        }
+      }, 340);
+    };
+
+    const release = (direction: -1 | 1) => {
+      const width = el.getBoundingClientRect().width || window.innerWidth;
+      const target =
+        direction < 0
+          ? -(window.innerWidth + width * 0.08)
+          : window.innerWidth + width * 0.08;
+
+      el.style.transition = "transform 320ms cubic-bezier(0.16,1,0.3,1)";
+      el.style.transform = `translate3d(${target}px,0px,0px) scale(1)`;
+
+      const startX = swipeRef.current.startX;
+      window.setTimeout(() => onSwipe?.(direction, startX), 325);
+    };
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (transition !== "idle") return;
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("button,a,input,textarea,select,[data-no-swipe]")) return;
+
+      const s = swipeRef.current;
+      s.active = true;
+      s.horizontal = false;
+      s.startX = event.clientX;
+      s.startY = event.clientY;
+      s.lastX = event.clientX;
+      s.lastTime = performance.now();
+      s.velocityX = 0;
+      s.pointerId = event.pointerId;
+
+      try {
+        el.setPointerCapture(event.pointerId);
+      } catch {}
+
+      el.style.transition = "none";
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      const s = swipeRef.current;
+      if (!s.active || s.pointerId !== event.pointerId) return;
+
+      const dx = event.clientX - s.startX;
+      const dy = event.clientY - s.startY;
+      const now = performance.now();
+      const dt = Math.max(8, now - s.lastTime);
+
+      s.velocityX = (event.clientX - s.lastX) / dt;
+      s.lastX = event.clientX;
+      s.lastTime = now;
+
+      if (!s.horizontal) {
+        if (Math.abs(dx) < MOVE_THRESHOLD && Math.abs(dy) < MOVE_THRESHOLD) return;
+
+        if (Math.abs(dx) <= Math.abs(dy)) {
+          s.active = false;
+          s.pointerId = -1;
+          try { el.releasePointerCapture(event.pointerId); } catch {}
+          return;
+        }
+
+        s.horizontal = true;
+      }
+
+      event.preventDefault();
+
+      const width = el.getBoundingClientRect().width || window.innerWidth;
+      const limit = window.innerWidth * 0.92;
+      const resistance = Math.abs(dx) > width * 0.45 ? 0.78 : 0.92;
+      const x = Math.max(-limit, Math.min(limit, dx * resistance));
+
+      el.style.transform = `translate3d(${x}px,0px,0px) scale(1)`;
+    };
+
+    const onPointerUp = (event: PointerEvent) => {
+      const s = swipeRef.current;
+      if (!s.active || s.pointerId !== event.pointerId) return;
+
+      s.active = false;
+      try { el.releasePointerCapture(event.pointerId); } catch {}
+
+      const dx = event.clientX - s.startX;
+      const width = el.getBoundingClientRect().width || window.innerWidth;
+      const threshold = Math.max(76, Math.min(160, width * 0.22));
+      const fastEnough = Math.abs(dx) > 58 && Math.abs(s.velocityX) > 0.8;
+
+      if (s.horizontal && (Math.abs(dx) >= threshold || fastEnough)) {
+        release(dx < 0 ? -1 : 1);
+      } else {
+        restore();
+      }
+
+      s.pointerId = -1;
+      s.horizontal = false;
+    };
+
+    const onPointerCancel = () => {
+      const s = swipeRef.current;
+      if (!s.active) return;
+      s.active = false;
+      s.horizontal = false;
+      s.pointerId = -1;
+      restore();
+    };
+
+    el.addEventListener("pointerdown", onPointerDown);
+    el.addEventListener("pointermove", onPointerMove, { passive: false });
+    el.addEventListener("pointerup", onPointerUp);
+    el.addEventListener("pointercancel", onPointerCancel);
+
+    return () => {
+      el.removeEventListener("pointerdown", onPointerDown);
+      el.removeEventListener("pointermove", onPointerMove);
+      el.removeEventListener("pointerup", onPointerUp);
+      el.removeEventListener("pointercancel", onPointerCancel);
+    };
+  }, [interactive, onSwipe, transition]);
 
   useEffect(() => {
     if (!entered) return;
@@ -236,10 +385,14 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
   });
 
   const outgoingTransform = transition === "exit-left"
-    ? (wipeVisible ? "translateX(calc(-100% - 9rem)) scale(1)" : "translateX(0) scale(1)")
-    : transition === "reset-right"
-      ? "translateX(calc(100% + 9rem)) scale(1)"
-      : transition === "enter-center"
+    ? (wipeVisible ? "translateX(calc(-100% - 9rem)) scale(1)" : `translate3d(${initialX}px,0,0) scale(1)`)
+    : transition === "exit-right"
+      ? (wipeVisible ? "translateX(calc(100% + 9rem)) scale(1)" : `translate3d(${initialX}px,0,0) scale(1)`)
+      : transition === "reset-right"
+        ? "translateX(calc(100% + 9rem)) scale(1)"
+        : transition === "reset-left"
+          ? "translateX(calc(-100% - 9rem)) scale(1)"
+          : transition === "enter-center"
         ? "translateX(0) scale(1)"
         : entered
           ? "translateX(0) scale(1)"
@@ -255,12 +408,19 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
         style={{
           opacity: entered ? 1 : 0,
           transform: outgoingTransform,
-          backgroundColor: transition === "reset-right" || transition === "enter-center" ? "#b7b7b7" : "#fff",
+          backgroundColor:
+            transition === "reset-right" ||
+            transition === "reset-left" ||
+            transition === "enter-center"
+              ? "#b7b7b7"
+              : "#fff",
+          touchAction: interactive ? "pan-y" : undefined,
+          cursor: interactive ? "grab" : undefined,
           transition:
-            transition === "reset-right"
+            (transition === "reset-right" || transition === "reset-left")
               ? "none"
-              : transition === "exit-left"
-                ? "transform 0.38s cubic-bezier(0.16,1,0.3,1)"
+              : transition === "exit-left" || transition === "exit-right"
+                ? "transform 0.32s cubic-bezier(0.16,1,0.3,1)"
                 : transition === "enter-center"
                   ? "transform 0.38s cubic-bezier(0.16,1,0.3,1), background-color 0.30s cubic-bezier(0.16,1,0.3,1)"
                   : "opacity 0.45s cubic-bezier(0.16,1,0.3,1), transform 0.55s cubic-bezier(0.16,1,0.3,1)",
@@ -295,7 +455,7 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
             ))}
           </div>
         </div>
-        {transition !== "idle" && transition !== "exit-left" && (
+        {transition !== "idle" && transition !== "exit-left" && transition !== "exit-right" && (
           <div
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 z-20 rounded-15 s:rounded-20 bg-[#b7b7b7] will-change-transform"
