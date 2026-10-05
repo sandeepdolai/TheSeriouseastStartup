@@ -7,11 +7,10 @@ import { HomeCarousel } from "./HomeCarousel";
 import { Hud } from "./Hud";
 import { MyProjects, type EditorRatio } from "./MyProjects";
 import { SavedTemplates } from "./SavedTemplates";
-import { Editor } from "./Editor";
 import { ProjectSheet } from "./ProjectSheet";
 import { ProfileOverlay } from "./Overlays";
 
-type View = "home" | "my" | "project" | "saved" | "editor";
+type View = "home" | "my" | "project" | "saved";
 type Overlay = "profile" | null;
 
 export function App() {
@@ -22,9 +21,6 @@ export function App() {
   const [sheetEntered, setSheetEntered] = useState(false);
   const [myEntered, setMyEntered] = useState(false);
   const [savedEntered, setSavedEntered] = useState(false);
-  const [editorEntered, setEditorEntered] = useState(false);
-  const [editorRatio, setEditorRatio] = useState<EditorRatio>("1:1");
-  const [editorFileName, setEditorFileName] = useState<string | undefined>();
   const [carouselHidden, setCarouselHidden] = useState(false);
   const [returning, setReturning] = useState<string | null>(null);
 
@@ -103,40 +99,6 @@ export function App() {
     await wait(220);
     if (next === "my") setMyEntered(true);
     if (next === "saved") setSavedEntered(true);
-    busy.current = false;
-  }, [folio]);
-
-  const openEditor = useCallback(async (ratio: EditorRatio, fileName?: string) => {
-    if (busy.current) return;
-    busy.current = true;
-    setEditorRatio(ratio);
-    setEditorFileName(fileName);
-    setEditorEntered(false);
-    folio.openHole(window.innerWidth / 2, window.innerHeight / 2);
-    await wait(500);
-    setView("editor");
-    setMyEntered(false);
-    setSavedEntered(false);
-    await wait(120);
-    folio.closeHole();
-    await wait(220);
-    setEditorEntered(true);
-    busy.current = false;
-  }, [folio]);
-
-  const closeEditor = useCallback(async () => {
-    if (busy.current) return;
-    busy.current = true;
-    setEditorEntered(false);
-    await wait(300);
-    folio.openHole(window.innerWidth / 2, window.innerHeight / 2);
-    await wait(420);
-    setView("my");
-    setEditorFileName(undefined);
-    setMyEntered(false);
-    folio.closeHole();
-    await wait(220);
-    setMyEntered(true);
     busy.current = false;
   }, [folio]);
 
@@ -248,8 +210,8 @@ export function App() {
       createdAt: new Date().toISOString(),
     });
     localStorage.setItem("paper-stish-projects", JSON.stringify(projects));
-    void openEditor("1:1");
-  }, [openEditor]);
+    void wipeTo("my");
+  }, [wipeTo]);
 
   const saveTemplate = useCallback((template: (typeof FEATURED)[number]) => {
     const templates = readLocalArray("paper-stish-templates");
@@ -268,9 +230,8 @@ export function App() {
     if (busy.current) return;
     if (overlay) closeOverlay();
     else if (view === "project") closeProject();
-    else if (view === "editor") closeEditor();
     else if (view === "my" || view === "saved") wipeTo("home");
-  }, [view, overlay, closeOverlay, closeProject, closeEditor, wipeTo]);
+  }, [view, overlay, closeOverlay, closeProject, wipeTo]);
 
   const goMy = useCallback(() => {
     if (busy.current || view !== "home" || overlay) return;
@@ -297,8 +258,6 @@ export function App() {
       {view === "my" && <MyProjects entered={myEntered} />}
 
       {view === "saved" && <SavedTemplates entered={savedEntered} />}
-
-      {view === "editor" && <Editor entered={editorEntered} ratio={editorRatio} importedFileName={editorFileName} onClose={closeEditor} />}
 
       {view === "project" && project && swipe.active && swipe.targetSlug && (
         <ProjectSheet
