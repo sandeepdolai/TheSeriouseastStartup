@@ -222,7 +222,7 @@ export function TemplateEditor({
 
   return (
     <main className="fixed inset-0 z-50 flex min-h-0 flex-col bg-[#0a0a0a] text-white">
-      <header className="relative z-30 flex h-72 shrink-0 items-center justify-between border-b border-white/8 px-15 s:h-82 s:px-25">
+      <header className="relative z-30 grid h-72 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-8 border-b border-white/8 px-15 s:h-82 s:px-25">
         <button
           type="button"
           onClick={onClose}
@@ -232,25 +232,25 @@ export function TemplateEditor({
           <span className="text-22 leading-none">×</span>
         </button>
 
-        <div className="absolute left-1/2 -translate-x-1/2 text-center">
-          <p className="text-15 tracking-[-0.04em]">Paper Stish</p>
-          <p className="mt-2 text-10 text-white/38">
+        <div className="min-w-0 text-center">
+          <p className="truncate text-15 tracking-[-0.04em]">Paper Stish</p>
+          <p className="mt-2 hidden truncate text-10 text-white/38 s:block">
             {project?.title ?? "Template Editor"}
           </p>
         </div>
 
-        <div className="flex items-center gap-8">
+        <div className="flex min-w-0 items-center justify-end gap-6">
           <button
             type="button"
             onClick={save}
-            className="rounded-full border border-white/12 bg-white/5 px-16 py-10 text-12 tracking-[-0.02em] text-white transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98]"
+            className="whitespace-nowrap rounded-full border border-white/12 bg-white/5 px-13 py-10 text-12 tracking-[-0.02em] text-white transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] s:px-16"
           >
             {saved ? "Saved" : "Save"}
           </button>
           <button
             type="button"
             onClick={() => setPublishOpen(true)}
-            className="rounded-full bg-white px-16 py-10 text-12 tracking-[-0.02em] text-black transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98]"
+            className="whitespace-nowrap rounded-full bg-white px-13 py-10 text-12 tracking-[-0.02em] text-black transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] s:px-16"
           >
             Publish
           </button>
