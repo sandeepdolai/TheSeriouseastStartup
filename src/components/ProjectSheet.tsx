@@ -99,7 +99,7 @@ export function ProjectSheet({
   onSwipeMove,
   onSwipeCancel,
   onSwipeCommit,
-}: Props) {{
+}: Props) {
   const idx = FEATURED.findIndex((p) => p.slug === project.slug);
   const prev = FEATURED[(idx - 1 + FEATURED.length) % FEATURED.length];
   const next = FEATURED[(idx + 1) % FEATURED.length];
@@ -182,9 +182,6 @@ export function ProjectSheet({
 
       event.preventDefault();
 
-      // The reference keeps the incoming sheet exactly one sheet-width
-      // behind the finger-driven outgoing sheet, creating the continuous
-      // "two cards handing off" motion.
       const bounded = Math.max(-window.innerWidth, Math.min(window.innerWidth, dx));
       onSwipeMove?.(bounded);
     };
