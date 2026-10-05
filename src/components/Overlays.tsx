@@ -147,7 +147,7 @@ export function ProfileOverlay({ open }: OverlayProps) {
                 <SparkIcon />
               </div>
               <div className="min-w-0">
-                <p className="text-15 leading-17 tracking-[-0.02em]">Free Experience</p>
+                <p className="text-15 leading-17 tracking-[-0.02em]">Free</p>
                 <p className="mt-5 text-12 leading-15 tracking-[-0.01em] text-white/50">
                   Upgrade to unlock the full Paper Stish experience.
                 </p>
@@ -164,7 +164,6 @@ export function ProfileOverlay({ open }: OverlayProps) {
           <div data-reveal className="mt-10 flex flex-col gap-8">
             <ProfileAction icon={<UserIcon />}>My Projects</ProfileAction>
             <ProfileAction>My Templates</ProfileAction>
-            <ProfileAction>My Fonts</ProfileAction>
             <ProfileAction>Manage subscription</ProfileAction>
           </div>
 
@@ -179,8 +178,19 @@ export function ProfileOverlay({ open }: OverlayProps) {
         </div>
 
         <div className="px-25 pb-22 text-center s:px-30 s:pb-25">
-          <p className="label opacity-35 mb-8">Privacy • Terms of Service •</p>
-          <p className="label opacity-35">Your projects stay on your device.</p>
+          <p className="mb-8 text-10 font-medium tracking-[-0.01em] text-[#000080]">
+            <span>Privacy</span>
+            <span className="text-white/35"> • </span>
+            <span>Terms Of Service</span>
+            <span className="text-white/35"> • </span>
+            <span>Support</span>
+          </p>
+          <p className="text-10 font-medium tracking-[-0.01em] text-white/35">
+            Anyone can make something beautiful for someone they love.
+          </p>
+          <p className="mt-2 text-10 font-medium tracking-[-0.01em] text-white/35">
+            — The Paper Stish Promise
+          </p>
         </div>
       </div>
     </div>
