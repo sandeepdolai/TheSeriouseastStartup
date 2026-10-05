@@ -246,7 +246,15 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
           transition: "opacity 0.45s cubic-bezier(0.16,1,0.3,1), transform 0.55s cubic-bezier(0.16,1,0.3,1)",
         }}
       >
-        <div className="flex flex-col items-start s:flex-1 pt-40 s:pt-0 px-15 s:px-0">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-30 bg-[#b7b7b7] will-change-transform"
+          style={{
+            transform: entered ? "translateX(100%)" : "translateX(0%)",
+            transition: "transform 0.42s cubic-bezier(0.16, 1, 0.3, 1)",
+          }}
+        />
+        <div className="relative z-10 flex flex-col items-start s:flex-1 pt-40 s:pt-0 px-15 s:px-0">
           <h1
             className="relative whitespace-nowrap text-35 s:text-45 font-normal leading-none tracking-[-0.05em] text-black"
             {...reveal(0.1)}
