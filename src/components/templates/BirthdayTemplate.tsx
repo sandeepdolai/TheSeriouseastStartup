@@ -218,16 +218,14 @@ export function BirthdayTemplate({
             onInput={(event) =>
               onMessageChange?.(event.currentTarget.innerText)
             }
-            className="select-text whitespace-pre-line text-center outline-none"
+            className="birthday-message select-text whitespace-pre-line text-center outline-none"
             style={{
               fontFamily: '"Patrick Hand", "Comic Sans MS", cursive',
               fontWeight: 400,
               fontSize: "clamp(1rem, 2.55vw, 1.7rem)",
               letterSpacing: "0.005em",
               lineHeight: 1.47,
-              ...(typeof window !== "undefined" && window.innerWidth >= 650
-                ? { fontSize: "clamp(1.45rem, 2.7vw, 2rem)" }
-                : {}),
+
             }}
             title={editable ? "Double-click to edit" : undefined}
           >
