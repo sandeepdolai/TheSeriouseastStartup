@@ -56,17 +56,13 @@ function CloseIcon({ className }: { className?: string }) {
 function TrophyIcon() {
   return (
     <svg viewBox="0 0 40 28" className="h-28 w-40 text-[#d9a441]" fill="none" stroke="currentColor" strokeWidth="2">
-      <path
-        d="M10 5h20v6a10 10 0 0 1-20 0V5z"
-        strokeLinejoin="round"
-      />
+      <path d="M10 5h20v6a10 10 0 0 1-20 0V5z" strokeLinejoin="round" />
       <path d="M10 7H5a5 5 0 0 0 5 5M30 7h5a5 5 0 0 1-5 5" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M20 21v-3M14 24h12" strokeLinecap="round" />
     </svg>
   );
 }
 
-/** media aspect ratios from the reference project pages */
 const MEDIA_ASPECTS: Record<string, number[]> = {
   "nathan-riley": [2048 / 1172, 1787 / 900, 1798 / 905, 1792 / 904],
   "casa-di-solare": [2048 / 1204, 1280 / 596, 1280 / 644],
@@ -97,25 +93,19 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
       const raf = requestAnimationFrame(() => setWipeVisible(true));
       return () => cancelAnimationFrame(raf);
     }
-    if (transition === "reset-right") {
-      setWipeVisible(true);
-      return;
-    }
-    if (transition === "enter-center") {
+    if (transition === "reset-right" || transition === "enter-center") {
       setWipeVisible(true);
       return;
     }
     setWipeVisible(false);
   }, [transition]);
 
-  // enter animation for sheet content
   useEffect(() => {
     if (!entered) return;
     const t = setTimeout(() => setRevealed(true), 60);
     return () => clearTimeout(t);
   }, [entered, project.slug]);
 
-  // measure media items for the virtual scroll
   useEffect(() => {
     const media = mediaRef.current;
     if (!media) return;
@@ -132,11 +122,9 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
     const gap = parseFloat(getComputedStyle(media).rowGap || "0") || 0;
     const first = items[0];
     if (items.length) {
-      totalRef.current =
-        items[items.length - 1].base.bottom + gap - first.base.top - outer.clientHeight;
+      totalRef.current = items[items.length - 1].base.bottom + gap - first.base.top - outer.clientHeight;
     }
     apply(scrollRef.current.a, true);
-     
   }, [project.slug]);
 
   function apply(a: number, force = false) {
@@ -157,7 +145,6 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
     }
   }
 
-  // smooth scroll loop
   useEffect(() => {
     let raf = 0;
     let last = performance.now();
@@ -172,10 +159,8 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-     
   }, [project.slug]);
 
-  // wheel + drag (vertical)
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
       if (e.ctrlKey) return;
@@ -221,9 +206,7 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
       down = false;
       document.documentElement.classList.remove("grabbing");
       if (dragging) {
-        if (e.timeStamp - lastMove < FLING_WINDOW && vel) {
-          scrollRef.current.t += vel * FLING_MULT;
-        }
+        if (e.timeStamp - lastMove < FLING_WINDOW && vel) scrollRef.current.t += vel * FLING_MULT;
         dragging = false;
       }
     };
@@ -252,6 +235,16 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
     },
   });
 
+  const outgoingTransform = transition === "exit-left"
+    ? (wipeVisible ? "translateX(calc(-100% - 9rem)) scale(1)" : "translateX(0) scale(1)")
+    : transition === "reset-right"
+      ? "translateX(calc(100% + 9rem)) scale(1)"
+      : transition === "enter-center"
+        ? "translateX(0) scale(1)"
+        : entered
+          ? "translateX(0) scale(1)"
+          : "scale(0.96)";
+
   return (
     <>
       <div
@@ -261,140 +254,68 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
         className="fixed inset-y-15 s:inset-y-20 inset-x-20 s:inset-x-50 z-20 flex flex-col s:flex-row s:items-start gap-y-40 s:gap-x-100 overflow-hidden rounded-15 s:rounded-20 px-10 s:pt-40 s:pl-40 s:pr-120 bg-white will-change-transform"
         style={{
           opacity: entered ? 1 : 0,
-          transform:
-            transition === "exit-left"
-              ? "translateX(calc(-100% - 9rem)) scale(1)"
-              : transition === "reset-right"
-                ? "translateX(calc(100% + 9rem)) scale(1)"
-                : transition === "enter-center"
-                  ? "translateX(0) scale(1)"
-                  : entered
-                    ? "translateX(0) scale(1)"
-                    : "scale(0.96)",
+          transform: outgoingTransform,
           backgroundColor: transition === "reset-right" || transition === "enter-center" ? "#b7b7b7" : "#fff",
           transition:
             transition === "reset-right"
               ? "none"
               : transition === "exit-left"
-                ? "transform 0.36s cubic-bezier(0.16,1,0.3,1)"
+                ? "transform 0.38s cubic-bezier(0.16,1,0.3,1)"
                 : transition === "enter-center"
-                  ? "transform 0.52s cubic-bezier(0.16,1,0.3,1), background-color 0.45s cubic-bezier(0.16,1,0.3,1)"
+                  ? "transform 0.38s cubic-bezier(0.16,1,0.3,1), background-color 0.30s cubic-bezier(0.16,1,0.3,1)"
                   : "opacity 0.45s cubic-bezier(0.16,1,0.3,1), transform 0.55s cubic-bezier(0.16,1,0.3,1)",
         }}
       >
         <div className="relative z-10 flex flex-col items-start s:flex-1 pt-40 s:pt-0 px-15 s:px-0">
-          <h1
-            className="relative whitespace-nowrap text-35 s:text-45 font-normal leading-none tracking-[-0.05em] text-black"
-            {...reveal(0.1)}
-          >
+          <h1 className="relative whitespace-nowrap text-35 s:text-45 font-normal leading-none tracking-[-0.05em] text-black" {...reveal(0.1)}>
             {project.title}
           </h1>
-          <div
-            className="mt-15 s:mt-20 max-w-[40rem] text-14 s:text-16 tracking-[-0.035em] text-black"
-            {...reveal(0.22)}
-          >
+          <div className="mt-15 s:mt-20 max-w-[40rem] text-14 s:text-16 tracking-[-0.035em] text-black" {...reveal(0.22)}>
             {project.description}
           </div>
           <div className="mt-30 s:mt-45 flex items-start gap-8" {...reveal(0.34)}>
-            <button
-              type="button"
-              onClick={() => onDuplicate(project)}
-              className="relative inline-flex items-center rounded-full h-[2em] aspect-square justify-center px-2 bg-black text-white pointer-events-auto transition-transform duration-300 hover:scale-105"
-              aria-label={"Duplicate " + project.title}
-            >
+            <button type="button" onClick={() => onDuplicate(project)} className="relative inline-flex items-center rounded-full h-[2em] aspect-square justify-center px-2 bg-black text-white pointer-events-auto transition-transform duration-300 hover:scale-105" aria-label={"Duplicate " + project.title}>
               <DuplicateIcon className="size-[1.05em]" />
             </button>
-            <button
-              type="button"
-              onClick={() => onSaveTemplate(project)}
-              className="relative inline-flex items-center rounded-full h-[2em] px-[1.25em] bg-[#eee] text-black pointer-events-auto transition-colors duration-300 hover:bg-[#e2e2e2]"
-              aria-label={"Save " + project.title + " to My Templates"}
-            >
+            <button type="button" onClick={() => onSaveTemplate(project)} className="relative inline-flex items-center rounded-full h-[2em] px-[1.25em] bg-[#eee] text-black pointer-events-auto transition-colors duration-300 hover:bg-[#e2e2e2]" aria-label={"Save " + project.title + " to My Templates"}>
               <span className="label whitespace-nowrap">Save</span>
             </button>
           </div>
         </div>
         <div className="relative w-full flex-1 min-h-0 overflow-hidden s:w-auto s:flex-none s:h-full">
-          <div
-            ref={mediaRef}
-            className="flex w-full flex-col items-center gap-y-30 s:gap-y-60 s:w-700 s:shrink-0 pb-80 has-hover:pb-0 will-change-transform"
-          >
+          <div ref={mediaRef} className="flex w-full flex-col items-center gap-y-30 s:gap-y-60 s:w-700 s:shrink-0 pb-80 has-hover:pb-0 will-change-transform">
             {project.media.map((m, i) => (
-              <div
-                key={`${project.slug}-${i}`}
-                className="w-full flex-none overflow-hidden rounded-10 s:rounded-15"
-                style={{ aspectRatio: `${aspects[i] ?? 16 / 9}` }}
-              >
+              <div key={`${project.slug}-${i}`} className="w-full flex-none overflow-hidden rounded-10 s:rounded-15" style={{ aspectRatio: `${aspects[i] ?? 16 / 9}` }}>
                 {/\.(mp4|webm)$/i.test(m) ? (
-                  <video
-                    src={m}
-                    className="h-full w-full object-cover"
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                  />
+                  <video src={m} className="h-full w-full object-cover" autoPlay muted loop playsInline />
                 ) : (
-                   
                   <img src={m} alt={`${project.title} — media ${i + 1}`} className="h-full w-full object-cover" />
                 )}
               </div>
             ))}
           </div>
         </div>
-        {transition !== "idle" && (
+        {transition !== "idle" && transition !== "exit-left" && (
           <div
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 z-20 rounded-15 s:rounded-20 bg-[#b7b7b7] will-change-transform"
             style={{
-              transform: wipeVisible ? "translateX(0)" : "translateX(calc(100% + 9rem))",
               opacity: transition === "enter-center" ? 0 : 1,
-              transition:
-                transition === "exit-left"
-                  ? "transform 0.36s cubic-bezier(0.16,1,0.3,1)"
-                  : transition === "enter-center"
-                    ? "opacity 0.4s cubic-bezier(0.16,1,0.3,1) 0.25s"
-                    : "none",
+              transition: transition === "enter-center" ? "opacity 0.30s cubic-bezier(0.16,1,0.3,1) 0.08s" : "none",
             }}
           />
         )}
         <div className="size-25 rounded-full border-2 border-solid border-black absolute bottom-15 left-15 s:bottom-30 s:left-30" />
-        <button
-          type="button"
-          onClick={onClose}
-          className="relative inline-flex items-center rounded-full h-[2em] aspect-square justify-center px-2 bg-black text-white pointer-events-auto !absolute !bottom-15 s:!bottom-auto s:!top-30 !right-15 s:!right-30 !size-40 s:!size-45 !p-0 transition-transform duration-300 hover:scale-105"
-          aria-label="Close project"
-        >
+        <button type="button" onClick={onClose} className="relative inline-flex items-center rounded-full h-[2em] aspect-square justify-center px-2 bg-black text-white pointer-events-auto !absolute !bottom-15 s:!bottom-auto s:!top-30 !right-15 s:!right-30 !size-40 s:!size-45 !p-0 transition-transform duration-300 hover:scale-105" aria-label="Close project">
           <CloseIcon className="size-[1.05em]" />
         </button>
       </div>
 
-      {/* related project cards peeking from the edges */}
-      <div
-        className="invisible fixed inset-100 z-20 translate-x-[calc((100%+9rem)*-1)] s:translate-x-[calc((100%+7.5rem)*-1)] rounded-15 s:rounded-20 bg-white opacity-30"
-        data-id={prev.slug}
-        data-gl="related"
-        style={{ visibility: entered ? "visible" : "hidden" }}
-      >
-        <button
-          type="button"
-          onClick={() => onPrev(prev.slug)}
-          className="pointer-events-auto absolute inset-0 -right-25 cursor-pointer"
-          aria-label={`Previous project: ${prev.title}`}
-        />
+      <div className="invisible fixed inset-100 z-20 translate-x-[calc((100%+9rem)*-1)] s:translate-x-[calc((100%+7.5rem)*-1)] rounded-15 s:rounded-20 bg-white opacity-30" data-id={prev.slug} data-gl="related" style={{ visibility: entered ? "visible" : "hidden" }}>
+        <button type="button" onClick={() => onPrev(prev.slug)} className="pointer-events-auto absolute inset-0 -right-25 cursor-pointer" aria-label={`Previous project: ${prev.title}`} />
       </div>
-      <div
-        className="invisible fixed inset-100 z-20 translate-x-[calc(100%+9rem)] s:translate-x-[calc(100%+7.5rem)] rounded-15 s:rounded-20 bg-white opacity-30"
-        data-id={next.slug}
-        data-gl="related"
-        style={{ visibility: entered ? "visible" : "hidden" }}
-      >
-        <button
-          type="button"
-          onClick={() => onNext(next.slug)}
-          className="pointer-events-auto absolute inset-0 -left-25 cursor-pointer"
-          aria-label={`Next project: ${next.title}`}
-        />
+      <div className="invisible fixed inset-100 z-20 translate-x-[calc(100%+9rem)] s:translate-x-[calc(100%+7.5rem)] rounded-15 s:rounded-20 bg-white opacity-30" data-id={next.slug} data-gl="related" style={{ visibility: entered ? "visible" : "hidden" }}>
+        <button type="button" onClick={() => onNext(next.slug)} className="pointer-events-auto absolute inset-0 -left-25 cursor-pointer" aria-label={`Next project: ${next.title}`} />
       </div>
     </>
   );
