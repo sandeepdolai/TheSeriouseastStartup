@@ -284,64 +284,6 @@ export function TemplateEditor({
             </div>
           </section>
 
-          <aside className="hidden">
-            <div className="p-18">
-              <p className="text-13 tracking-[-0.03em]">Edit website</p>
-              <p className="mt-4 text-10 leading-14 text-white/40">
-                Edit the website itself. Nothing here turns it into a photo canvas.
-              </p>
-
-              <div className="mt-20 border-t border-white/8 pt-18">
-                <label className="grid gap-7">
-                  <span className="text-10 text-white/45">Heading</span>
-                  <input
-                    value={heading}
-                    onChange={(event) => setHeading(event.target.value)}
-                    className="w-full rounded-[12px] border border-white/10 bg-white/5 px-11 py-10 text-12 text-white outline-none transition-colors focus:border-white/25"
-                  />
-                </label>
-
-                <label className="mt-14 grid gap-7">
-                  <span className="text-10 text-white/45">Message</span>
-                  <textarea
-                    value={message}
-                    onChange={(event) => setMessage(event.target.value)}
-                    rows={12}
-                    className="w-full resize-y rounded-[12px] border border-white/10 bg-white/5 px-11 py-10 text-12 leading-17 text-white outline-none transition-colors focus:border-white/25"
-                  />
-                </label>
-
-                <div className="mt-14 rounded-[14px] border border-white/8 bg-white/[0.025] p-12">
-                  <div className="flex items-center justify-between gap-10">
-                    <div>
-                      <p className="text-11">Photo #1</p>
-                      <p className="mt-3 text-10 text-white/35">
-                        Replace the photo in the website.
-                      </p>
-                    </div>
-                    <label className="cursor-pointer rounded-full bg-white px-12 py-8 text-10 text-black transition-transform duration-300 hover:scale-[1.02]">
-                      Upload
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(event) => {
-                          choosePhoto(event.target.files?.[0]);
-                          event.currentTarget.value = "";
-                        }}
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                <div className="mt-18 border-t border-white/8 pt-15">
-                  <p className="text-10 leading-15 text-white/35">
-                    In the website preview, double-click the handwritten text to edit it directly.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </aside>
         </div>
       </div>
 
