@@ -269,9 +269,10 @@ export function App() {
   }, [view, overlay, closeOverlay, closeProject, closeTemplateEditor, wipeTo]);
 
   const goMy = useCallback(() => {
-    if (busy.current || view !== "home" || overlay) return;
+    if (busy.current || (view !== "home" && view !== "my")) return;
+    if (overlay) closeOverlay();
     wipeTo("my");
-  }, [view, overlay, wipeTo]);
+  }, [view, overlay, closeOverlay, wipeTo]);
 
   const goSaved = useCallback(() => {
     if (busy.current || (view !== "home" && view !== "my")) return;
