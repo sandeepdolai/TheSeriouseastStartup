@@ -6,12 +6,12 @@ import { FEATURED } from "@/lib/projects";
 import { HomeCarousel } from "./HomeCarousel";
 import { Hud } from "./Hud";
 import { MyProjects, type EditorRatio } from "./MyProjects";
-import { ImportView } from "./ImportView";
+import { SavedTemplates } from "./SavedTemplates";
 import { Editor } from "./Editor";
 import { ProjectSheet } from "./ProjectSheet";
 import { ProfileOverlay } from "./Overlays";
 
-type View = "home" | "my" | "project" | "import" | "editor";
+type View = "home" | "my" | "project" | "saved" | "editor";
 type Overlay = "profile" | null;
 
 export function App() {
@@ -21,7 +21,7 @@ export function App() {
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [sheetEntered, setSheetEntered] = useState(false);
   const [myEntered, setMyEntered] = useState(false);
-  const [importEntered, setImportEntered] = useState(false);
+  const [savedEntered, setSavedEntered] = useState(false);
   const [editorEntered, setEditorEntered] = useState(false);
   const [editorRatio, setEditorRatio] = useState<EditorRatio>("1:1");
   const [editorFileName, setEditorFileName] = useState<string | undefined>();
@@ -90,19 +90,19 @@ export function App() {
     });
   }, [folio]);
 
-  const wipeTo = useCallback(async (next: "my" | "home" | "import") => {
+  const wipeTo = useCallback(async (next: "my" | "home" | "saved") => {
     if (busy.current) return;
     busy.current = true;
     folio.openHole(window.innerWidth / 2, window.innerHeight / 2);
     await wait(500);
     setView(next);
     setMyEntered(false);
-    setImportEntered(false);
+    setSavedEntered(false);
     await wait(120);
     folio.closeHole();
     await wait(220);
     if (next === "my") setMyEntered(true);
-    if (next === "import") setImportEntered(true);
+    if (next === "saved") setSavedEntered(true);
     busy.current = false;
   }, [folio]);
 
@@ -116,7 +116,7 @@ export function App() {
     await wait(500);
     setView("editor");
     setMyEntered(false);
-    setImportEntered(false);
+    setSavedEntered(false);
     await wait(120);
     folio.closeHole();
     await wait(220);
@@ -269,7 +269,7 @@ export function App() {
     if (overlay) closeOverlay();
     else if (view === "project") closeProject();
     else if (view === "editor") closeEditor();
-    else if (view === "my" || view === "import") wipeTo("home");
+    else if (view === "my" || view === "saved") wipeTo("home");
   }, [view, overlay, closeOverlay, closeProject, closeEditor, wipeTo]);
 
   const goMy = useCallback(() => {
@@ -277,9 +277,9 @@ export function App() {
     wipeTo("my");
   }, [view, overlay, wipeTo]);
 
-  const goImport = useCallback(() => {
+  const goSaved = useCallback(() => {
     if (busy.current || overlay || (view !== "home" && view !== "my")) return;
-    wipeTo("import");
+    wipeTo("saved");
   }, [view, overlay, wipeTo]);
 
   return (
@@ -295,7 +295,7 @@ export function App() {
 
       {view === "my" && <MyProjects entered={myEntered} />}
 
-      {view === "import" && <ImportView entered={importEntered} onClose={goHome} onImport={(fileName) => openEditor("1:1", fileName)} />}
+      {view === "saved" && <SavedTemplates entered={savedEntered} />}
 
       {view === "editor" && <Editor entered={editorEntered} ratio={editorRatio} importedFileName={editorFileName} onClose={closeEditor} />}
 
@@ -343,7 +343,7 @@ export function App() {
         view={view}
         overlay={overlay}
         onProfile={() => toggleOverlay("profile")}
-        onImport={goImport}
+        onSaved={goSaved}
         onHome={goHome}
         onMy={goMy}
       />
