@@ -13,6 +13,7 @@ interface Props {
   onDuplicate: (project: Project) => void;
   onSaveTemplate: (project: Project) => void;
   entered: boolean;
+  transition?: "idle" | "exit-left" | "reset-right" | "enter-center";
 }
 
 const OVERSCAN = 0.25;
@@ -77,7 +78,7 @@ const MEDIA_ASPECTS: Record<string, number[]> = {
   griflan: [1162 / 720, 1022 / 720, 1280 / 642],
 };
 
-export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, onSaveTemplate, entered }: Props) {
+export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, onSaveTemplate, entered, transition = "idle" }: Props) {
   const idx = FEATURED.findIndex((p) => p.slug === project.slug);
   const prev = FEATURED[(idx - 1 + FEATURED.length) % FEATURED.length];
   const next = FEATURED[(idx + 1) % FEATURED.length];
@@ -88,6 +89,24 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
   const itemsRef = useRef<{ el: HTMLElement; base: { top: number; bottom: number } }[]>([]);
   const totalRef = useRef(0);
   const [revealed, setRevealed] = useState(false);
+  const [wipeVisible, setWipeVisible] = useState(false);
+
+  useEffect(() => {
+    if (transition === "exit-left") {
+      setWipeVisible(false);
+      const raf = requestAnimationFrame(() => setWipeVisible(true));
+      return () => cancelAnimationFrame(raf);
+    }
+    if (transition === "reset-right") {
+      setWipeVisible(true);
+      return;
+    }
+    if (transition === "enter-center") {
+      setWipeVisible(true);
+      return;
+    }
+    setWipeVisible(false);
+  }, [transition]);
 
   // enter animation for sheet content
   useEffect(() => {
@@ -242,18 +261,27 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
         className="fixed inset-y-15 s:inset-y-20 inset-x-20 s:inset-x-50 z-20 flex flex-col s:flex-row s:items-start gap-y-40 s:gap-x-100 overflow-hidden rounded-15 s:rounded-20 px-10 s:pt-40 s:pl-40 s:pr-120 bg-white will-change-transform"
         style={{
           opacity: entered ? 1 : 0,
-          transform: entered ? "scale(1)" : "scale(0.96)",
-          transition: "opacity 0.45s cubic-bezier(0.16,1,0.3,1), transform 0.55s cubic-bezier(0.16,1,0.3,1)",
+          transform:
+            transition === "exit-left"
+              ? "translateX(calc(-100% - 9rem)) scale(1)"
+              : transition === "reset-right"
+                ? "translateX(calc(100% + 9rem)) scale(1)"
+                : transition === "enter-center"
+                  ? "translateX(0) scale(1)"
+                  : entered
+                    ? "translateX(0) scale(1)"
+                    : "scale(0.96)",
+          backgroundColor: transition === "reset-right" || transition === "enter-center" ? "#b7b7b7" : "#fff",
+          transition:
+            transition === "reset-right"
+              ? "none"
+              : transition === "exit-left"
+                ? "transform 0.36s cubic-bezier(0.16,1,0.3,1)"
+                : transition === "enter-center"
+                  ? "transform 0.52s cubic-bezier(0.16,1,0.3,1), background-color 0.45s cubic-bezier(0.16,1,0.3,1)"
+                  : "opacity 0.45s cubic-bezier(0.16,1,0.3,1), transform 0.55s cubic-bezier(0.16,1,0.3,1)",
         }}
       >
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-30 bg-[#b7b7b7] will-change-transform"
-          style={{
-            transform: entered ? "translateX(100%)" : "translateX(0%)",
-            transition: "transform 0.42s cubic-bezier(0.16, 1, 0.3, 1)",
-          }}
-        />
         <div className="relative z-10 flex flex-col items-start s:flex-1 pt-40 s:pt-0 px-15 s:px-0">
           <h1
             className="relative whitespace-nowrap text-35 s:text-45 font-normal leading-none tracking-[-0.05em] text-black"
@@ -314,6 +342,22 @@ export function ProjectSheet({ project, onClose, onPrev, onNext, onDuplicate, on
             ))}
           </div>
         </div>
+        {transition !== "idle" && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 z-20 rounded-15 s:rounded-20 bg-[#b7b7b7] will-change-transform"
+            style={{
+              transform: wipeVisible ? "translateX(0)" : "translateX(calc(100% + 9rem))",
+              opacity: transition === "enter-center" ? 0 : 1,
+              transition:
+                transition === "exit-left"
+                  ? "transform 0.36s cubic-bezier(0.16,1,0.3,1)"
+                  : transition === "enter-center"
+                    ? "opacity 0.4s cubic-bezier(0.16,1,0.3,1) 0.25s"
+                    : "none",
+            }}
+          />
+        )}
         <div className="size-25 rounded-full border-2 border-solid border-black absolute bottom-15 left-15 s:bottom-30 s:left-30" />
         <button
           type="button"
