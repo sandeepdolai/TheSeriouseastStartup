@@ -7,6 +7,7 @@ export interface PublishedTemplatePayload {
   heading: string;
   message: string;
   photoUrl: string | null;
+  data?: Record<string, string | null>;
   publishedAt: string;
 }
 
@@ -48,6 +49,14 @@ export function decodePublishedPayload(value: string): PublishedTemplatePayload 
       heading: parsed.heading,
       message: parsed.message,
       photoUrl: typeof parsed.photoUrl === "string" ? parsed.photoUrl : null,
+      data:
+        parsed.data && typeof parsed.data === "object"
+          ? Object.fromEntries(
+              Object.entries(parsed.data).filter(
+                ([, value]) => typeof value === "string" || value === null,
+              ),
+            )
+          : undefined,
       publishedAt:
         typeof parsed.publishedAt === "string"
           ? parsed.publishedAt
