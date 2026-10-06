@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { getAccountStorageKey } from "@/lib/accountStorage";
 import {
   BIRTHDAY_DEFAULT_MESSAGE,
@@ -67,6 +67,7 @@ export function TemplateEditor({
   const [publishing, setPublishing] = useState(false);
   const [published, setPublished] = useState<PublishedRecord | null>(null);
   const [copied, setCopied] = useState(false);
+  const [authRequired, setAuthRequired] = useState(false);
   const { data: session, status } = useSession();
 
   const loveTemplate = templateSlug === "love-of-my-life";
@@ -175,6 +176,11 @@ export function TemplateEditor({
   };
 
   const publish = () => {
+    if (status !== "authenticated") {
+      setAuthRequired(true);
+      return;
+    }
+
     const cleanUsername = slugPart(username, "");
     const cleanViewerName = slugPart(viewerName, "");
 
@@ -376,7 +382,38 @@ export function TemplateEditor({
           }}
         >
           <div className="w-full max-w-[470px] rounded-[22px] border border-white/10 bg-[#121212] p-18 shadow-2xl">
-            {!published ? (
+            {authRequired && !published ? (
+              <>
+                <div className="flex items-start justify-between gap-15">
+                  <div>
+                    <p className="text-20 tracking-[-0.05em]">Create your account</p>
+                    <p className="mt-6 text-11 leading-15 text-white/42">
+                      Sign up with Google to publish this website and create your personal link.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPublishOpen(false)}
+                    className="flex size-32 items-center justify-center rounded-full bg-white/7 text-white/65"
+                    aria-label="Close publish dialog"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => signIn("google")}
+                  className="mt-22 flex h-48 w-full items-center justify-center gap-9 rounded-full bg-white text-13 text-black transition-transform duration-300 hover:scale-[1.01] active:scale-[0.99]"
+                >
+                  Continue with Google
+                </button>
+
+                <p className="mt-12 text-center text-10 leading-14 text-white/32">
+                  Your template can be created and edited without an account. An account is only required to publish.
+                </p>
+              </>
+            ) : !published ? (
               <>
                 <div className="flex items-start justify-between gap-15">
                   <div>
