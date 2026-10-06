@@ -6,9 +6,7 @@ const ASSET_BASE =
   "https://raw.githubusercontent.com/sandeepdolai/templateassets/main/";
 
 const LOVE_ASSETS = {
-  background: ASSET_BASE + "ec6103999a9a1153cab168e028555b63.png",
   cats: ASSET_BASE + "file_00000000db28820b8ba26950672162f5.png",
-  frame: ASSET_BASE + "a4061d3351e63fe0fe177d547bd349c0.png",
   tag: ASSET_BASE + "3229e85812cd42b0a87630ac580b562d.png",
   hearts: ASSET_BASE + "204e765506cf4c2d7b789922b4b0ccf8.png",
 };
@@ -30,10 +28,8 @@ interface LoveLifeTemplateProps {
   message?: string;
   photoUrl?: string | null;
   editable?: boolean;
-  onHeadingChange?: (value: string) => void;
   onYearsChange?: (value: string) => void;
   onYearsLabelChange?: (value: string) => void;
-  onSideNoteChange?: (value: string) => void;
   onMessageChange?: (value: string) => void;
   onPhotoChange?: (file: File | undefined) => void;
 }
@@ -46,8 +42,8 @@ const Handwritten = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
         {...props}
         className={className}
         style={{
-          fontFamily: '"Dancing Script", "Gochi Hand", cursive',
-          fontWeight: 600,
+          fontFamily: '"Dancing Script", cursive',
+          fontWeight: 500,
           color: "#8d252a",
           ...style,
         }}
@@ -66,25 +62,15 @@ export function LoveLifeTemplate({
   message = LOVE_DEFAULT_MESSAGE,
   photoUrl = null,
   editable = false,
-  onHeadingChange,
   onYearsChange,
   onYearsLabelChange,
-  onSideNoteChange,
   onMessageChange,
   onPhotoChange,
 }: LoveLifeTemplateProps) {
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const headingRef = useRef<HTMLDivElement>(null);
   const yearsRef = useRef<HTMLDivElement>(null);
   const yearsLabelRef = useRef<HTMLDivElement>(null);
-  const sideNoteRef = useRef<HTMLDivElement>(null);
   const messageRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (headingRef.current && document.activeElement !== headingRef.current) {
-      headingRef.current.innerText = heading;
-    }
-  }, [heading]);
 
   useEffect(() => {
     if (yearsRef.current && document.activeElement !== yearsRef.current) {
@@ -100,12 +86,6 @@ export function LoveLifeTemplate({
       yearsLabelRef.current.innerText = yearsLabel;
     }
   }, [yearsLabel]);
-
-  useEffect(() => {
-    if (sideNoteRef.current && document.activeElement !== sideNoteRef.current) {
-      sideNoteRef.current.innerText = sideNote;
-    }
-  }, [sideNote]);
 
   useEffect(() => {
     if (messageRef.current && document.activeElement !== messageRef.current) {
@@ -132,15 +112,11 @@ export function LoveLifeTemplate({
 
       <div
         className="relative mx-auto w-full max-w-[864px] overflow-hidden"
-        style={{ aspectRatio: "864 / 1536" }}
+        style={{
+          aspectRatio: "864 / 1536",
+          background: "#eee7e3",
+        }}
       >
-        <img
-          src={LOVE_ASSETS.background}
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-        />
-
         <img
           src={LOVE_ASSETS.hearts}
           alt=""
@@ -149,13 +125,9 @@ export function LoveLifeTemplate({
         />
 
         <Handwritten
-          ref={headingRef}
-          contentEditable={editable}
-          suppressContentEditableWarning
-          onInput={(event) => onHeadingChange?.(event.currentTarget.innerText)}
-          className="absolute left-[4%] top-[15%] z-30 w-[38%] select-text leading-[.78] outline-none"
+          className="absolute left-[4%] top-[14.5%] z-30 w-[38%] select-none leading-[.78]"
           style={{
-            fontSize: "clamp(2.4rem, 6.2vw, 5.6rem)",
+            fontSize: "clamp(2.5rem, 6.1vw, 5.6rem)",
             transform: "rotate(-9deg)",
           }}
         >
@@ -166,15 +138,26 @@ export function LoveLifeTemplate({
           src={LOVE_ASSETS.cats}
           alt=""
           aria-hidden="true"
-          className="pointer-events-none absolute right-[1%] top-[4%] z-30 h-auto w-[49%] object-contain"
+          className="pointer-events-none absolute right-[0.5%] top-[4%] z-30 h-auto w-[39%] object-contain"
         />
 
-        <section className="absolute left-[9.5%] top-[27.2%] z-20 w-[81%]">
-          <div className="relative aspect-[700/853]">
+        <section className="absolute left-[9.5%] top-[27.2%] z-20 w-[81.1%]">
+          <div className="relative aspect-[700/853] rounded-[1px] bg-[#7c1b27] shadow-[0_10px_22px_rgba(43,16,20,.07)]">
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 opacity-25"
+              style={{
+                backgroundImage:
+                  "radial-gradient(circle at 17% 22%, rgba(255,255,255,.16) 0 1px, transparent 1.4px), radial-gradient(circle at 73% 64%, rgba(30,0,0,.18) 0 .9px, transparent 1.3px)",
+                backgroundSize: "11px 11px, 15px 15px",
+                mixBlendMode: "soft-light",
+              }}
+            />
+
             <button
               type="button"
               onClick={choosePhoto}
-              className="absolute left-[5.7%] top-[5.6%] z-10 block aspect-square w-[88.3%] overflow-hidden bg-black"
+              className="absolute left-[5.7%] top-[5.8%] z-10 block aspect-square w-[88.3%] overflow-hidden bg-black"
               style={{ cursor: editable ? "pointer" : "default" }}
             >
               {photoUrl ? (
@@ -200,30 +183,7 @@ export function LoveLifeTemplate({
               )}
             </button>
 
-            <img
-              src={LOVE_ASSETS.frame}
-              alt=""
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 z-20 h-full w-full object-fill"
-            />
-
-            <Handwritten
-              ref={sideNoteRef}
-              contentEditable={editable}
-              suppressContentEditableWarning
-              onInput={(event) =>
-                onSideNoteChange?.(event.currentTarget.innerText)
-              }
-              className="absolute right-[-8.3%] top-[25%] z-30 w-[17%] select-text text-center leading-[.92] outline-none"
-              style={{
-                fontSize: "clamp(1.25rem, 3.7vw, 3.1rem)",
-                transform: "rotate(83deg)",
-              }}
-            >
-              {sideNote}
-            </Handwritten>
-
-            <div className="absolute bottom-[8%] left-[5%] z-30 flex items-end text-white">
+            <div className="absolute bottom-[7.4%] left-[4.5%] z-30 flex items-end text-white">
               <Handwritten
                 ref={yearsRef}
                 contentEditable={editable}
@@ -231,12 +191,12 @@ export function LoveLifeTemplate({
                 onInput={(event) =>
                   onYearsChange?.(event.currentTarget.innerText)
                 }
-                className="select-text leading-[.78] outline-none"
+                className="select-text leading-[.72] outline-none"
                 style={{
                   color: "#fff",
                   fontFamily: "Arial, Helvetica, sans-serif",
                   fontWeight: 900,
-                  fontSize: "clamp(5rem, 10vw, 9rem)",
+                  fontSize: "clamp(5rem, 9vw, 8.6rem)",
                 }}
               >
                 {years}
@@ -249,21 +209,32 @@ export function LoveLifeTemplate({
                 onInput={(event) =>
                   onYearsLabelChange?.(event.currentTarget.innerText)
                 }
-                className="mb-[.35rem] ml-[.5rem] select-text whitespace-nowrap outline-none"
+                className="mb-[.25rem] ml-[.7rem] select-text whitespace-nowrap outline-none"
                 style={{
                   color: "#fff",
                   fontFamily: "Arial, Helvetica, sans-serif",
-                  fontWeight: 800,
-                  fontSize: "clamp(1.1rem, 2.8vw, 2.5rem)",
+                  fontWeight: 700,
+                  fontSize: "clamp(1.15rem, 2.55vw, 2.3rem)",
                 }}
               >
                 {yearsLabel}
               </Handwritten>
             </div>
           </div>
+
+          <Handwritten
+            aria-hidden="true"
+            className="absolute right-[-10%] top-[24%] z-40 w-[18%] select-none text-center leading-[.92]"
+            style={{
+              fontSize: "clamp(1.25rem, 3.4vw, 3rem)",
+              transform: "rotate(82deg)",
+            }}
+          >
+            {sideNote}
+          </Handwritten>
         </section>
 
-        <section className="absolute left-[31.5%] top-[76.2%] z-40 w-[55%]">
+        <section className="absolute left-[31.5%] top-[76.2%] z-50 w-[55%]">
           <div className="relative aspect-[3229/1900]">
             <img
               src={LOVE_ASSETS.tag}
@@ -284,9 +255,9 @@ export function LoveLifeTemplate({
                   fontFamily: '"Oswald", "Arial Narrow", sans-serif',
                   fontWeight: 700,
                   color: "#171112",
-                  fontSize: "clamp(.65rem, 1.6vw, 1.3rem)",
+                  fontSize: "clamp(.62rem, 1.55vw, 1.3rem)",
                   lineHeight: 1.2,
-                  letterSpacing: ".015em",
+                  letterSpacing: ".012em",
                 }}
               >
                 {message}
