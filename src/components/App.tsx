@@ -11,7 +11,7 @@ import { SavedTemplates } from "./SavedTemplates";
 import { TemplateEditor } from "./TemplateEditor";
 import { ProjectSheet } from "./ProjectSheet";
 import { ProfileOverlay } from "./Overlays";
-import { getAccountStorageKey } from "@/lib/accountStorage";
+import { getAccountStorageKey, getAccountKey } from "@/lib/accountStorage";
 
 type View = "home" | "my" | "project" | "saved" | "editor";
 type Overlay = "profile" | null;
@@ -20,6 +20,43 @@ export function App() {
   const folio = useFolio();
   const { data: session } = useSession();
   const accountEmail = session?.user?.email ?? null;
+  useEffect(() => {
+    if (!accountEmail) return;
+
+    const accountSuffix = getAccountKey(accountEmail);
+    const migrate = (key: string) => {
+      const guestKey = getAccountStorageKey(key, null);
+      const accountKey = getAccountStorageKey(key, accountEmail);
+      try {
+        const guestRaw = localStorage.getItem(guestKey);
+        if (!guestRaw) return;
+
+        const guest = JSON.parse(guestRaw);
+        const existingRaw = localStorage.getItem(accountKey);
+        const existing = existingRaw ? JSON.parse(existingRaw) : [];
+
+        if (Array.isArray(guest)) {
+          const merged = Array.isArray(existing) ? [...existing] : [];
+          const existingIds = new Set(merged.map((item) => item?.id).filter(Boolean));
+          for (const item of guest) {
+            if (!item?.id || !existingIds.has(item.id)) merged.push(item);
+          }
+          localStorage.setItem(accountKey, JSON.stringify(merged));
+        } else if (key === "paper-stish-username" && typeof guest === "string" && !existingRaw) {
+          localStorage.setItem(accountKey, guest);
+        }
+
+        localStorage.removeItem(guestKey);
+      } catch {
+        // Keep anonymous data untouched if migration fails.
+      }
+    };
+
+    migrate("paper-stish-projects");
+    migrate("paper-stish-templates");
+    migrate("paper-stish-username");
+    void accountSuffix;
+  }, [accountEmail]);
   const [view, setView] = useState<View>("home");
   const [projectSlug, setProjectSlug] = useState<string | null>(null);
   const [overlay, setOverlay] = useState<Overlay>(null);
