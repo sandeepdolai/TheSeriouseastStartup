@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { BirthdayTemplate, BIRTHDAY_DEFAULT_MESSAGE } from "./templates/BirthdayTemplate";
+import { LoveLifeTemplate, LOVE_DEFAULT_MESSAGE } from "./templates/LoveLifeTemplate";
 
 interface Props {
   entered: boolean;
@@ -80,6 +81,15 @@ export function MyProjects({ entered, onOpenProject }: Props) {
                     <BirthdayTemplate
                       heading={project.data?.heading ?? "★ HAPPY BIRTHDAY !!"}
                       message={project.data?.message ?? BIRTHDAY_DEFAULT_MESSAGE}
+                      photoUrl={project.data?.photoUrl ?? null}
+                    />
+                  ) : project.templateSlug === "love-of-my-life" ? (
+                    <LoveLifeTemplate
+                      heading={project.data?.heading ?? "Love of my life"}
+                      years={project.data?.years ?? "2"}
+                      yearsLabel={project.data?.yearsLabel ?? "years with you"}
+                      sideNote={project.data?.sideNote ?? "favorite person"}
+                      message={project.data?.message ?? LOVE_DEFAULT_MESSAGE}
                       photoUrl={project.data?.photoUrl ?? null}
                     />
                   ) : project.thumbnail ? (
