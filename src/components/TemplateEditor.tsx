@@ -126,7 +126,7 @@ export function TemplateEditor({
 
   const save = () => {
     try {
-      const raw = localStorage.getItem("paper-stish-projects");
+      const raw = localStorage.getItem(getAccountStorageKey("paper-stish-projects", session?.user?.email));
       const projects = raw ? JSON.parse(raw) : [];
       if (!Array.isArray(projects)) return;
 
@@ -241,7 +241,7 @@ export function TemplateEditor({
               }
             : item,
         );
-        localStorage.setItem("paper-stish-projects", JSON.stringify(next));
+        localStorage.setItem(getAccountStorageKey("paper-stish-projects", session?.user?.email), JSON.stringify(next));
       }
     } catch {
       // Keep the editor usable if the browser rejects a large publish payload.
