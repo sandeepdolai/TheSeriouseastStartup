@@ -18,7 +18,7 @@ type Overlay = "profile" | null;
 
 export function App() {
   const folio = useFolio();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const accountEmail = session?.user?.email ?? null;
   useEffect(() => {
     if (!accountEmail) return;
