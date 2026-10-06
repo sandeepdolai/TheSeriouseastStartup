@@ -6,6 +6,10 @@ import {
   BirthdayTemplate,
 } from "./templates/BirthdayTemplate";
 import {
+  LOVE_DEFAULT_MESSAGE,
+  LoveLifeTemplate,
+} from "./templates/LoveLifeTemplate";
+import {
   createTemplateId,
   encodePublishedPayload,
   slugPart,
@@ -31,11 +35,16 @@ interface ProjectRecord {
   templateSlug?: string;
   data?: {
     heading?: string;
+    years?: string;
+    yearsLabel?: string;
+    sideNote?: string;
     message?: string;
     photoUrl?: string | null;
     published?: PublishedRecord | null;
   };
 }
+
+const BIRTHDAY_HEADING = "★ HAPPY BIRTHDAY !!";
 
 export function TemplateEditor({
   projectId,
@@ -43,7 +52,10 @@ export function TemplateEditor({
   onClose,
 }: TemplateEditorProps) {
   const [project, setProject] = useState<ProjectRecord | null>(null);
-  const [heading, setHeading] = useState("★ HAPPY BIRTHDAY !!");
+  const [heading, setHeading] = useState(BIRTHDAY_HEADING);
+  const [years, setYears] = useState("2");
+  const [yearsLabel, setYearsLabel] = useState("years with you");
+  const [sideNote, setSideNote] = useState("favorite person");
   const [message, setMessage] = useState(BIRTHDAY_DEFAULT_MESSAGE);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -53,6 +65,8 @@ export function TemplateEditor({
   const [publishing, setPublishing] = useState(false);
   const [published, setPublished] = useState<PublishedRecord | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const loveTemplate = templateSlug === "love-of-my-life";
 
   useEffect(() => {
     try {
@@ -64,9 +78,28 @@ export function TemplateEditor({
 
       if (!current) return;
 
+      const defaults = loveTemplate
+        ? {
+            heading: "Love of my life",
+            years: "2",
+            yearsLabel: "years with you",
+            sideNote: "favorite person",
+            message: LOVE_DEFAULT_MESSAGE,
+          }
+        : {
+            heading: BIRTHDAY_HEADING,
+            years: "2",
+            yearsLabel: "years with you",
+            sideNote: "favorite person",
+            message: BIRTHDAY_DEFAULT_MESSAGE,
+          };
+
       setProject(current);
-      setHeading(current.data?.heading ?? "★ HAPPY BIRTHDAY !!");
-      setMessage(current.data?.message ?? BIRTHDAY_DEFAULT_MESSAGE);
+      setHeading(current.data?.heading ?? defaults.heading);
+      setYears(current.data?.years ?? defaults.years);
+      setYearsLabel(current.data?.yearsLabel ?? defaults.yearsLabel);
+      setSideNote(current.data?.sideNote ?? defaults.sideNote);
+      setMessage(current.data?.message ?? defaults.message);
       setPhotoUrl(current.data?.photoUrl ?? null);
       setPublished(current.data?.published ?? null);
 
@@ -75,7 +108,17 @@ export function TemplateEditor({
     } catch {
       // Local-first editor remains usable if stored data is malformed.
     }
-  }, [projectId]);
+  }, [projectId, loveTemplate]);
+
+  const collectData = () => ({
+    heading,
+    years,
+    yearsLabel,
+    sideNote,
+    message,
+    photoUrl,
+    published,
+  });
 
   const save = () => {
     try {
@@ -84,16 +127,14 @@ export function TemplateEditor({
       if (!Array.isArray(projects)) return;
 
       const updatedAt = new Date().toISOString();
+      const data = collectData();
       const next = projects.map((item) =>
         item?.id === projectId
           ? {
               ...item,
               data: {
                 ...(item.data ?? {}),
-                heading,
-                message,
-                photoUrl,
-                published,
+                ...data,
               },
               updatedAt,
             }
@@ -107,10 +148,7 @@ export function TemplateEditor({
               ...current,
               data: {
                 ...(current.data ?? {}),
-                heading,
-                message,
-                photoUrl,
-                published,
+                ...data,
               },
             }
           : current,
@@ -118,7 +156,7 @@ export function TemplateEditor({
       setSaved(true);
       window.setTimeout(() => setSaved(false), 1400);
     } catch {
-      // Keep the editor responsive when browser storage rejects a write.
+      // Keep the editor responsive when browser storage rejects the write.
     }
   };
 
@@ -151,6 +189,14 @@ export function TemplateEditor({
         heading,
         message,
         photoUrl,
+        data: {
+          heading,
+          years,
+          yearsLabel,
+          sideNote,
+          message,
+          photoUrl,
+        },
         publishedAt,
       });
 
@@ -163,11 +209,7 @@ export function TemplateEditor({
         cleanViewerName +
         "/" +
         templateId;
-      const url =
-        window.location.origin +
-        path +
-        "#data=" +
-        payload;
+      const url = window.location.origin + path + "#data=" + payload;
 
       const record: PublishedRecord = {
         username: cleanUsername,
@@ -182,16 +224,14 @@ export function TemplateEditor({
       const raw = localStorage.getItem("paper-stish-projects");
       const projects = raw ? JSON.parse(raw) : [];
       if (Array.isArray(projects)) {
+        const data = collectData();
         const next = projects.map((item) =>
           item?.id === projectId
             ? {
                 ...item,
                 data: {
                   ...(item.data ?? {}),
-                  heading,
-                  message,
-                  photoUrl,
-                  published: record,
+                  ...data,
                 },
                 updatedAt: publishedAt,
               }
@@ -218,7 +258,8 @@ export function TemplateEditor({
     }
   };
 
-  const templateReady = templateSlug === "birthday-template";
+  const templateReady =
+    templateSlug === "birthday-template" || loveTemplate;
 
   return (
     <main className="fixed inset-0 z-50 flex min-h-0 flex-col bg-[#0a0a0a] text-white">
@@ -262,15 +303,33 @@ export function TemplateEditor({
           <section className="min-h-0 overflow-y-auto overscroll-contain bg-[#111] px-10 py-15 s:px-20 s:py-20">
             <div className="mx-auto w-full max-w-[760px]">
               {templateReady ? (
-                <BirthdayTemplate
-                  editable
-                  heading={heading}
-                  message={message}
-                  photoUrl={photoUrl}
-                  onHeadingChange={setHeading}
-                  onMessageChange={setMessage}
-                  onPhotoChange={choosePhoto}
-                />
+                loveTemplate ? (
+                  <LoveLifeTemplate
+                    editable
+                    heading={heading}
+                    years={years}
+                    yearsLabel={yearsLabel}
+                    sideNote={sideNote}
+                    message={message}
+                    photoUrl={photoUrl}
+                    onHeadingChange={setHeading}
+                    onYearsChange={setYears}
+                    onYearsLabelChange={setYearsLabel}
+                    onSideNoteChange={setSideNote}
+                    onMessageChange={setMessage}
+                    onPhotoChange={choosePhoto}
+                  />
+                ) : (
+                  <BirthdayTemplate
+                    editable
+                    heading={heading}
+                    message={message}
+                    photoUrl={photoUrl}
+                    onHeadingChange={setHeading}
+                    onMessageChange={setMessage}
+                    onPhotoChange={choosePhoto}
+                  />
+                )
               ) : (
                 <div className="flex min-h-[70svh] items-center justify-center rounded-[2rem] border border-white/8 bg-[#151515] text-center">
                   <div>
@@ -283,7 +342,6 @@ export function TemplateEditor({
               )}
             </div>
           </section>
-
         </div>
       </div>
 
@@ -363,7 +421,7 @@ export function TemplateEditor({
                     {typeof window !== "undefined" ? window.location.origin : ""}/
                     {slugPart(username, "your-name")}/
                     {slugPart(viewerName, "their-name")}/
-                    1xxxxxxxx
+                    1xx
                   </p>
                 </div>
 
