@@ -19,6 +19,9 @@ interface LocalProject {
   templateSlug?: string;
   data?: {
     heading?: string;
+    years?: string;
+    yearsLabel?: string;
+    sideNote?: string;
     message?: string;
     photoUrl?: string | null;
   };
