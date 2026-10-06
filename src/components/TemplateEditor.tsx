@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { getAccountStorageKey } from "@/lib/accountStorage";
 import {
   BIRTHDAY_DEFAULT_MESSAGE,
   BirthdayTemplate,
@@ -65,12 +67,14 @@ export function TemplateEditor({
   const [publishing, setPublishing] = useState(false);
   const [published, setPublished] = useState<PublishedRecord | null>(null);
   const [copied, setCopied] = useState(false);
+  const { data: session, status } = useSession();
 
   const loveTemplate = templateSlug === "love-of-my-life";
 
   useEffect(() => {
+    if (status === "loading") return;
     try {
-      const raw = localStorage.getItem("paper-stish-projects");
+      const raw = localStorage.getItem(getAccountStorageKey("paper-stish-projects", session?.user?.email));
       const projects = raw ? JSON.parse(raw) : [];
       const current = Array.isArray(projects)
         ? projects.find((item) => item?.id === projectId)
@@ -103,12 +107,12 @@ export function TemplateEditor({
       setPhotoUrl(current.data?.photoUrl ?? null);
       setPublished(current.data?.published ?? null);
 
-      const savedUsername = localStorage.getItem("paper-stish-username");
+      const savedUsername = localStorage.getItem(getAccountStorageKey("paper-stish-username", session?.user?.email));
       if (savedUsername) setUsername(savedUsername);
     } catch {
       // Local-first editor remains usable if stored data is malformed.
     }
-  }, [projectId, loveTemplate]);
+  }, [projectId, loveTemplate, session?.user?.email, status]);
 
   const collectData = () => ({
     heading,
@@ -141,7 +145,7 @@ export function TemplateEditor({
           : item,
       );
 
-      localStorage.setItem("paper-stish-projects", JSON.stringify(next));
+      localStorage.setItem(getAccountStorageKey("paper-stish-projects", session?.user?.email), JSON.stringify(next));
       setProject((current) =>
         current
           ? {
@@ -178,7 +182,7 @@ export function TemplateEditor({
 
     try {
       setPublishing(true);
-      localStorage.setItem("paper-stish-username", username.trim());
+      localStorage.setItem(getAccountStorageKey("paper-stish-username", session?.user?.email), username.trim());
 
       const templateId = createTemplateId();
       const publishedAt = new Date().toISOString();
