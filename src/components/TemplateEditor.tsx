@@ -312,7 +312,6 @@ export function TemplateEditor({
                     sideNote={sideNote}
                     message={message}
                     photoUrl={photoUrl}
-                    onHeadingChange={setHeading}
                     onYearsChange={setYears}
                     onYearsLabelChange={setYearsLabel}
                     onSideNoteChange={setSideNote}
