@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { getAccountStorageKey } from "@/lib/accountStorage";
 
 interface Props {
   entered: boolean;
@@ -18,17 +20,19 @@ const STORAGE_KEY = "paper-stish-templates";
 
 export function SavedTemplates({ entered }: Props) {
   const [templates, setTemplates] = useState<SavedTemplate[]>([]);
+  const { data: session, status } = useSession();
 
   useEffect(() => {
+    if (status === "loading") return;
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = localStorage.getItem(getAccountStorageKey(STORAGE_KEY, session?.user?.email));
       if (!saved) return;
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed)) setTemplates(parsed);
     } catch {
       // Saved template data is optional; keep the empty state usable.
     }
-  }, []);
+  }, [session?.user?.email, status]);
 
   return (
     <main className="fixed inset-0 z-20 overflow-hidden" data-gl-shield="">
