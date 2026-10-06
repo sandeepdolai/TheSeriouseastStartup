@@ -23,7 +23,6 @@ export function App() {
   useEffect(() => {
     if (!accountEmail) return;
 
-    const accountSuffix = getAccountKey(accountEmail);
     const migrate = (key: string) => {
       const guestKey = getAccountStorageKey(key, null);
       const accountKey = getAccountStorageKey(key, accountEmail);
@@ -55,7 +54,6 @@ export function App() {
     migrate("paper-stish-projects");
     migrate("paper-stish-templates");
     migrate("paper-stish-username");
-    void accountSuffix;
   }, [accountEmail]);
   const [view, setView] = useState<View>("home");
   const [projectSlug, setProjectSlug] = useState<string | null>(null);
