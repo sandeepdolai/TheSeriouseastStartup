@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { BirthdayTemplate } from "@/components/templates/BirthdayTemplate";
+import { LoveLifeTemplate } from "@/components/templates/LoveLifeTemplate";
 import { decodePublishedPayload, type PublishedTemplatePayload } from "@/lib/publish";
 
 export function PublishedTemplateViewer() {
@@ -49,6 +50,20 @@ export function PublishedTemplateViewer() {
         heading={payload.heading}
         message={payload.message}
         photoUrl={payload.photoUrl}
+      />
+    );
+  }
+
+
+  if (payload.templateSlug === "love-of-my-life") {
+    return (
+      <LoveLifeTemplate
+        heading={payload.data?.heading ?? "Love of my life"}
+        years={payload.data?.years ?? "2"}
+        yearsLabel={payload.data?.yearsLabel ?? "years with you"}
+        sideNote={payload.data?.sideNote ?? "favorite person"}
+        message={payload.data?.message ?? payload.message}
+        photoUrl={payload.data?.photoUrl ?? payload.photoUrl}
       />
     );
   }
