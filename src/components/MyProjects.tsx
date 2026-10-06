@@ -92,10 +92,8 @@ export function MyProjects({ entered, onOpenProject }: Props) {
                     />
                   ) : project.templateSlug === "love-of-my-life" ? (
                     <LoveLifeTemplate
-                      heading={project.data?.heading ?? "Love of my life"}
                       years={project.data?.years ?? "2"}
-                      yearsLabel={project.data?.yearsLabel ?? "years with you"}
-                      sideNote={project.data?.sideNote ?? "favorite person"}
+                      yearsLabel={project.data?.yearsLabel ?? "yers with you"}
                       message={project.data?.message ?? LOVE_DEFAULT_MESSAGE}
                       photoUrl={project.data?.photoUrl ?? null}
                     />
