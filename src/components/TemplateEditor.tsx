@@ -68,6 +68,7 @@ export function TemplateEditor({
   const [published, setPublished] = useState<PublishedRecord | null>(null);
   const [copied, setCopied] = useState(false);
   const [authRequired, setAuthRequired] = useState(false);
+  const [authRequiredAction, setAuthRequiredAction] = useState<"save" | "publish" | null>(null);
   const { data: session, status } = useSession();
 
   const loveTemplate = templateSlug === "love-of-my-life";
@@ -126,6 +127,12 @@ export function TemplateEditor({
   });
 
   const save = () => {
+    if (status !== "authenticated") {
+      setAuthRequiredAction("save");
+      setAuthRequired(true);
+      return;
+    }
+
     try {
       const raw = localStorage.getItem(getAccountStorageKey("paper-stish-projects", session?.user?.email));
       const projects = raw ? JSON.parse(raw) : [];
@@ -177,6 +184,7 @@ export function TemplateEditor({
 
   const publish = () => {
     if (status !== "authenticated") {
+      setAuthRequiredAction("publish");
       setAuthRequired(true);
       return;
     }
@@ -388,14 +396,18 @@ export function TemplateEditor({
                   <div>
                     <p className="text-20 tracking-[-0.05em]">Create your account</p>
                     <p className="mt-6 text-11 leading-15 text-white/42">
-                      Sign up with Google to publish this website and create your personal link.
+                      {authRequiredAction === "save" ? "Sign up with Google to save this project to your Paper Stish account." : "Sign up with Google to publish this website and create your personal link."}
                     </p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => setPublishOpen(false)}
+                    onClick={() => {
+                      setPublishOpen(false);
+                      setAuthRequired(false);
+                      setAuthRequiredAction(null);
+                    }}
                     className="flex size-32 items-center justify-center rounded-full bg-white/7 text-white/65"
-                    aria-label="Close publish dialog"
+                    aria-label="Close account dialog"
                   >
                     ×
                   </button>
