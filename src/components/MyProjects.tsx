@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { getAccountStorageKey } from "@/lib/accountStorage";
 import { BirthdayTemplate, BIRTHDAY_DEFAULT_MESSAGE } from "./templates/BirthdayTemplate";
 import { LoveLifeTemplate, LOVE_DEFAULT_MESSAGE } from "./templates/LoveLifeTemplate";
 
@@ -31,17 +33,19 @@ const STORAGE_KEY = "paper-stish-projects";
 
 export function MyProjects({ entered, onOpenProject }: Props) {
   const [projects, setProjects] = useState<LocalProject[]>([]);
+  const { data: session, status } = useSession();
 
   useEffect(() => {
+    if (status === "loading") return;
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const saved = localStorage.getItem(getAccountStorageKey(STORAGE_KEY, session?.user?.email));
       if (!saved) return;
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed)) setProjects(parsed);
     } catch {
       // Local project data is optional; keep the empty state usable.
     }
-  }, []);
+  }, [session?.user?.email, status]);
 
   return (
     <main className="fixed inset-0 z-20 overflow-hidden" data-gl-shield="">
