@@ -34,3 +34,27 @@ Stage Summary (KEY SPEC):
 - Full index: centered flex-wrap max-w-90rem gap-x-24 gap-y-6 px-20; links text-30 leading-none tracking-.05em; dot bullets 0.8rem after each; 23 items.
 - Mobile: sheet inset-y-15 inset-x-20 rounded-15 px-10, col layout, title text-35, close btn bottom-right, gap-y-40.
 - Cursor ball: white glowing orb follows mouse with trail (amp by speed), hidden on touch.
+
+---
+Task ID: 2
+Agent: main (Z.ai Code)
+Task: Integrate the supplied "2 yers with you" HTML template from sandeepdolai/templateassets into Paper Stish, replacing the inaccurate "Love of My Life" implementation
+
+Work Log:
+- Cloned templateassets repo; parsed "2 yers with you (1).html" (source of truth) — extracted full CSS spec, embedded SVG displacement filters (rough/rough-light), note-text autofit JS, photo-upload JS, and 6 embedded base64 webp assets
+- Identified all assets: paper texture (736x1472), red polaroid frame (1016x1215), cats (736x693), "love of my life" sticker (695x436), "Favorite person" sticker (900x516), twine bow (664x330); mapped standalone PNGs in the repo to the same assets via pixel comparison + VLM
+- Root-caused the broken template: the 6 webp assets referenced by LoveLifeTemplate.tsx and love-of-my-life.svg were never committed to public/templates/ — installed all 6 extracted webps with the exact expected filenames
+- Rewrote src/components/templates/LoveLifeTemplate.tsx as an exact conversion of the HTML: root-level paper texture + radial-gradient layering (background-size var(--w) auto / position 50% calc(var(--w) * -0.111)), --w stage formula min(100%, max(480px, 56.28vh)), no stage overflow clipping (rotated stickers overlap the paper like the original), safe-area insets, Oswald body font, photo focus-visible outline, note autofit effect with ResizeObserver, useId-based SVG filter ids, contentEditable wiring preserved for editor
+- Added fitToContainer prop (container-query cqh-based fit) for My Projects card previews; MyProjects wrapper div gets container-type: size
+- Generated pixel-accurate 1080x1550 thumbnail by Playwright-screenshotting the ORIGINAL HTML at 2x and downsampling to public/templates/love-of-my-life.webp (110KB); updated projects.ts media path
+- ProjectSheet: added "love-of-my-life": [1080/1550] to MEDIA_ASPECTS (was falling back to 16:9 crop) and fixed the virtual scroll for single-item media lists (circular wrap math was invalid for one tall item — clamps instead; multi-item wrap behavior untouched)
+- TemplateEditor: fixed publish() reading the wrong localStorage key ("paper-stish-projects" without account suffix) which erased the user's projects on publish — now reads the account-scoped key like save()
+- Verified with agent-browser: template library card (WebGL texture), Template View, account gate on Duplicate/Save, editor text editing (years/caption/message), photo upload, Save persistence, Publish link generation, public viewer (no app UI, scrolls naturally), My Projects fit-mode card, Saved Templates, birthday template regression (its sheet sliver bug fixed by the shared clamp), nathan-riley multi-item sheet regression
+- Fidelity proof: screenshot-diffed the React implementation against the original HTML at 390x844, 768x1024, 844x390 (landscape, 480px floor + scroll), 1280x800, 1920x1080 — ALL byte-identical (max channel diff 0)
+- Ran bun run lint (only 4 pre-existing set-state-in-effect errors in untouched files remain), tsc --noEmit (0 errors in changed files), and the production build (next build compiles clean, all routes generate)
+- Used a temporary test-only NextAuth credentials provider to exercise the authenticated flows, then reverted it before committing
+
+Stage Summary:
+- Template now renders pixel-identical to the supplied HTML across all viewports; full Paper Stish flow works: Library → View → Duplicate/Save (account-gated) → My Projects → Editor (text + photo editing) → Publish → public viewer
+- New files: public/templates/love-{paper-texture,polaroid-frame,cats,bow}.webp, love-of-my-life-art.webp, love-favorite-person-art.webp, love-of-my-life.webp (thumbnail)
+- Changed files: LoveLifeTemplate.tsx (rewrite), MyProjects.tsx (fit mode), ProjectSheet.tsx (aspect + single-item scroll clamp), TemplateEditor.tsx (publish key fix), projects.ts (thumbnail path), bun.lock (resynced to package.json)

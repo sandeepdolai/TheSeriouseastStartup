@@ -23,39 +23,43 @@ interface LoveLifeTemplateProps {
   message?: string;
   photoUrl?: string | null;
   editable?: boolean;
+  /**
+   * Fit the collage to a sized container instead of the viewport. Requires an
+   * ancestor with `container-type: size` (used by My Projects card previews).
+   */
+  fitToContainer?: boolean;
   onYearsChange?: (value: string) => void;
   onYearsLabelChange?: (value: string) => void;
   onMessageChange?: (value: string) => void;
   onPhotoChange?: (file: File | undefined) => void;
 }
 
-const abs = (
-  extra: CSSProperties,
-  className = "",
-): CSSProperties & { className?: string } => ({
-  position: "absolute",
-  ...extra,
-  ...(className ? { className } : {}),
-});
-
+/**
+ * Faithful conversion of the supplied "2 yers with you" HTML template.
+ * The collage is one fixed-ratio stage; every size is in cqw so it scales as
+ * a unit. Stage width follows the original `--w` formula: full width on
+ * phones, scaled to the screen height on bigger screens.
+ */
 export function LoveLifeTemplate({
   years = "2",
   yearsLabel = "yers with you",
   message = LOVE_DEFAULT_MESSAGE,
   photoUrl = null,
   editable = false,
+  fitToContainer = false,
   onYearsChange,
   onYearsLabelChange,
   onMessageChange,
   onPhotoChange,
 }: LoveLifeTemplateProps) {
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const noteRef = useRef<HTMLDivElement>(null);
   const messageRef = useRef<HTMLParagraphElement>(null);
   const filterId = useId().replace(/:/g, "");
 
   useEffect(() => {
     const node = messageRef.current;
-    const note = node?.parentElement;
+    const note = noteRef.current;
     if (!node || !note) return;
 
     const fit = () => {
@@ -92,37 +96,49 @@ export function LoveLifeTemplate({
     if (editable) photoInputRef.current?.click();
   };
 
+  // The original page paints the paper texture on the root element, sized to
+  // the collage width and offset so the pattern sits behind the composition.
+  const stageWidth = fitToContainer
+    ? "min(100%, calc(100cqh * 736 / 1308))"
+    : "min(100%, max(480px, calc(100vh * 0.5628)))";
+
+  const articleStyle = {
+    "--w": stageWidth,
+    position: "relative",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "flex-start",
+    minHeight: fitToContainer ? 0 : "100vh",
+    height: fitToContainer ? "100%" : undefined,
+    overflowX: "clip",
+    paddingTop: fitToContainer ? 0 : "env(safe-area-inset-top, 0px)",
+    paddingBottom: fitToContainer ? 0 : "env(safe-area-inset-bottom, 0px)",
+    fontFamily: "'Oswald', 'Arial Narrow', sans-serif",
+    backgroundColor: "#e9e1dc",
+    backgroundImage: `url("${LOVE_ASSETS.texture}"), radial-gradient(120% 70% at 30% 0%, #f1eae6 0%, transparent 65%)`,
+    backgroundRepeat: "repeat, no-repeat",
+    backgroundSize: "var(--w) auto, 100% 100%",
+    backgroundPosition: "50% calc(var(--w) * -0.111), 0 0",
+  } as CSSProperties;
+
   const stageStyle: CSSProperties = {
     position: "relative",
-    width: "min(100%, max(480px, calc(100dvh * 0.5628)))",
+    width: "var(--w)",
     flex: "none",
     aspectRatio: "736 / 1308",
     containerType: "inline-size",
-    backgroundColor: "#e9e1dc",
-    backgroundImage: `url("${LOVE_ASSETS.texture}")`,
-    backgroundRepeat: "repeat",
-    backgroundSize: "100% auto",
-    overflow: "hidden",
   };
 
   const polaroidStyle: CSSProperties = {
-    ...abs({
-      left: "9.5%",
-      top: "27.2%",
-      width: "81.3%",
-      aspectRatio: "1016 / 1215",
-    }),
+    position: "absolute",
+    left: "9.5%",
+    top: "27.2%",
+    width: "81.3%",
+    aspectRatio: "1016 / 1215",
   };
 
   return (
-    <article
-      className="relative flex min-h-0 w-full justify-center overflow-hidden"
-      style={{
-        backgroundColor: "#e9e1dc",
-        backgroundImage: `url("${LOVE_ASSETS.texture}")`,
-        backgroundRepeat: "repeat",
-      }}
-    >
+    <article className="w-full" style={articleStyle}>
       <input
         ref={photoInputRef}
         type="file"
@@ -134,53 +150,54 @@ export function LoveLifeTemplate({
         }}
       />
 
-      <div style={stageStyle}>
-        <svg
-          width="0"
-          height="0"
-          aria-hidden="true"
-          style={{ position: "absolute" }}
+      <svg
+        width="0"
+        height="0"
+        aria-hidden="true"
+        style={{ position: "absolute" }}
+      >
+        <filter
+          id={filterId}
+          x="-5%"
+          y="-5%"
+          width="110%"
+          height="110%"
         >
-          <filter
-            id={filterId}
-            x="-5%"
-            y="-5%"
-            width="110%"
-            height="110%"
-          >
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="0.07"
-              numOctaves="2"
-              seed="4"
-              result="n"
-            />
-            <feDisplacementMap in="SourceGraphic" in2="n" scale="4.5" />
-          </filter>
-          <filter
-            id={filterId + "light"}
-            x="-5%"
-            y="-5%"
-            width="110%"
-            height="110%"
-          >
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="0.09"
-              numOctaves="2"
-              seed="9"
-              result="n"
-            />
-            <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6" />
-          </filter>
-        </svg>
+          <feTurbulence
+            type="fractalNoise"
+            baseFrequency="0.07"
+            numOctaves="2"
+            seed="4"
+            result="n"
+          />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="4.5" />
+        </filter>
+        <filter
+          id={filterId + "light"}
+          x="-5%"
+          y="-5%"
+          width="110%"
+          height="110%"
+        >
+          <feTurbulence
+            type="fractalNoise"
+            baseFrequency="0.09"
+            numOctaves="2"
+            seed="9"
+            result="n"
+          />
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="1.6" />
+        </filter>
+      </svg>
 
+      <section style={stageStyle} aria-label="Two years with you — anniversary collage">
+        {/* polaroid: photo window behind, frame image on top */}
         <div style={polaroidStyle}>
           <button
             type="button"
             onClick={choosePhoto}
             aria-label="Add your photo"
-            className="absolute z-[1] block overflow-hidden bg-black p-0"
+            className="absolute z-[1] block overflow-hidden bg-black focus-visible:[outline:0.8cqw_solid_#f1e1b9] focus-visible:[outline-offset:-1cqw]"
             style={{
               left: "7.2%",
               top: "6.2%",
@@ -192,14 +209,13 @@ export function LoveLifeTemplate({
             {photoUrl ? (
               <img
                 src={photoUrl}
-                alt=""
+                alt="Your photo"
                 className="absolute inset-0 h-full w-full object-cover"
               />
             ) : (
               <span
-                className="absolute inset-0 grid place-items-center text-center text-white"
+                className="absolute inset-0 grid place-items-center px-[4%] text-center"
                 style={{
-                  fontFamily: '"Oswald", "Arial Narrow", sans-serif',
                   fontWeight: 700,
                   fontSize: "3.4cqw",
                   letterSpacing: ".08em",
@@ -215,7 +231,8 @@ export function LoveLifeTemplate({
             src={LOVE_ASSETS.frame}
             alt=""
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 z-[2] h-full w-full object-fill"
+            draggable={false}
+            className="pointer-events-none absolute inset-0 z-[2] h-full w-full select-none object-fill"
             style={{
               filter: "drop-shadow(0 .6cqw 1.4cqw rgba(60,10,15,.3))",
             }}
@@ -224,9 +241,9 @@ export function LoveLifeTemplate({
 
         <img
           src={LOVE_ASSETS.cats}
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none absolute z-[4] h-auto"
+          alt="A black cat and a white cat cuddling"
+          draggable={false}
+          className="pointer-events-none absolute z-[4] block h-auto select-none"
           style={{
             left: "49.2%",
             top: "4.9%",
@@ -237,9 +254,9 @@ export function LoveLifeTemplate({
 
         <img
           src={LOVE_ASSETS.love}
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none absolute z-[4] h-auto"
+          alt="love of my life"
+          draggable={false}
+          className="pointer-events-none absolute z-[4] block h-auto select-none"
           style={{
             left: "3.4%",
             top: "17.2%",
@@ -251,9 +268,9 @@ export function LoveLifeTemplate({
 
         <img
           src={LOVE_ASSETS.favorite}
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none absolute z-[4] h-auto"
+          alt="Favorite person"
+          draggable={false}
+          className="pointer-events-none absolute z-[4] block h-auto select-none"
           style={{
             left: "80.6%",
             top: "44.3%",
@@ -266,18 +283,18 @@ export function LoveLifeTemplate({
         <div
           className="absolute z-[3] flex items-end text-white"
           style={{ left: "10.2%", top: "72.4%" }}
-          aria-label={`${years} yers with you`}
+          aria-label={`${years} ${yearsLabel}`}
         >
           <div
             contentEditable={editable}
             suppressContentEditableWarning
             onInput={(event) => onYearsChange?.(event.currentTarget.innerText)}
-            className="select-text leading-[.9] outline-none"
+            className="select-text outline-none"
             style={{
-              fontFamily: '"Anton", "Impact", "Arial Narrow", sans-serif',
+              fontFamily: "'Anton', 'Impact', 'Arial Narrow', sans-serif",
               fontWeight: 400,
               fontSize: "14.5cqw",
-              lineHeight: ".9",
+              lineHeight: 0.9,
               WebkitTextStroke: ".7cqw #fff",
               filter: `url(#${filterId})`,
             }}
@@ -291,15 +308,16 @@ export function LoveLifeTemplate({
             onInput={(event) =>
               onYearsLabelChange?.(event.currentTarget.innerText)
             }
-            className="mb-[1.2cqw] ml-[-.2cqw] select-text whitespace-nowrap outline-none"
+            className="select-text whitespace-nowrap outline-none"
             style={{
-              fontFamily: '"Anton", "Impact", "Arial Narrow", sans-serif',
+              fontFamily: "'Anton', 'Impact', 'Arial Narrow', sans-serif",
               fontWeight: 400,
               fontSize: "4.7cqw",
               lineHeight: 1,
               letterSpacing: "-.02em",
               wordSpacing: ".35em",
               WebkitTextStroke: ".15cqw #fff",
+              margin: "0 0 1.2cqw -.2cqw",
               filter: `url(#${filterId}light)`,
             }}
           >
@@ -308,6 +326,7 @@ export function LoveLifeTemplate({
         </div>
 
         <div
+          aria-hidden="true"
           className="absolute z-[3]"
           style={{
             left: "48.9%",
@@ -321,6 +340,7 @@ export function LoveLifeTemplate({
         />
 
         <div
+          ref={noteRef}
           className="absolute z-[3] grid place-items-center text-center"
           style={{
             left: "31.8%",
@@ -355,12 +375,11 @@ export function LoveLifeTemplate({
             onInput={(event) => onMessageChange?.(event.currentTarget.innerText)}
             className="m-0 select-text uppercase outline-none"
             style={{
-              fontFamily: '"Caveat Brush", "Amatic SC", "Arial Narrow", sans-serif',
+              fontFamily: "'Caveat Brush', 'Amatic SC', 'Arial Narrow', sans-serif",
               fontWeight: 400,
               color: "#14110f",
               fontSize: "4.6cqw",
               lineHeight: 1.22,
-              letterSpacing: ".08em",
               wordSpacing: ".22em",
               WebkitTextStroke: ".08cqw #14110f",
               textWrap: "balance",
@@ -374,7 +393,8 @@ export function LoveLifeTemplate({
           src={LOVE_ASSETS.bow}
           alt=""
           aria-hidden="true"
-          className="pointer-events-none absolute z-[5] h-auto"
+          draggable={false}
+          className="pointer-events-none absolute z-[5] block h-auto select-none"
           style={{
             left: "44.6%",
             top: "72.2%",
@@ -382,7 +402,7 @@ export function LoveLifeTemplate({
             filter: "drop-shadow(0 .3cqw .4cqw rgba(60,40,20,.25))",
           }}
         />
-      </div>
+      </section>
     </article>
   );
 }

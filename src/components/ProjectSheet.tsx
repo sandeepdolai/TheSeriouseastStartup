@@ -72,6 +72,7 @@ function TrophyIcon() {
 }
 
 const MEDIA_ASPECTS: Record<string, number[]> = {
+  "love-of-my-life": [1080 / 1550],
   "nathan-riley": [2048 / 1172, 1787 / 900, 1798 / 905, 1792 / 904],
   "casa-di-solare": [2048 / 1204, 1280 / 596, 1280 / 644],
   "the-lookback": [1250 / 720, 1620 / 1080, 1500 / 1897, 1500 / 1000],
@@ -257,8 +258,13 @@ export function ProjectSheet({
     if (!media || !outer) return;
     const h = outer.clientHeight;
     const l = h * OVERSCAN;
+    // A single media item (template previews) cannot wrap around the virtual
+    // scroll; clamp it instead so it rests at the top and scrolls naturally.
+    const single = itemsRef.current.length === 1;
     for (const it of itemsRef.current) {
-      const y = wrap(-(totalRef.current - it.base.bottom), it.base.bottom, a);
+      const y = single
+        ? Math.min(Math.max(a, 0), Math.max(totalRef.current, 0))
+        : wrap(-(totalRef.current - it.base.bottom), it.base.bottom, a);
       const top = it.base.top - y;
       const inView = top + 200 > -l && top < h + l;
       if (inView || force) {

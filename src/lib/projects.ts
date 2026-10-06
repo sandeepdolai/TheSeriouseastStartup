@@ -40,7 +40,7 @@ export const FEATURED: Project[] = [
     tags: [{ title: "Love", url: null }],
     awards: 0,
     aspect: 1080 / 1550,
-    media: [BASE_PATH + "/templates/love-of-my-life.svg"],
+    media: [BASE_PATH + "/templates/love-of-my-life.webp"],
   },
   {
     title: "Nathan Riley",

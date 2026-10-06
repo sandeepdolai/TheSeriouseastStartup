@@ -83,7 +83,10 @@ export function MyProjects({ entered, onOpenProject }: Props) {
                     : undefined,
                 }}
               >
-                <div className="absolute inset-0 transition-transform duration-700 ease-out group-hover:scale-[0.985]">
+                <div
+                  className="absolute inset-0 transition-transform duration-700 ease-out group-hover:scale-[0.985]"
+                  style={{ containerType: "size" }}
+                >
                   {project.templateSlug === "birthday-template" ? (
                     <BirthdayTemplate
                       heading={project.data?.heading ?? "★ HAPPY BIRTHDAY !!"}
@@ -96,6 +99,7 @@ export function MyProjects({ entered, onOpenProject }: Props) {
                       yearsLabel={project.data?.yearsLabel ?? "yers with you"}
                       message={project.data?.message ?? LOVE_DEFAULT_MESSAGE}
                       photoUrl={project.data?.photoUrl ?? null}
+                      fitToContainer
                     />
                   ) : project.thumbnail ? (
                     <img src={project.thumbnail} alt="" className="absolute inset-0 size-full object-cover" />

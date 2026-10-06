@@ -239,7 +239,7 @@ export function TemplateEditor({
 
       setPublished(record);
 
-      const raw = localStorage.getItem("paper-stish-projects");
+      const raw = localStorage.getItem(getAccountStorageKey("paper-stish-projects", session?.user?.email));
       const projects = raw ? JSON.parse(raw) : [];
       if (Array.isArray(projects)) {
         const data = collectData();
