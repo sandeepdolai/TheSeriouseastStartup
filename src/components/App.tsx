@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 import { useFolio } from "@/gl/react";
 import { FEATURED } from "@/lib/projects";
 import { HomeCarousel } from "./HomeCarousel";
@@ -10,12 +11,15 @@ import { SavedTemplates } from "./SavedTemplates";
 import { TemplateEditor } from "./TemplateEditor";
 import { ProjectSheet } from "./ProjectSheet";
 import { ProfileOverlay } from "./Overlays";
+import { getAccountStorageKey } from "@/lib/accountStorage";
 
 type View = "home" | "my" | "project" | "saved" | "editor";
 type Overlay = "profile" | null;
 
 export function App() {
   const folio = useFolio();
+  const { data: session } = useSession();
+  const accountEmail = session?.user?.email ?? null;
   const [view, setView] = useState<View>("home");
   const [projectSlug, setProjectSlug] = useState<string | null>(null);
   const [overlay, setOverlay] = useState<Overlay>(null);
@@ -235,7 +239,7 @@ export function App() {
 
   const duplicateTemplate = useCallback((template: (typeof FEATURED)[number]) => {
     const id = `project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const projects = readLocalArray("paper-stish-projects");
+    const projects = readLocalArray(getAccountStorageKey("paper-stish-projects", accountEmail));
     projects.unshift({
       id,
       title: template.title,
@@ -243,12 +247,12 @@ export function App() {
       templateSlug: template.slug,
       createdAt: new Date().toISOString(),
     });
-    localStorage.setItem("paper-stish-projects", JSON.stringify(projects));
+    localStorage.setItem(getAccountStorageKey("paper-stish-projects", accountEmail), JSON.stringify(projects));
     void openTemplateEditor(id, template.slug);
-  }, [openTemplateEditor]);
+  }, [openTemplateEditor, accountEmail]);
 
   const saveTemplate = useCallback((template: (typeof FEATURED)[number]) => {
-    const templates = readLocalArray("paper-stish-templates");
+    const templates = readLocalArray(getAccountStorageKey("paper-stish-templates", accountEmail));
     if (templates.some((item) => item.templateSlug === template.slug)) return;
     templates.unshift({
       id: `template-${template.slug}`,
@@ -257,7 +261,7 @@ export function App() {
       templateSlug: template.slug,
       savedAt: new Date().toISOString(),
     });
-    localStorage.setItem("paper-stish-templates", JSON.stringify(templates));
+    localStorage.setItem(getAccountStorageKey("paper-stish-templates", accountEmail), JSON.stringify(templates));
   }, []);
 
   const goHome = useCallback(() => {
