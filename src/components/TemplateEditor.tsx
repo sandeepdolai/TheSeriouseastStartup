@@ -88,7 +88,7 @@ export function TemplateEditor({
         ? {
             heading: "Love of my life",
             years: "2",
-            yearsLabel: "years with you",
+            yearsLabel: "yers with you",
             sideNote: "favorite person",
             message: LOVE_DEFAULT_MESSAGE,
           }
@@ -324,15 +324,12 @@ export function TemplateEditor({
                 loveTemplate ? (
                   <LoveLifeTemplate
                     editable
-                    heading={heading}
                     years={years}
                     yearsLabel={yearsLabel}
-                    sideNote={sideNote}
                     message={message}
                     photoUrl={photoUrl}
                     onYearsChange={setYears}
                     onYearsLabelChange={setYearsLabel}
-                    onSideNoteChange={setSideNote}
                     onMessageChange={setMessage}
                     onPhotoChange={choosePhoto}
                   />
@@ -422,7 +419,7 @@ export function TemplateEditor({
                 </button>
 
                 <p className="mt-12 text-center text-10 leading-14 text-white/32">
-                  Your template can be created and edited without an account. An account is only required to publish.
+                  Your template can be created and edited without an account. An account is required to save or publish.
                 </p>
               </>
             ) : !published ? (
