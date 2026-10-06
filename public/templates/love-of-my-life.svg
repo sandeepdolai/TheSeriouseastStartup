@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1550">
+  <rect width="1080" height="1550" fill="#eee5e1"/>
+  <rect width="1080" height="1550" fill="url(#paper)" opacity=".28"/>
+  <defs>
+    <pattern id="paper" width="18" height="18" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="6" r="1" fill="#7b5650" opacity=".18"/>
+      <circle cx="14" cy="12" r=".8" fill="#7b5650" opacity=".12"/>
+    </pattern>
+  </defs>
+  <text x="95" y="150" fill="#8f2428" font-size="68" font-family="cursive" font-style="italic" transform="rotate(-7 95 150)">Love of my life</text>
+  <text x="80" y="245" fill="#8f2428" font-size="33" font-family="cursive">♥</text>
+  <text x="920" y="215" fill="#8f2428" font-size="28" font-family="cursive">♥</text>
+  <rect x="100" y="380" width="880" height="770" fill="#7c1824" rx="4"/>
+  <rect x="150" y="430" width="780" height="650" fill="#050505"/>
+  <image href="https://raw.githubusercontent.com/sandeepdolai/templateassets/main/file_00000000db28820b8ba26950672162f5.png" x="470" y="80" width="520" height="350" preserveAspectRatio="xMidYMid meet"/>
+  <text x="125" y="1120" fill="#fff" font-size="95" font-family="Arial" font-weight="900">2</text>
+  <text x="205" y="1110" fill="#fff" font-size="39" font-family="Arial" font-weight="700">years with you</text>
+  <rect x="270" y="1115" width="540" height="290" fill="#efe6d4" transform="rotate(2 540 1260)"/>
+  <circle cx="540" cy="1117" r="17" fill="#eee5e1"/>
+  <text x="360" y="1190" fill="#181010" font-size="24" font-family="Arial" font-weight="700">I JUST WANT TO TELL YOU, THANK YOU</text>
+  <text x="350" y="1230" fill="#181010" font-size="24" font-family="Arial" font-weight="700">FOR COMING INTO MY LIFE. YOU MAKE ME</text>
+  <text x="370" y="1270" fill="#181010" font-size="24" font-family="Arial" font-weight="700">SMILE AND LAUGH. I LOVE YOU A LOT!</text>
+  <text x="930" y="740" fill="#8f2428" font-size="36" font-family="cursive" transform="rotate(82 930 740)">favorite person</text>
+</svg>
