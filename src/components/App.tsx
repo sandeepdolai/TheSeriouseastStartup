@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { useFolio } from "@/gl/react";
 import { FEATURED } from "@/lib/projects";
 import { HomeCarousel } from "./HomeCarousel";
@@ -65,6 +65,10 @@ export function App() {
   const [editorTemplateSlug, setEditorTemplateSlug] = useState<string | null>(null);
   const [carouselHidden, setCarouselHidden] = useState(false);
   const [returning, setReturning] = useState<string | null>(null);
+  const [accountGateOpen, setAccountGateOpen] = useState(false);
+  const [pendingAccountAction, setPendingAccountAction] = useState<
+    { type: "duplicate" | "save-template"; templateSlug: string } | null
+  >(null);
 
   const busy = useRef(false);
   const carouselApi = useRef<{ center: (slug: string) => void }>({ center: () => {} });
@@ -272,7 +276,7 @@ export function App() {
     busy.current = false;
   }, [folio]);
 
-  const duplicateTemplate = useCallback((template: (typeof FEATURED)[number]) => {
+  const performDuplicateTemplate = useCallback((template: (typeof FEATURED)[number]) => {
     const id = `project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const projects = readLocalArray(getAccountStorageKey("paper-stish-projects", accountEmail));
     projects.unshift({
@@ -286,7 +290,7 @@ export function App() {
     void openTemplateEditor(id, template.slug);
   }, [openTemplateEditor, accountEmail]);
 
-  const saveTemplate = useCallback((template: (typeof FEATURED)[number]) => {
+  const performSaveTemplate = useCallback((template: (typeof FEATURED)[number]) => {
     const templates = readLocalArray(getAccountStorageKey("paper-stish-templates", accountEmail));
     if (templates.some((item) => item.templateSlug === template.slug)) return;
     templates.unshift({
@@ -298,6 +302,35 @@ export function App() {
     });
     localStorage.setItem(getAccountStorageKey("paper-stish-templates", accountEmail), JSON.stringify(templates));
   }, [accountEmail]);
+
+  const duplicateTemplate = useCallback((template: (typeof FEATURED)[number]) => {
+    if (status !== "authenticated") {
+      setPendingAccountAction({ type: "duplicate", templateSlug: template.slug });
+      setAccountGateOpen(true);
+      return;
+    }
+    performDuplicateTemplate(template);
+  }, [performDuplicateTemplate, status]);
+
+  const saveTemplate = useCallback((template: (typeof FEATURED)[number]) => {
+    if (status !== "authenticated") {
+      setPendingAccountAction({ type: "save-template", templateSlug: template.slug });
+      setAccountGateOpen(true);
+      return;
+    }
+    performSaveTemplate(template);
+  }, [performSaveTemplate, status]);
+
+  useEffect(() => {
+    if (status !== "authenticated" || !pendingAccountAction) return;
+    const action = pendingAccountAction;
+    const template = FEATURED.find((item) => item.slug === action.templateSlug);
+    setPendingAccountAction(null);
+    setAccountGateOpen(false);
+    if (!template) return;
+    if (action.type === "duplicate") performDuplicateTemplate(template);
+    else performSaveTemplate(template);
+  }, [pendingAccountAction, performDuplicateTemplate, performSaveTemplate, status]);
 
   const goHome = useCallback(() => {
     if (busy.current) return;
@@ -385,6 +418,52 @@ export function App() {
           onSaveTemplate={saveTemplate}
           interactive
         />
+      )}
+
+      {accountGateOpen && (
+        <div
+          className="fixed inset-0 z-[95] flex items-center justify-center bg-black/55 px-15 backdrop-blur-[10px]"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setAccountGateOpen(false);
+              setPendingAccountAction(null);
+            }
+          }}
+        >
+          <div className="w-full max-w-[430px] rounded-[22px] border border-white/10 bg-[#121212] p-18 text-white shadow-2xl">
+            <div className="flex items-start justify-between gap-15">
+              <div>
+                <p className="text-20 tracking-[-0.05em]">Create your account</p>
+                <p className="mt-6 text-11 leading-15 text-white/42">
+                  Sign up with Google to duplicate or save templates to your Paper Stish account.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setAccountGateOpen(false);
+                  setPendingAccountAction(null);
+                }}
+                className="flex size-32 items-center justify-center rounded-full bg-white/7 text-white/65"
+                aria-label="Close account sign-up dialog"
+              >
+                ×
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => signIn("google")}
+              className="mt-22 flex h-48 w-full items-center justify-center gap-9 rounded-full bg-white text-13 text-black transition-transform duration-300 hover:scale-[1.01] active:scale-[0.99]"
+            >
+              Continue with Google
+            </button>
+
+            <p className="mt-12 text-center text-10 leading-14 text-white/32">
+              You can browse templates without an account. An account is required to duplicate, save, or publish.
+            </p>
+          </div>
+        </div>
       )}
 
       <ProfileOverlay open={overlay === "profile"} onMyProjects={goMy} onMyTemplates={goSaved} />
