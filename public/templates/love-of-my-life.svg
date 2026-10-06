@@ -1,37 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1550">
-  <rect width="1080" height="1550" fill="#eee5e1"/>
-  <rect width="1080" height="1550" fill="url(#paper)" opacity=".28"/>
-  <defs>
-    <pattern id="paper" width="18" height="18" patternUnits="userSpaceOnUse">
-      <circle cx="3" cy="6" r="1" fill="#7b5650" opacity=".18"/>
-      <circle cx="14" cy="12" r=".8" fill="#7b5650" opacity=".12"/>
-    </pattern>
-  </defs>
-  <text x="95" y="150" fill="#8f2428" font-size="68" font-family="cursive" font-style="italic" transform="rotate(-7 95 150)">Love of my life</text>
-  <text x="80" y="245" fill="#8f2428" font-size="33" font-family="cursive">♥</text>
-  <text x="920" y="215" fill="#8f2428" font-size="28" font-family="cursive">♥</text>
-  <rect x="100" y="380" width="880" height="770" fill="#7c1824" rx="4"/>
-  <rect x="150" y="430" width="780" height="650" fill="#050505"/>
-  <g transform="translate(700 235)">
-    <ellipse cx="0" cy="115" rx="110" ry="155" fill="#191719"/>
-    <polygon points="-100,-40 -52,-150 -5,-72" fill="#191719"/>
-    <polygon points="5,-72 55,-150 98,-40" fill="#191719"/>
-    <circle cx="-42" cy="8" r="8" fill="#efe6d4"/>
-    <circle cx="43" cy="8" r="8" fill="#efe6d4"/>
-    <circle cx="0" cy="35" r="7" fill="#8f2428"/>
-    <ellipse cx="125" cy="135" rx="105" ry="145" fill="#e6ddd2"/>
-    <polygon points="55,-5 90,-120 128,-28" fill="#e6ddd2"/>
-    <polygon points="135,-28 175,-120 198,-3" fill="#e6ddd2"/>
-    <circle cx="93" cy="20" r="8" fill="#3d3430"/>
-    <circle cx="157" cy="20" r="8" fill="#3d3430"/>
-    <circle cx="125" cy="48" r="7" fill="#d08f79"/>
-  </g>
-  <text x="125" y="1120" fill="#fff" font-size="95" font-family="Arial" font-weight="900">2</text>
-  <text x="205" y="1110" fill="#fff" font-size="39" font-family="Arial" font-weight="700">years with you</text>
-  <rect x="270" y="1115" width="540" height="290" fill="#efe6d4" transform="rotate(2 540 1260)"/>
-  <circle cx="540" cy="1117" r="17" fill="#eee5e1"/>
-  <text x="360" y="1190" fill="#181010" font-size="24" font-family="Arial" font-weight="700">I JUST WANT TO TELL YOU, THANK YOU</text>
-  <text x="350" y="1230" fill="#181010" font-size="24" font-family="Arial" font-weight="700">FOR COMING INTO MY LIFE. YOU MAKE ME</text>
-  <text x="370" y="1270" fill="#181010" font-size="24" font-family="Arial" font-weight="700">SMILE AND LAUGH. I LOVE YOU A LOT!</text>
-  <text x="930" y="740" fill="#8f2428" font-size="36" font-family="cursive" transform="rotate(82 930 740)">favorite person</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 864 1536">
+  <rect width="864" height="1536" fill="#eee7e3"/>
+  <image href="https://raw.githubusercontent.com/sandeepdolai/templateassets/main/ec6103999a9a1153cab168e028555b63.png" x="0" y="0" width="864" height="1536" preserveAspectRatio="xMidYMid slice"/>
+  <image href="https://raw.githubusercontent.com/sandeepdolai/templateassets/main/204e765506cf4c2d7b789922b4b0ccf8.png" x="0" y="0" width="864" height="1536" preserveAspectRatio="none"/>
+  <text x="38" y="245" fill="#8d252a" font-size="67" font-family="cursive" font-style="italic" transform="rotate(-9 38 245)">Love of my life</text>
+  <image href="https://raw.githubusercontent.com/sandeepdolai/templateassets/main/file_00000000db28820b8ba26950672162f5.png" x="425" y="65" width="425" height="405" preserveAspectRatio="xMidYMid meet"/>
+  <rect x="82" y="418" width="700" height="853" fill="#000"/>
+  <rect x="122" y="466" width="618" height="632" fill="#000"/>
+  <image href="https://raw.githubusercontent.com/sandeepdolai/templateassets/main/a4061d3351e63fe0fe177d547bd349c0.png" x="82" y="418" width="700" height="853" preserveAspectRatio="none"/>
+  <text x="798" y="640" fill="#8d252a" font-size="29" font-family="cursive" font-weight="600" transform="rotate(83 798 640)">favorite person</text>
+  <text x="91" y="1200" fill="#fff" font-size="93" font-family="Arial" font-weight="900">2</text>
+  <text x="157" y="1190" fill="#fff" font-size="35" font-family="Arial" font-weight="800">years with you</text>
+  <image href="https://raw.githubusercontent.com/sandeepdolai/templateassets/main/3229e85812cd42b0a87630ac580b562d.png" x="274" y="1175" width="470" height="321" preserveAspectRatio="none"/>
+  <text x="430" y="1294" text-anchor="middle" fill="#171112" font-size="18" font-family="Arial" font-weight="700">"I JUST WANT TO TELL YOU, THANK YOU FOR COMING</text>
+  <text x="430" y="1322" text-anchor="middle" fill="#171112" font-size="18" font-family="Arial" font-weight="700">INTO MY LIFE. YOU ACTUALLY MAKE ME SMILE AND</text>
+  <text x="430" y="1350" text-anchor="middle" fill="#171112" font-size="18" font-family="Arial" font-weight="700">LAUGH. THANK YOU FOR BEING UNDERSTANDING. THANK</text>
+  <text x="430" y="1378" text-anchor="middle" fill="#171112" font-size="18" font-family="Arial" font-weight="700">YOU FOR BEING MY BIGGEST SUPPORTER, AND THANK YOU</text>
+  <text x="430" y="1406" text-anchor="middle" fill="#171112" font-size="18" font-family="Arial" font-weight="700">FOR CARING ABOUT ME. I REALLY APPRECIATE YOU SO</text>
+  <text x="430" y="1434" text-anchor="middle" fill="#171112" font-size="18" font-family="Arial" font-weight="700">MUCH. I LOVE YOU A LOT!"</text>
 </svg>
