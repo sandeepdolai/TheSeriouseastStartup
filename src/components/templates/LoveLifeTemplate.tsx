@@ -14,12 +14,12 @@ const LOVE_ASSETS = {
 };
 
 export const LOVE_DEFAULT_MESSAGE = [
-  '“I JUST WANT TO TELL YOU, THANK YOU FOR COMING',
+  '"I JUST WANT TO TELL YOU, THANK YOU FOR COMING',
   'INTO MY LIFE. YOU ACTUALLY MAKE ME SMILE AND',
   'LAUGH. THANK YOU FOR BEING UNDERSTANDING. THANK',
   'YOU FOR BEING MY BIGGEST SUPPORTER, AND THANK YOU',
   'FOR CARING ABOUT ME. I REALLY APPRECIATE YOU SO',
-  'MUCH. I LOVE YOU A LOT!”',
+  'MUCH. I LOVE YOU A LOT!"',
 ].join("\n");
 
 interface LoveLifeTemplateProps {
@@ -48,7 +48,7 @@ const Handwritten = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
         style={{
           fontFamily: '"Dancing Script", "Gochi Hand", cursive',
           fontWeight: 600,
-          color: "#8f2428",
+          color: "#8d252a",
           ...style,
         }}
       >
@@ -57,20 +57,6 @@ const Handwritten = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
     );
   },
 );
-
-function PaperTexture() {
-  return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0 opacity-[0.18] mix-blend-multiply"
-      style={{
-        backgroundImage:
-          'radial-gradient(circle at 20% 18%, rgba(76,48,45,.13) 0 1px, transparent 1.4px), radial-gradient(circle at 72% 64%, rgba(76,48,45,.08) 0 .8px, transparent 1.2px)',
-        backgroundSize: "13px 13px, 17px 17px",
-      }}
-    />
-  );
-}
 
 export function LoveLifeTemplate({
   heading = "Love of my life",
@@ -132,9 +118,7 @@ export function LoveLifeTemplate({
   };
 
   return (
-    <article className="relative min-h-screen w-full overflow-hidden bg-[#eee5e1] text-[#27181a]">
-      <PaperTexture />
-
+    <article className="relative w-full overflow-hidden bg-[#eee7e3]">
       <input
         ref={photoInputRef}
         type="file"
@@ -147,64 +131,51 @@ export function LoveLifeTemplate({
       />
 
       <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-90"
-        style={{
-          backgroundImage: `url(${LOVE_ASSETS.background})`,
-          backgroundPosition: "center",
-          backgroundSize: "cover",
-          mixBlendMode: "multiply",
-        }}
-      />
+        className="relative mx-auto w-full max-w-[864px] overflow-hidden"
+        style={{ aspectRatio: "864 / 1536" }}
+      >
+        <img
+          src={LOVE_ASSETS.background}
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        />
 
-      <main className="relative mx-auto min-h-screen w-full max-w-[1180px] px-[5vw] pb-[8vh] pt-[5vh] sm:px-12 lg:px-16">
-        <header className="relative min-h-[13vh]">
-          <Handwritten
-            ref={headingRef}
-            contentEditable={editable}
-            suppressContentEditableWarning
-            onInput={(event) => onHeadingChange?.(event.currentTarget.innerText)}
-            className="max-w-[58%] select-text leading-[.86] outline-none"
-            style={{
-              fontSize: "clamp(3.1rem, 6vw, 6.6rem)",
-              transform: "rotate(-8deg)",
-              transformOrigin: "left top",
-            }}
-          >
-            {heading}
-          </Handwritten>
+        <img
+          src={LOVE_ASSETS.hearts}
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 h-full w-full object-fill"
+        />
 
-          <img
-            src={LOVE_ASSETS.cats}
-            alt=""
-            aria-hidden={!editable}
-            className="pointer-events-none absolute right-[-1%] top-[-2vh] z-10 h-auto w-[52%] max-w-[560px] object-contain sm:right-[0%] sm:w-[48%]"
-          />
+        <Handwritten
+          ref={headingRef}
+          contentEditable={editable}
+          suppressContentEditableWarning
+          onInput={(event) => onHeadingChange?.(event.currentTarget.innerText)}
+          className="absolute left-[4%] top-[15%] z-30 w-[38%] select-text leading-[.78] outline-none"
+          style={{
+            fontSize: "clamp(2.4rem, 6.2vw, 5.6rem)",
+            transform: "rotate(-9deg)",
+          }}
+        >
+          {heading}
+        </Handwritten>
 
-          <div
-            aria-hidden="true"
-            className="absolute inset-x-0 top-0 h-full bg-[radial-gradient(circle_at_20%_25%,rgba(255,255,255,.28),transparent_35%)]"
-          />
-        </header>
+        <img
+          src={LOVE_ASSETS.cats}
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute right-[1%] top-[4%] z-30 h-auto w-[49%] object-contain"
+        />
 
-        <section className="relative mx-auto mt-[3vh] w-full max-w-[850px]">
-          <div className="relative">
-            <img
-              src={LOVE_ASSETS.frame}
-              alt=""
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 h-full w-full object-fill"
-            />
-
+        <section className="absolute left-[9.5%] top-[27.2%] z-20 w-[81%]">
+          <div className="relative aspect-[700/853]">
             <button
               type="button"
               onClick={choosePhoto}
-              className="relative mx-auto block aspect-square w-[73%] overflow-hidden bg-black/95"
-              style={{
-                marginTop: "8%",
-                boxShadow: "0 0 0 1px rgba(25,12,15,.04)",
-                cursor: editable ? "pointer" : "default",
-              }}
+              className="absolute left-[5.7%] top-[5.6%] z-10 block aspect-square w-[88.3%] overflow-hidden bg-black"
+              style={{ cursor: editable ? "pointer" : "default" }}
             >
               {photoUrl ? (
                 <img
@@ -214,7 +185,7 @@ export function LoveLifeTemplate({
                 />
               ) : (
                 <span className="absolute inset-0 flex flex-col items-center justify-center text-center text-white">
-                  <span className="text-[clamp(2.2rem,5vw,4.5rem)] font-light leading-none">
+                  <span className="text-[clamp(2rem,5vw,4.5rem)] font-light leading-none">
                     +
                   </span>
                   <span className="mt-2 font-serif text-[clamp(1.1rem,2.4vw,2rem)]">
@@ -229,6 +200,13 @@ export function LoveLifeTemplate({
               )}
             </button>
 
+            <img
+              src={LOVE_ASSETS.frame}
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 z-20 h-full w-full object-fill"
+            />
+
             <Handwritten
               ref={sideNoteRef}
               contentEditable={editable}
@@ -236,94 +214,87 @@ export function LoveLifeTemplate({
               onInput={(event) =>
                 onSideNoteChange?.(event.currentTarget.innerText)
               }
-              className="absolute right-[-5%] top-[36%] z-20 w-[15%] text-center select-text leading-[.95] outline-none"
+              className="absolute right-[-8.3%] top-[25%] z-30 w-[17%] select-text text-center leading-[.92] outline-none"
               style={{
-                fontSize: "clamp(1.5rem, 3.8vw, 3.4rem)",
-                transform: "rotate(82deg)",
+                fontSize: "clamp(1.25rem, 3.7vw, 3.1rem)",
+                transform: "rotate(83deg)",
               }}
             >
               {sideNote}
             </Handwritten>
 
+            <div className="absolute bottom-[8%] left-[5%] z-30 flex items-end text-white">
+              <Handwritten
+                ref={yearsRef}
+                contentEditable={editable}
+                suppressContentEditableWarning
+                onInput={(event) =>
+                  onYearsChange?.(event.currentTarget.innerText)
+                }
+                className="select-text leading-[.78] outline-none"
+                style={{
+                  color: "#fff",
+                  fontFamily: "Arial, Helvetica, sans-serif",
+                  fontWeight: 900,
+                  fontSize: "clamp(5rem, 10vw, 9rem)",
+                }}
+              >
+                {years}
+              </Handwritten>
+
+              <Handwritten
+                ref={yearsLabelRef}
+                contentEditable={editable}
+                suppressContentEditableWarning
+                onInput={(event) =>
+                  onYearsLabelChange?.(event.currentTarget.innerText)
+                }
+                className="mb-[.35rem] ml-[.5rem] select-text whitespace-nowrap outline-none"
+                style={{
+                  color: "#fff",
+                  fontFamily: "Arial, Helvetica, sans-serif",
+                  fontWeight: 800,
+                  fontSize: "clamp(1.1rem, 2.8vw, 2.5rem)",
+                }}
+              >
+                {yearsLabel}
+              </Handwritten>
+            </div>
+          </div>
+        </section>
+
+        <section className="absolute left-[31.5%] top-[76.2%] z-40 w-[55%]">
+          <div className="relative aspect-[3229/1900]">
             <img
-              src={LOVE_ASSETS.hearts}
+              src={LOVE_ASSETS.tag}
               alt=""
               aria-hidden="true"
-              className="pointer-events-none absolute inset-0 h-full w-full object-contain opacity-85"
+              className="pointer-events-none absolute inset-0 h-full w-full object-fill"
             />
-
-            <div className="relative flex items-end justify-between px-[6%] pb-[3%] pt-[-2%]">
-              <div className="flex items-end gap-2 text-white">
-                <Handwritten
-                  ref={yearsRef}
-                  contentEditable={editable}
-                  suppressContentEditableWarning
-                  onInput={(event) =>
-                    onYearsChange?.(event.currentTarget.innerText)
-                  }
-                  className="select-text font-sans font-black leading-none outline-none"
-                  style={{
-                    color: "#fff",
-                    fontFamily: "sans-serif",
-                    fontWeight: 900,
-                    fontSize: "clamp(4rem, 7vw, 8rem)",
-                  }}
-                >
-                  {years}
-                </Handwritten>
-                <Handwritten
-                  ref={yearsLabelRef}
-                  contentEditable={editable}
-                  suppressContentEditableWarning
-                  onInput={(event) =>
-                    onYearsLabelChange?.(event.currentTarget.innerText)
-                  }
-                  className="mb-[.55rem] select-text whitespace-nowrap outline-none"
-                  style={{
-                    color: "#fff",
-                    fontFamily: "sans-serif",
-                    fontWeight: 800,
-                    fontSize: "clamp(1.25rem, 2.8vw, 2.6rem)",
-                    transform: "translateX(-.2rem)",
-                  }}
-                >
-                  {yearsLabel}
-                </Handwritten>
+            <div className="absolute inset-[21%_10%_11%] flex items-center justify-center">
+              <div
+                ref={messageRef}
+                contentEditable={editable}
+                suppressContentEditableWarning
+                onInput={(event) =>
+                  onMessageChange?.(event.currentTarget.innerText)
+                }
+                className="select-text whitespace-pre-line text-center outline-none"
+                style={{
+                  fontFamily: '"Oswald", "Arial Narrow", sans-serif',
+                  fontWeight: 700,
+                  color: "#171112",
+                  fontSize: "clamp(.65rem, 1.6vw, 1.3rem)",
+                  lineHeight: 1.2,
+                  letterSpacing: ".015em",
+                }}
+              >
+                {message}
               </div>
             </div>
           </div>
         </section>
-
-        <section className="relative mx-auto mt-[-2vh] w-[78%] max-w-[700px] sm:w-[72%]">
-          <img
-            src={LOVE_ASSETS.tag}
-            alt=""
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 h-full w-full object-fill"
-          />
-          <div className="relative px-[12%] py-[15%]">
-            <div
-              ref={messageRef}
-              contentEditable={editable}
-              suppressContentEditableWarning
-              onInput={(event) => onMessageChange?.(event.currentTarget.innerText)}
-              className="select-text whitespace-pre-line text-center outline-none"
-              style={{
-                fontFamily: '"Oswald", "Arial Narrow", sans-serif',
-                fontWeight: 700,
-                color: "#171112",
-                fontSize: "clamp(.8rem, 1.55vw, 1.35rem)",
-                lineHeight: 1.28,
-                letterSpacing: ".02em",
-              }}
-            >
-              {message}
-            </div>
-          </div>
-        </section>
-
-        <div className="pb-4" />
-      </main>
+      </div>
     </article>
   );
 }
