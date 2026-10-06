@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BirthdayTemplate, BIRTHDAY_DEFAULT_MESSAGE } from "./templates/BirthdayTemplate";
 
 interface Props {
   entered: boolean;
@@ -14,6 +15,12 @@ interface LocalProject {
   title: string;
   thumbnail?: string;
   updatedAt?: string;
+  templateSlug?: string;
+  data?: {
+    heading?: string;
+    message?: string;
+    photoUrl?: string | null;
+  };
 }
 
 const STORAGE_KEY = "paper-stish-projects";
@@ -59,21 +66,29 @@ export function MyProjects({ entered, onOpenProject }: Props) {
               <button
                 key={project.id}
                 type="button"
-                onClick={() => onOpenProject?.(project.id, (project as LocalProject & { templateSlug?: string }).templateSlug ?? "")}
-                className="group relative w-full s:h-[43.5svh] s:max-h-[55rem] s:w-auto flex-none cursor-pointer overflow-hidden rounded-15 s:rounded-20 text-left"
+                onClick={() => onOpenProject?.(project.id, project.templateSlug ?? "")}
+                className="group relative w-full s:h-[70svh] s:max-h-[78rem] s:w-auto flex-none cursor-pointer overflow-hidden rounded-15 s:rounded-20 text-left"
                 style={{
-                  aspectRatio: "2048 / 1172",
+                  aspectRatio: "1080 / 1550",
                   animation: entered
                     ? `my-project-pop 1.25s cubic-bezier(0.16,1,0.3,1) ${0.1 + index * 0.04}s both`
                     : undefined,
                 }}
               >
-                {project.thumbnail ? (
-                  <img src={project.thumbnail} alt="" className="absolute inset-0 size-full object-cover transition-transform duration-700 ease-out group-hover:scale-[0.985]" />
-                ) : (
-                  <div className="absolute inset-0 bg-black/20 transition-transform duration-700 ease-out group-hover:scale-[0.985]" />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+                <div className="absolute inset-0 transition-transform duration-700 ease-out group-hover:scale-[0.985]">
+                  {project.templateSlug === "birthday-template" ? (
+                    <BirthdayTemplate
+                      heading={project.data?.heading ?? "★ HAPPY BIRTHDAY !!"}
+                      message={project.data?.message ?? BIRTHDAY_DEFAULT_MESSAGE}
+                      photoUrl={project.data?.photoUrl ?? null}
+                    />
+                  ) : project.thumbnail ? (
+                    <img src={project.thumbnail} alt="" className="absolute inset-0 size-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 bg-black/20" />
+                  )}
+                </div>
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
                 <p className="pointer-events-none absolute bottom-10 inset-x-10 s:bottom-10 s:inset-x-20 flex items-end justify-between text-white">
                   <span className="min-w-0 truncate text-16 s:text-18 tracking-[-0.05em]">{project.title}</span>
                   <span className="relative ml-6 inline-flex size-25 s:size-25 flex-none items-center justify-center rounded-full bg-black text-white transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true">
