@@ -1,20 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 864 1536">
-  <rect width="864" height="1536" fill="#eee7e3"/>
-  <image href="https://raw.githubusercontent.com/sandeepdolai/templateassets/main/ec6103999a9a1153cab168e028555b63.png" x="0" y="0" width="864" height="1536" preserveAspectRatio="xMidYMid slice"/>
-  <image href="https://raw.githubusercontent.com/sandeepdolai/templateassets/main/204e765506cf4c2d7b789922b4b0ccf8.png" x="0" y="0" width="864" height="1536" preserveAspectRatio="none"/>
-  <text x="38" y="245" fill="#8d252a" font-size="67" font-family="cursive" font-style="italic" transform="rotate(-9 38 245)">Love of my life</text>
-  <image href="https://raw.githubusercontent.com/sandeepdolai/templateassets/main/file_00000000db28820b8ba26950672162f5.png" x="425" y="65" width="425" height="405" preserveAspectRatio="xMidYMid meet"/>
-  <rect x="82" y="418" width="700" height="853" fill="#000"/>
-  <rect x="122" y="466" width="618" height="632" fill="#000"/>
-  <image href="https://raw.githubusercontent.com/sandeepdolai/templateassets/main/a4061d3351e63fe0fe177d547bd349c0.png" x="82" y="418" width="700" height="853" preserveAspectRatio="none"/>
-  <text x="798" y="640" fill="#8d252a" font-size="29" font-family="cursive" font-weight="600" transform="rotate(83 798 640)">favorite person</text>
-  <text x="91" y="1200" fill="#fff" font-size="93" font-family="Arial" font-weight="900">2</text>
-  <text x="157" y="1190" fill="#fff" font-size="35" font-family="Arial" font-weight="800">years with you</text>
-  <image href="https://raw.githubusercontent.com/sandeepdolai/templateassets/main/3229e85812cd42b0a87630ac580b562d.png" x="274" y="1175" width="470" height="321" preserveAspectRatio="none"/>
-  <text x="430" y="1294" text-anchor="middle" fill="#171112" font-size="18" font-family="Arial" font-weight="700">"I JUST WANT TO TELL YOU, THANK YOU FOR COMING</text>
-  <text x="430" y="1322" text-anchor="middle" fill="#171112" font-size="18" font-family="Arial" font-weight="700">INTO MY LIFE. YOU ACTUALLY MAKE ME SMILE AND</text>
-  <text x="430" y="1350" text-anchor="middle" fill="#171112" font-size="18" font-family="Arial" font-weight="700">LAUGH. THANK YOU FOR BEING UNDERSTANDING. THANK</text>
-  <text x="430" y="1378" text-anchor="middle" fill="#171112" font-size="18" font-family="Arial" font-weight="700">YOU FOR BEING MY BIGGEST SUPPORTER, AND THANK YOU</text>
-  <text x="430" y="1406" text-anchor="middle" fill="#171112" font-size="18" font-family="Arial" font-weight="700">FOR CARING ABOUT ME. I REALLY APPRECIATE YOU SO</text>
-  <text x="430" y="1434" text-anchor="middle" fill="#171112" font-size="18" font-family="Arial" font-weight="700">MUCH. I LOVE YOU A LOT!"</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="736" height="1308" viewBox="0 0 736 1308">
+  <defs>
+    <style>
+      .years{font-family:Anton,Impact,Arial Narrow,sans-serif;font-weight:400;fill:#fff}
+      .noteText{font-family:"Caveat Brush","Arial Narrow",sans-serif;font-weight:400;fill:#14110f}
+    </style>
+  </defs>
+  <rect width="736" height="1308" fill="#e9e1dc"/>
+  <image href="love-paper-texture.webp" x="0" y="0" width="736" height="1308" preserveAspectRatio="xMidYMid slice" opacity=".96"/>
+  <image href="love-cats.webp" x="362" y="64" width="346" height="auto" preserveAspectRatio="xMidYMin meet"/>
+  <image href="love-of-my-life-art.webp" x="25" y="225" width="224" height="auto" preserveAspectRatio="xMinYMin meet" transform="rotate(-13 25 225)"/>
+  <image href="love-favorite-person-art.webp" x="594" y="580" width="173" height="auto" preserveAspectRatio="xMinYMin meet" transform="rotate(78 594 580)"/>
+  <g transform="translate(70 356)">
+    <rect x="0" y="0" width="598" height="716" fill="#050505"/>
+    <image href="love-polaroid-frame.webp" x="0" y="0" width="598" height="716" preserveAspectRatio="none"/>
+    <text class="years" x="61" y="625" font-size="107" stroke="#fff" stroke-width="4">2</text>
+    <text class="years" x="143" y="625" font-size="35" stroke="#fff" stroke-width="1">yers with you</text>
+  </g>
+  <path d="M360 1041 H560 L548 1010 H375 Z" fill="#f7f3ee"/>
+  <rect x="234" y="1038" width="400" height="244" fill="#f1e1b9"/>
+  <circle cx="432" cy="1047" r="12" fill="#fff"/>
+  <text class="noteText" x="434" y="1105" font-size="33" text-anchor="middle">I JUST WANT TO TELL YOU, THANK YOU FOR</text>
+  <text class="noteText" x="434" y="1146" font-size="33" text-anchor="middle">COMING INTO MY LIFE. YOU ACTUALLY MAKE</text>
+  <text class="noteText" x="434" y="1187" font-size="33" text-anchor="middle">ME SMILE AND LAUGH. I LOVE YOU A LOT.</text>
+  <image href="love-bow.webp" x="328" y="944" width="276" height="auto" preserveAspectRatio="xMidYMin meet"/>
 </svg>
