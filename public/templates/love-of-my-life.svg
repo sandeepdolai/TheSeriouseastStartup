@@ -12,7 +12,20 @@
   <text x="920" y="215" fill="#8f2428" font-size="28" font-family="cursive">♥</text>
   <rect x="100" y="380" width="880" height="770" fill="#7c1824" rx="4"/>
   <rect x="150" y="430" width="780" height="650" fill="#050505"/>
-  <image href="https://raw.githubusercontent.com/sandeepdolai/templateassets/main/file_00000000db28820b8ba26950672162f5.png" x="470" y="80" width="520" height="350" preserveAspectRatio="xMidYMid meet"/>
+  <g transform="translate(700 235)">
+    <ellipse cx="0" cy="115" rx="110" ry="155" fill="#191719"/>
+    <polygon points="-100,-40 -52,-150 -5,-72" fill="#191719"/>
+    <polygon points="5,-72 55,-150 98,-40" fill="#191719"/>
+    <circle cx="-42" cy="8" r="8" fill="#efe6d4"/>
+    <circle cx="43" cy="8" r="8" fill="#efe6d4"/>
+    <circle cx="0" cy="35" r="7" fill="#8f2428"/>
+    <ellipse cx="125" cy="135" rx="105" ry="145" fill="#e6ddd2"/>
+    <polygon points="55,-5 90,-120 128,-28" fill="#e6ddd2"/>
+    <polygon points="135,-28 175,-120 198,-3" fill="#e6ddd2"/>
+    <circle cx="93" cy="20" r="8" fill="#3d3430"/>
+    <circle cx="157" cy="20" r="8" fill="#3d3430"/>
+    <circle cx="125" cy="48" r="7" fill="#d08f79"/>
+  </g>
   <text x="125" y="1120" fill="#fff" font-size="95" font-family="Arial" font-weight="900">2</text>
   <text x="205" y="1110" fill="#fff" font-size="39" font-family="Arial" font-weight="700">years with you</text>
   <rect x="270" y="1115" width="540" height="290" fill="#efe6d4" transform="rotate(2 540 1260)"/>
