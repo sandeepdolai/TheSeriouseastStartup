@@ -262,7 +262,7 @@ export function App() {
       savedAt: new Date().toISOString(),
     });
     localStorage.setItem(getAccountStorageKey("paper-stish-templates", accountEmail), JSON.stringify(templates));
-  }, []);
+  }, [accountEmail]);
 
   const goHome = useCallback(() => {
     if (busy.current) return;
