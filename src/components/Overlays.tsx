@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { ease, tween } from "@/gl/react";
 
 interface OverlayProps {
@@ -122,6 +123,8 @@ export function ProfileOverlay({
   onMyTemplates?: () => void;
 }) {
   const { ref, visible } = useReveal(open);
+  const { data: session, status } = useSession();
+  const signedIn = status === "authenticated" && !!session?.user;
 
   return (
     <div
@@ -144,40 +147,71 @@ export function ProfileOverlay({
         </div>
 
         <div className="px-15 pb-15 s:px-20 s:pb-20">
-          <div data-reveal className="rounded-[1.55rem] bg-[#272727] p-20 s:p-25">
-            <div className="flex items-start gap-12">
-              <div className="flex size-38 shrink-0 items-center justify-center rounded-full bg-white text-black">
-                <SparkIcon />
+          {!signedIn ? (
+            <div data-reveal className="rounded-[1.55rem] bg-[#272727] p-20 s:p-25">
+              <div className="flex items-start gap-12">
+                <div className="flex size-38 shrink-0 items-center justify-center rounded-full bg-white text-black">
+                  <svg viewBox="0 0 24 24" className="size-17" aria-hidden="true">
+                    <path d="M21.35 12.27c0-.77-.07-1.51-.21-2.23H12v4.22h5.24a4.48 4.48 0 0 1-1.94 2.94v2.44h3.14c1.84-1.69 2.91-4.17 2.91-7.37Z" fill="#4285F4"/>
+                    <path d="M12 22c2.7 0 4.97-.89 6.63-2.41l-3.14-2.44c-.87.58-1.97.92-3.49.92-2.68 0-4.95-1.81-5.77-4.24H3v2.51A10 10 0 0 0 12 22Z" fill="#34A853"/>
+                    <path d="M6.23 13.83A6 6 0 0 1 5.91 12c0-.64.11-1.26.32-1.83V7.66H3a10 10 0 0 0 0 8.68l3.23-2.51Z" fill="#FBBC05"/>
+                    <path d="M12 5.93c1.47 0 2.8.51 3.84 1.52l2.88-2.88C16.96 2.99 14.7 2 12 2a10 10 0 0 0-9 5.66l3.23 2.51C7.05 7.74 9.32 5.93 12 5.93Z" fill="#EA4335"/>
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-15 leading-17 tracking-[-0.02em]">Sign in with Google</p>
+                  <p className="mt-5 text-12 leading-15 tracking-[-0.01em] text-white/50">
+                    Save your projects and templates to your Paper Stish account.
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-15 leading-17 tracking-[-0.02em]">Free</p>
-                <p className="mt-5 text-12 leading-15 tracking-[-0.01em] text-white/50">
-                  Upgrade to unlock the full Paper Stish experience.
-                </p>
-              </div>
+              <button
+                type="button"
+                onClick={() => signIn("google")}
+                className="pointer-events-auto mt-18 flex h-48 w-full items-center justify-center gap-9 rounded-full bg-white text-black text-14 tracking-[-0.02em] transition-transform duration-300 hover:scale-[1.01] active:scale-[0.99]"
+              >
+                Continue with Google
+              </button>
             </div>
-            <button
-              type="button"
-              className="pointer-events-auto mt-18 h-48 w-full rounded-full bg-white text-black text-14 tracking-[-0.02em] transition-transform duration-300 hover:scale-[1.01] active:scale-[0.99]"
-            >
-              Upgrade
-            </button>
-          </div>
+          ) : (
+            <>
+              <div data-reveal className="rounded-[1.55rem] bg-[#272727] p-20 s:p-25">
+                <div className="flex items-center gap-12">
+                  <div className="size-38 shrink-0 overflow-hidden rounded-full bg-white/10">
+                    {session.user?.image ? (
+                      <img src={session.user.image} alt="" className="size-full object-cover" />
+                    ) : (
+                      <div className="flex size-full items-center justify-center"><UserIcon /></div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-15 leading-17 tracking-[-0.02em]">
+                      {session.user?.name ?? "Paper Stish user"}
+                    </p>
+                    <p className="mt-5 truncate text-12 leading-15 tracking-[-0.01em] text-white/50">
+                      {session.user?.email ?? ""}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-          <div data-reveal className="mt-10 flex flex-col gap-8">
-            <ProfileAction icon={<UserIcon />} onClick={onMyProjects}>My Projects</ProfileAction>
-            <ProfileAction onClick={onMyTemplates}>My Templates</ProfileAction>
-            <ProfileAction>Manage subscription</ProfileAction>
-          </div>
+              <div data-reveal className="mt-10 flex flex-col gap-8">
+                <ProfileAction icon={<UserIcon />} onClick={onMyProjects}>My Projects</ProfileAction>
+                <ProfileAction onClick={onMyTemplates}>My Templates</ProfileAction>
+                <ProfileAction>Manage subscription</ProfileAction>
+              </div>
 
-          <div data-reveal className="mt-15 border-t border-white/10 pt-15 text-center">
-            <button
-              type="button"
-              className="pointer-events-auto text-12 tracking-[-0.01em] text-white/45 transition-colors duration-300 hover:text-white/80"
-            >
-              Sign out
-            </button>
-          </div>
+              <div data-reveal className="mt-15 border-t border-white/10 pt-15 text-center">
+                <button
+                  type="button"
+                  onClick={() => signOut()}
+                  className="pointer-events-auto text-12 tracking-[-0.01em] text-white/45 transition-colors duration-300 hover:text-white/80"
+                >
+                  Sign out
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="px-25 pb-22 text-center s:px-30 s:pb-25">
