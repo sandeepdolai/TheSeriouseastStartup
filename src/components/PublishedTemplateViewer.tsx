@@ -58,10 +58,8 @@ export function PublishedTemplateViewer() {
   if (payload.templateSlug === "love-of-my-life") {
     return (
       <LoveLifeTemplate
-        heading={payload.data?.heading ?? "Love of my life"}
         years={payload.data?.years ?? "2"}
-        yearsLabel={payload.data?.yearsLabel ?? "years with you"}
-        sideNote={payload.data?.sideNote ?? "favorite person"}
+        yearsLabel={payload.data?.yearsLabel ?? "yers with you"}
         message={payload.data?.message ?? payload.message}
         photoUrl={payload.data?.photoUrl ?? payload.photoUrl}
       />
