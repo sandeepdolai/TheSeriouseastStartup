@@ -127,6 +127,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   const [libraryError, setLibraryError] = useState("");
   const [uploadsVersion, setUploadsVersion] = useState(0);
   const [saveError, setSaveError] = useState("");
+  const [textEditorOpen, setTextEditorOpen] = useState(false);
 
   const title = useEditorStore((s) => s.title);
   const doc = useEditorStore((s) => s.document);
@@ -486,7 +487,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   // already committed to the store) — no caret stays active behind an open
   // sheet. Closing a sheet never touches the editing state.
   const sheetsOpen =
-    libraryOpen || inspectorOpen || exportOpen || publishOpen || !!authGate;
+    libraryOpen || inspectorOpen || exportOpen || publishOpen || !!authGate || textEditorOpen;
   const prevSheetsOpenRef = useRef(false);
   useEffect(() => {
     if (sheetsOpen && !prevSheetsOpenRef.current) {
@@ -495,6 +496,12 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
     }
     prevSheetsOpenRef.current = sheetsOpen;
   }, [sheetsOpen]);
+
+  useEffect(() => {
+    if (textEditorOpen && selectedLayer?.type !== "text") {
+      setTextEditorOpen(false);
+    }
+  }, [selectedLayer, textEditorOpen]);
 
   /* ── Save / publish / export ──────────────────────────────────────── */
 
@@ -673,10 +680,19 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   }, []);
 
   const editSelectedText = useCallback(() => {
-    // Enter text-editing mode directly on the canvas — the inspector must
-    // not be open at the same time (distinct editing states).
     const state = useEditorStore.getState();
-    if (state.selection) state.startEditing(state.selection);
+    const layer = state.selection
+      ? state.document.layers.find((item) => item.id === state.selection)
+      : null;
+    if (!layer || layer.type !== "text" || layer.locked) return;
+
+    // Edit Text opens the formatting editor. It deliberately does NOT enter
+    // canvas text-edit mode, so clicking the header button never summons the
+    // mobile keyboard by itself. The keyboard appears only when the user
+    // explicitly taps the words field inside the editor.
+    state.startEditing(null);
+    setInspectorOpen(false);
+    setTextEditorOpen(true);
   }, []);
 
   /* ── Keyboard shortcuts ───────────────────────────────────────────── */
@@ -1001,6 +1017,33 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
         }}
       />
 
+      {/* text editor — formatting controls for the selected text layer */}
+      {textEditorOpen && selectedLayer?.type === "text" && (
+        <>
+          <div className="hidden s:block">
+            <ModalShell
+              title="Edit Text"
+              subtitle="Change the words, font, size, colour and alignment. Changes appear live on the canvas."
+              onClose={() => setTextEditorOpen(false)}
+              width={500}
+            >
+              <TextEditorContent
+                layer={selectedLayer}
+                onImportFont={() => fontFileRef.current?.click()}
+              />
+            </ModalShell>
+          </div>
+          <div className="s:hidden">
+            <SheetShell title="Edit Text" onClose={() => setTextEditorOpen(false)}>
+              <TextEditorContent
+                layer={selectedLayer}
+                onImportFont={() => fontFileRef.current?.click()}
+              />
+            </SheetShell>
+          </div>
+        </>
+      )}
+
       {/* library panel — desktop side panel / mobile sheet */}
       {libraryOpen && load.phase === "ready" && (
         <>
@@ -1203,6 +1246,190 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
 
 const PLACEHOLDER_GIF =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+
+function TextEditorContent({
+  layer,
+  onImportFont,
+}: {
+  layer: TextLayer;
+  onImportFont: () => void;
+}) {
+  const doc = useEditorStore((s) => s.document);
+  const updateText = useEditorStore((s) => s.updateText);
+
+  const fontOptions = useMemo(() => {
+    const userFonts = doc.fonts
+      .filter((font) => font.source === "user")
+      .map((font) => ({
+        id: font.id,
+        family: font.family,
+        name: getAsset(font.id)?.name ?? "My font",
+        weights: [400],
+      }));
+    return [
+      ...BUILTIN_FONTS.map((font) => ({
+        id: font.id,
+        family: font.family,
+        name: font.name,
+        weights: font.weights,
+      })),
+      ...userFonts,
+    ];
+  }, [doc.fonts]);
+
+  const font = fontOptions.find((item) => item.id === layer.fontId);
+  const swatches = [
+    "#1c1b18", "#ffffff", "#e5484d", "#ff8fab",
+    "#f5c518", "#4f9cf9", "#7fc97f", "#b78ef0",
+  ];
+
+  return (
+    <div className="grid gap-14">
+      <label className="grid gap-7">
+        <span className="text-10 text-white/45">Words</span>
+        <textarea
+          value={layer.text}
+          onChange={(event) => updateText(layer.id, { text: event.target.value.slice(0, 2000) })}
+          rows={4}
+          spellCheck={false}
+          aria-label="Text content"
+          className="min-h-100 w-full resize-y rounded-[13px] border border-white/10 bg-white/5 px-12 py-10 text-13 leading-18 text-white outline-none focus:border-white/30"
+        />
+      </label>
+
+      <label className="grid gap-7">
+        <span className="text-10 text-white/45">Font</span>
+        <select
+          value={layer.fontId}
+          onChange={(event) => {
+            const value = event.target.value;
+            if (value === "__add__") {
+              onImportFont();
+              return;
+            }
+            const next = fontOptions.find((item) => item.id === value);
+            if (next) updateText(layer.id, { fontId: next.id, fontFamily: next.family });
+          }}
+          className="w-full appearance-none rounded-[13px] border border-white/10 bg-white/5 px-12 py-10 text-12 text-white outline-none focus:border-white/25"
+          aria-label="Font"
+        >
+          {fontOptions.map((option) => (
+            <option key={option.id} value={option.id} style={{ fontFamily: option.family }} className="bg-[#161616]">
+              {option.name}
+            </option>
+          ))}
+          <option value="__add__" className="bg-[#161616]">＋ Import font…</option>
+        </select>
+      </label>
+
+      {font && font.weights.length > 1 && (
+        <div>
+          <span className="text-10 text-white/45">Weight</span>
+          <div className="mt-7 flex flex-wrap gap-6">
+            {font.weights.map((weight) => (
+              <button
+                key={weight}
+                type="button"
+                onClick={() => updateText(layer.id, { fontWeight: weight })}
+                aria-pressed={layer.fontWeight === weight}
+                className={`min-w-44 rounded-full px-10 py-7 text-10 transition-colors ${
+                  layer.fontWeight === weight ? "bg-white text-black" : "bg-white/7 text-white/70 hover:bg-white/12"
+                }`}
+                style={{ fontWeight: weight }}
+              >
+                {weight}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <div className="flex items-center justify-between">
+          <span className="text-10 text-white/45">Size</span>
+          <span className="text-10 text-white/55">{Math.round(layer.fontSize)} px</span>
+        </div>
+        <div className="mt-7 flex items-center gap-7">
+          <button
+            type="button"
+            onClick={() => updateText(layer.id, { fontSize: clamp(layer.fontSize - 1, 12, 280) })}
+            aria-label="Decrease text size"
+            className="flex size-34 shrink-0 items-center justify-center rounded-full bg-white/8 text-16 text-white/80 hover:bg-white/14"
+          >
+            −
+          </button>
+          <input
+            type="range"
+            min={12}
+            max={280}
+            step={1}
+            value={clamp(layer.fontSize, 12, 280)}
+            onChange={(event) => updateText(layer.id, { fontSize: Number(event.target.value) })}
+            aria-label="Font size"
+            className="h-30 min-w-0 flex-1 accent-white"
+          />
+          <button
+            type="button"
+            onClick={() => updateText(layer.id, { fontSize: clamp(layer.fontSize + 1, 12, 280) })}
+            aria-label="Increase text size"
+            className="flex size-34 shrink-0 items-center justify-center rounded-full bg-white/8 text-16 text-white/80 hover:bg-white/14"
+          >
+            +
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <span className="text-10 text-white/45">Colour</span>
+        <div className="mt-7 flex flex-wrap items-center gap-8">
+          {swatches.map((color) => (
+            <button
+              key={color}
+              type="button"
+              onClick={() => updateText(layer.id, { color })}
+              aria-label={`Text colour ${color}`}
+              aria-pressed={layer.color === color}
+              className={`size-30 rounded-full border transition-transform hover:scale-110 ${
+                layer.color === color ? "border-white" : "border-white/15"
+              }`}
+              style={{ background: color }}
+            />
+          ))}
+          <input
+            type="color"
+            value={safeColor(layer.color, "#1c1b18")}
+            onChange={(event) => updateText(layer.id, { color: event.target.value })}
+            aria-label="Custom text colour"
+            className="h-30 w-44 cursor-pointer rounded-full border border-white/15 bg-transparent"
+          />
+        </div>
+      </div>
+
+      <div>
+        <span className="text-10 text-white/45">Alignment</span>
+        <div className="mt-7 grid grid-cols-3 gap-7">
+          {(["left", "center", "right"] as const).map((align) => (
+            <button
+              key={align}
+              type="button"
+              onClick={() => updateText(layer.id, { align })}
+              aria-pressed={layer.align === align}
+              className={`rounded-10 py-9 text-10 capitalize transition-colors ${
+                layer.align === align ? "bg-white text-black" : "bg-white/7 text-white/70 hover:bg-white/12"
+              }`}
+            >
+              {align}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <p className="text-9 leading-13 text-white/30">
+        All changes update the selected text on the canvas immediately and are included in undo/redo and autosave.
+      </p>
+    </div>
+  );
+}
 
 /* ── Library content ──────────────────────────────────────────────────── */
 
