@@ -21,28 +21,6 @@ const P = `${BASE_PATH}/projects/`;
 
 export const FEATURED: Project[] = [
   {
-    title: "Birthday Template",
-    slug: "birthday-template",
-    description:
-      "A handmade birthday page with a paper texture, handwritten details, a photo space, and a personal message.",
-    link: null,
-    tags: [{ title: "Birthday", url: null }],
-    awards: 0,
-    aspect: 1080 / 1550,
-    media: [BASE_PATH + "/templates/birthday-template.svg"],
-  },
-  {
-    title: "Love of My Life",
-    slug: "love-of-my-life",
-    description:
-      "A scrapbook-style love story with a paper backdrop, two cats, a photo frame, handwritten details, and a hanging note.",
-    link: null,
-    tags: [{ title: "Love", url: null }],
-    awards: 0,
-    aspect: 1080 / 1550,
-    media: [BASE_PATH + "/templates/love-of-my-life.webp"],
-  },
-  {
     title: "Nathan Riley",
     slug: "nathan-riley",
     description:
