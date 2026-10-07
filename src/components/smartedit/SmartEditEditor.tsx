@@ -300,10 +300,10 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
         id: projectId,
         account,
         title: state.title,
-        templateSlug: adminTemplateDraft ? "admin-template" : "smart-edit",
+        templateSlug: "smart-edit",
         updatedAt: new Date().toISOString(),
         data: {
-          kind: adminTemplateDraft ? "smart-edit-template" : "smart-edit",
+          kind: "smart-edit",
           document: state.document,
           assets: snapshotAssets(state.document),
         },
@@ -311,7 +311,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
       if (ok) state.markSaved();
       return ok;
     },
-    [projectId, account, snapshotAssets, status, adminTemplateDraft],
+    [projectId, account, snapshotAssets, status],
   );
 
   const flushDraft = useCallback(() => {
