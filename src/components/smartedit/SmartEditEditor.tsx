@@ -158,9 +158,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
       } | null;
 
       if (alive) {
-        setAdminTemplateDraft(
-          isAdminEmail(session?.user?.email) && record?.templateSlug === "admin-template",
-        );
+        setAdminTemplateDraft(isAdminEmail(session?.user?.email));
       }
 
       const draft = await idb.getDraft<{
