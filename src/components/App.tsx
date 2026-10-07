@@ -10,11 +10,11 @@ import { MyProjects } from "./MyProjects";
 import { SavedTemplates } from "./SavedTemplates";
 import { TemplateEditor } from "./TemplateEditor";
 import { SmartEditEditor } from "./smartedit/SmartEditEditor";
-import { listProjects } from "./smartedit/api";
 import { type CanvasRatio, createDocument } from "./smartedit/types";
 import { ProjectSheet } from "./ProjectSheet";
 import { ProfileOverlay } from "./Overlays";
-import { getAccountStorageKey, getAccountKey } from "@/lib/accountStorage";
+import { getAccountKey, getAccountStorageKey } from "@/lib/accountStorage";
+import { listLocalProjects, putLocalProject } from "@/lib/localProjects";
 
 type View = "home" | "my" | "project" | "saved" | "editor" | "smart-edit";
 type Overlay = "profile" | null;
@@ -27,8 +27,8 @@ export function App() {
     if (!accountEmail) return;
 
     const migrate = (key: string) => {
-      const guestKey = getAccountStorageKey(key, null);
-      const accountKey = getAccountStorageKey(key, accountEmail);
+      const guestKey = `${key}:guest`;
+      const accountKey = `${key}:${getAccountKey(accountEmail)}`;
       try {
         const guestRaw = localStorage.getItem(guestKey);
         if (!guestRaw) return;
@@ -54,7 +54,8 @@ export function App() {
       }
     };
 
-    migrate("paper-stish-projects");
+    // Projects live in the device-first IndexedDB store — account folding
+    // (including legacy localStorage records) happens there on first read.
     migrate("paper-stish-templates");
     migrate("paper-stish-username");
   }, [accountEmail]);
@@ -311,15 +312,17 @@ export function App() {
   }, [folio]);
 
   const performCreateSmartEdit = useCallback(
-    (ratio: CanvasRatio) => {
+    async (ratio: CanvasRatio) => {
       const id = `project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const key = getAccountStorageKey("paper-stish-projects", accountEmail);
-      const projects = readLocalArray(key);
-      projects.unshift({
+      const createdAt = new Date().toISOString();
+      // One stable project id, created once, stored on this device.
+      const ok = await putLocalProject({
         id,
+        account: getAccountKey(accountEmail),
         title: "Smart Edit",
         templateSlug: "smart-edit",
-        createdAt: new Date().toISOString(),
+        createdAt,
+        updatedAt: createdAt,
         data: {
           kind: "smart-edit",
           document: createDocument(ratio),
@@ -327,7 +330,7 @@ export function App() {
           published: null,
         },
       });
-      localStorage.setItem(key, JSON.stringify(projects));
+      if (!ok) return; // storage unavailable — do not open an empty editor
       void openSmartEdit(id);
     },
     [openSmartEdit, accountEmail],
@@ -340,60 +343,41 @@ export function App() {
         setAccountGateOpen(true);
         return;
       }
-      performCreateSmartEdit(ratio);
+      void performCreateSmartEdit(ratio);
     },
     [performCreateSmartEdit, status],
   );
 
   const smartEditQuickAction = useCallback(() => {
     if (overlay) closeOverlay();
-    // Open the most recent Smart Edit project, or start a fresh one.
-    // Smart Edit projects are server-backed, so the signed-in user's server
-    // list is checked alongside the local mirror (newest wins).
-    const local = readLocalArray(
-      getAccountStorageKey("paper-stish-projects", accountEmail),
-    );
-    const pickMostRecent = (list: Array<Record<string, unknown>>) => {
-      const smartProjects = list
-        .filter((item) => item?.templateSlug === "smart-edit" && item?.id)
+    // Open the most recent Smart Edit project on this device, or start a
+    // fresh one (device-first: no server round-trip).
+    void listLocalProjects(getAccountKey(accountEmail)).then((local) => {
+      const smartProjects = local
+        .filter((item) => item.templateSlug === "smart-edit" && item.id)
         .sort((a, b) =>
-          String(b?.updatedAt ?? b?.createdAt ?? "").localeCompare(
-            String(a?.updatedAt ?? a?.createdAt ?? ""),
+          String(b.updatedAt ?? b.createdAt ?? "").localeCompare(
+            String(a.updatedAt ?? a.createdAt ?? ""),
           ),
         );
-      const id = smartProjects[0]?.id;
-      return typeof id === "string" ? id : null;
-    };
-
-    const localId = pickMostRecent(local);
-    if (status !== "authenticated") {
+      const localId = smartProjects[0]?.id ?? null;
       if (localId) void openSmartEdit(localId);
-      else createSmartEdit("4:5");
-      return;
-    }
-    void listProjects()
-      .then((server) => {
-        const serverId = pickMostRecent(server as unknown as Array<Record<string, unknown>>);
-        if (serverId || localId) void openSmartEdit(serverId ?? localId!);
-        else createSmartEdit("4:5");
-      })
-      .catch(() => {
-        if (localId) void openSmartEdit(localId);
-        else createSmartEdit("4:5");
-      });
-  }, [accountEmail, closeOverlay, createSmartEdit, openSmartEdit, overlay, status]);
+      else void createSmartEdit("4:5");
+    });
+  }, [accountEmail, closeOverlay, createSmartEdit, openSmartEdit, overlay]);
 
-  const performDuplicateTemplate = useCallback((template: (typeof FEATURED)[number]) => {
+  const performDuplicateTemplate = useCallback(async (template: (typeof FEATURED)[number]) => {
     const id = `project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const projects = readLocalArray(getAccountStorageKey("paper-stish-projects", accountEmail));
-    projects.unshift({
+    // Every duplicated project becomes an independent local project.
+    const ok = await putLocalProject({
       id,
+      account: getAccountKey(accountEmail),
       title: template.title,
-      thumbnail: template.media[0],
       templateSlug: template.slug,
+      thumbnail: template.media[0],
       createdAt: new Date().toISOString(),
     });
-    localStorage.setItem(getAccountStorageKey("paper-stish-projects", accountEmail), JSON.stringify(projects));
+    if (!ok) return; // storage unavailable — do not open an empty editor
     void openTemplateEditor(id, template.slug);
   }, [openTemplateEditor, accountEmail]);
 
@@ -416,7 +400,7 @@ export function App() {
       setAccountGateOpen(true);
       return;
     }
-    performDuplicateTemplate(template);
+    void performDuplicateTemplate(template);
   }, [performDuplicateTemplate, status]);
 
   const saveTemplate = useCallback((template: (typeof FEATURED)[number]) => {
@@ -435,12 +419,12 @@ export function App() {
     setAccountGateOpen(false);
     if (action.type === "duplicate") {
       const template = FEATURED.find((item) => item.slug === action.templateSlug);
-      if (template) performDuplicateTemplate(template);
+      if (template) void performDuplicateTemplate(template);
     } else if (action.type === "save-template") {
       const template = FEATURED.find((item) => item.slug === action.templateSlug);
-      if (template) performSaveTemplate(template);
+      if (template) void performSaveTemplate(template);
     } else if (action.type === "create-smart-edit") {
-      performCreateSmartEdit(action.ratio);
+      void performCreateSmartEdit(action.ratio);
     }
   }, [pendingAccountAction, performDuplicateTemplate, performSaveTemplate, performCreateSmartEdit, status]);
 

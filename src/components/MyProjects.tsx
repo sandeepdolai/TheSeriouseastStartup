@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { getAccountStorageKey } from "@/lib/accountStorage";
+import { getAccountKey } from "@/lib/accountStorage";
+import { listLocalProjects } from "@/lib/localProjects";
 import { BirthdayTemplate, BIRTHDAY_DEFAULT_MESSAGE } from "./templates/BirthdayTemplate";
 import { LoveLifeTemplate, LOVE_DEFAULT_MESSAGE } from "./templates/LoveLifeTemplate";
 import { SmartEditPreview } from "./smartedit/SmartEditPreview";
 import { CANVAS_RATIOS, type AssetRecord, type CanvasRatio, type SmartEditDocument } from "./smartedit/types";
-import { listProjects, type ServerProject } from "./smartedit/api";
 
 interface Props {
   entered: boolean;
@@ -36,8 +36,6 @@ interface LocalProject {
   };
 }
 
-const STORAGE_KEY = "paper-stish-projects";
-
 export function MyProjects({ entered, onOpenProject, onCreateSmartEdit }: Props) {
   const [projects, setProjects] = useState<LocalProject[]>([]);
   const [ratioPanelOpen, setRatioPanelOpen] = useState(false);
@@ -46,54 +44,15 @@ export function MyProjects({ entered, onOpenProject, onCreateSmartEdit }: Props)
   useEffect(() => {
     if (status === "loading") return;
 
-    const readLocal = (): LocalProject[] => {
-      try {
-        const saved = localStorage.getItem(getAccountStorageKey(STORAGE_KEY, session?.user?.email));
-        if (!saved) return [];
-        const parsed = JSON.parse(saved);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        // Local project data is optional; keep the empty state usable.
-        return [];
-      }
-    };
-
-    // Smart Edit projects are server-backed: merge the signed-in user's
-    // server list over the local mirror (server wins per id, server-only
-    // projects are added) so projects survive browsers and devices.
-    const applyLocal = () => setProjects(readLocal());
-    if (status !== "authenticated") {
-      applyLocal();
-      return;
-    }
-
+    // Device-first: My Projects reads from this device's store. A project
+    // created on another device does not appear here before it is
+    // published — that is intentional. Legacy localStorage records are
+    // folded in transparently on first read.
     let alive = true;
-    listProjects()
-      .then((server) => {
-        if (!alive || !Array.isArray(server)) return;
-        const serverMap = new Map<string, ServerProject>(server.map((p) => [p.id, p]));
-        const syncedIds = new Set<string>();
-        const merged = readLocal().map((project) => {
-          if (project.templateSlug !== "smart-edit") return project;
-          const remote = serverMap.get(project.id);
-          if (!remote) return project; // legacy/offline-only local project
-          syncedIds.add(project.id);
-          return {
-            ...project,
-            title: remote.title,
-            updatedAt: remote.updatedAt,
-            data: remote.data as LocalProject["data"],
-          };
-        });
-        const serverOnly = server.filter((p) => !syncedIds.has(p.id));
-        setProjects([...serverOnly, ...merged]);
-      })
-      .catch(() => {
-        if (alive) applyLocal();
-      });
-
-    // Show local data immediately while the server list loads.
-    applyLocal();
+    void listLocalProjects(getAccountKey(session?.user?.email)).then((list) => {
+      if (!alive) return;
+      setProjects(list as LocalProject[]);
+    });
     return () => {
       alive = false;
     };

@@ -3,7 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 
 /**
  * Shared NextAuth options. Imported by the NextAuth route handler and by
- * Smart Edit API routes (via getServerSession) — the single authentication
+ * the publish API (via getServerSession) — the single authentication
  * system used across Paper Stish.
  */
 export const authOptions: NextAuthOptions = {

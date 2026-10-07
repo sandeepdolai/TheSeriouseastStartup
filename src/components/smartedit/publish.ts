@@ -2,14 +2,14 @@
    Paper Stish — Smart Edit
    Publish model.
 
-   Publishing is SERVER-BACKED: the editor saves the project, then asks the
-   server to create/update a publication record. The public link is small —
+   Publishing is SERVER-BACKED: the editor asks the server (through
+   /api/publish, see lib/publications.ts) to create/update a publication
+   record. The public link is small —
 
      /{username}/{viewerName}/{templateId}
 
-   — and the viewer loads the published document from
-   /api/smart-edit/published/{templateId}. The document payload is never
-   placed in the URL.
+   — and the viewer loads the published document from the server. The
+   document payload is never placed in the URL.
 
    The base64 #data= encoding is still understood by the viewer so links
    produced by the earlier client-only version keep working.
@@ -30,14 +30,6 @@ export interface SmartEditPublishedPayload {
   title: string;
   publishedAt: string;
   document: SmartEditDocument;
-}
-
-export interface PublishedRecord {
-  username: string;
-  viewerName: string;
-  templateId: string;
-  url: string;
-  publishedAt: string;
 }
 
 /** Maximum serialized document size accepted for saving/publishing. */
@@ -207,18 +199,7 @@ export function decodeSmartEditPayload(value: string): SmartEditPublishedPayload
   }
 }
 
-/* ── URL construction ────────────────────────────────────────────────────── */
-
-/**
- * Public website URL — /{username}/{viewerName}/{templateId}.
- * The published document is fetched from the server by templateId; nothing
- * is appended to the URL.
- */
-export function buildPublicUrl(username: string, viewerName: string, templateId: string): string {
-  const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-  const path = `${basePath}/${username}/${viewerName}/${templateId}`;
-  return window.location.origin + path;
-}
+/* ── URL construction lives in lib/publications.ts (shared with the normal template editors) ────────────────────────────────────────────────────── */
 
 /** Estimated serialized size — used for friendly pre-flight size errors. */
 export function estimateDocumentBytes(document: SmartEditDocument): number {

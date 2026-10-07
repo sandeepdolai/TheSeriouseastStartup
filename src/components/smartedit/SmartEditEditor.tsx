@@ -8,8 +8,10 @@
    • header: close · title · undo/redo · save · publish
    • desktop (s:): tool rail on the left, canvas centre, inspector right
    • mobile: bottom tool dock, panels as bottom sheets
-   Persistence: debounced local draft (IndexedDB) + account-scoped project
-   records in the existing paper-stish-projects storage + autosave.
+   Persistence is DEVICE-FIRST: the editable project lives on this
+   device — debounced IndexedDB draft (700ms) + account-scoped project
+   record in IndexedDB (3s autosave / manual save). The server is only
+   contacted when the user presses Publish.
 ─────────────────────────────────────────────────────────────────────────── */
 
 import {
@@ -20,7 +22,13 @@ import {
   useState,
 } from "react";
 import { signIn, useSession } from "next-auth/react";
-import { getAccountStorageKey } from "@/lib/accountStorage";
+import { getAccountKey, getAccountStorageKey } from "@/lib/accountStorage";
+import {
+  getLocalProject,
+  listAllLocalProjects,
+  listLocalProjects,
+  putLocalProject,
+} from "@/lib/localProjects";
 import {
   type AssetRecord,
   type Layer,
@@ -54,19 +62,15 @@ import { layoutTextLayer } from "./textLayout";
 import { SmartEditCanvas } from "./SmartEditCanvas";
 import { exportDocument } from "./exportRenderer";
 import {
-  type PublishedRecord,
   SMART_EDIT_MAX_DOCUMENT_BYTES,
   estimateDocumentBytes,
   slugPart,
 } from "./publish";
 import {
-  type ServerProject,
-  createProject,
-  getProject,
-  publishProject,
+  type PublishedRecord,
   publishResultToRecord,
-  saveProject,
-} from "./api";
+  publishWebsite,
+} from "@/lib/publications";
 import {
   AuthGate,
   IconDelete,
@@ -97,20 +101,6 @@ interface SmartEditEditorProps {
   onClose: () => void;
 }
 
-interface ProjectRecord {
-  id: string;
-  title: string;
-  templateSlug?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  data?: {
-    kind?: string;
-    document?: SmartEditDocument;
-    assets?: Record<string, AssetRecord>;
-    published?: PublishedRecord | null;
-  };
-}
-
 type LoadState = { phase: "loading" } | { phase: "ready" } | { phase: "missing" };
 
 export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
@@ -135,7 +125,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   const [manifest, setManifest] = useState<LibraryManifest | null>(null);
   const [libraryError, setLibraryError] = useState("");
   const [uploadsVersion, setUploadsVersion] = useState(0);
-  const [syncError, setSyncError] = useState("");
+  const [saveError, setSaveError] = useState("");
 
   const title = useEditorStore((s) => s.title);
   const doc = useEditorStore((s) => s.document);
@@ -154,10 +144,6 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   const projectTimer = useRef<number | null>(null);
   const fontFileRef = useRef<HTMLInputElement>(null);
   const imageFileRef = useRef<HTMLInputElement>(null);
-  /** project row exists on the server (POST create done at least once) */
-  const serverSyncedRef = useRef(false);
-  /** serializes server saves so create/update never race */
-  const saveQueueRef = useRef<Promise<boolean>>(Promise.resolve(true));
 
   /* ── Project load + draft recovery ─────────────────────────────────── */
 
@@ -168,26 +154,16 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
     let alive = true;
 
     const boot = async () => {
-      const email = session?.user?.email ?? null;
-
-      // Server record — the source of truth for saved projects. A failure
-      // (offline / guest session) just falls back to local data below.
-      let serverRec: ServerProject | null = null;
-      if (email) {
-        serverRec = await getProject(projectId).catch(() => null);
-        if (serverRec?.data?.document) serverSyncedRef.current = true;
-      }
-
-      let record: ProjectRecord | null = null;
-      try {
-        const raw = localStorage.getItem(getAccountStorageKey("paper-stish-projects", email));
-        const projects = raw ? JSON.parse(raw) : [];
-        if (Array.isArray(projects)) {
-          record = projects.find((p: ProjectRecord) => p?.id === projectId) ?? null;
-        }
-      } catch {
-        record = null;
-      }
+      // Device-first: the editable project lives on this device. The stored
+      // record and the debounced draft are compared and the freshest
+      // document wins — no server round-trip while editing.
+      const record = await getLocalProject(getAccountKey(session?.user?.email), projectId);
+      const projectData = (record?.data ?? null) as {
+        kind?: string;
+        document?: SmartEditDocument;
+        assets?: Record<string, AssetRecord>;
+        published?: PublishedRecord | null;
+      } | null;
 
       const draft = await idb.getDraft<{
         document: SmartEditDocument;
@@ -198,8 +174,8 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
       const ts = (value?: string | number) =>
         value ? (typeof value === "number" ? value : Date.parse(value) || 0) : 0;
 
-      // Freshest document wins: local mirror, IndexedDB draft, server row
-      // (server last so it wins timestamp ties — cross-device truth).
+      // Freshest document wins: stored record vs IndexedDB draft (the
+      // draft is written most often, so it wins timestamp ties).
       const candidates: {
         document: SmartEditDocument;
         at: number;
@@ -207,13 +183,13 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
         assets: AssetRecord[];
         published: PublishedRecord | null;
       }[] = [];
-      if (record?.data?.document) {
+      if (projectData?.document) {
         candidates.push({
-          document: record.data.document,
-          at: ts(record.updatedAt),
-          title: record.title,
-          assets: Object.values(record.data.assets ?? {}) as AssetRecord[],
-          published: record.data.published ?? null,
+          document: projectData.document,
+          at: ts(record?.updatedAt),
+          title: record?.title ?? "Smart Edit",
+          assets: Object.values(projectData.assets ?? {}) as AssetRecord[],
+          published: projectData.published ?? null,
         });
       }
       if (draft?.document) {
@@ -221,19 +197,8 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
           document: draft.document,
           at: ts(draft.savedAt),
           title: draft.title || record?.title || "Smart Edit",
-          assets: Object.values(record?.data?.assets ?? {}) as AssetRecord[],
-          published: record?.data?.published ?? null,
-        });
-      }
-      if (serverRec?.data?.document) {
-        candidates.push({
-          document: serverRec.data.document,
-          at: ts(serverRec.updatedAt),
-          title: serverRec.title,
-          assets: Object.values(serverRec.data.assets ?? {}) as AssetRecord[],
-          published: serverRec.data.published
-            ? publishResultToRecord(serverRec.data.published)
-            : null,
+          assets: Object.values(projectData?.assets ?? {}) as AssetRecord[],
+          published: projectData?.published ?? null,
         });
       }
 
@@ -252,7 +217,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
 
       // Re-register user fonts (FontFace) referenced by the document — from
       // IndexedDB when the blob exists locally, otherwise from the data url
-      // embedded in server-loaded documents.
+      // embedded in the document (e.g. restored from another browser).
       await Promise.all(
         (loaded.fonts ?? [])
           .filter((f) => f.source === "user")
@@ -272,28 +237,13 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
       useEditorStore.getState().reset(projectId, best.title || "Smart Edit", loaded);
       if (alive) setLoad({ phase: "ready" });
 
-      // Housekeeping: drop stored blobs no project references anymore.
+      // Housekeeping: drop stored blobs no project on this device
+      // references anymore (conservative — every account is considered).
       const referenced = new Set<string>();
-      try {
-        for (const key of Object.keys(localStorage)) {
-          if (!key.startsWith("paper-stish-projects")) continue;
-          try {
-            const list = JSON.parse(localStorage.getItem(key) ?? "[]");
-            if (!Array.isArray(list)) continue;
-            for (const p of list) {
-              const data = p?.data;
-              if (data?.kind !== "smart-edit") continue;
-              for (const id of Object.keys(data.assets ?? {})) referenced.add(id);
-            }
-          } catch {
-            // skip malformed entries
-          }
-        }
-      } catch {
-        // storage enumeration is best-effort
-      }
-      if (serverRec) {
-        for (const id of Object.keys(serverRec.data.assets ?? {})) referenced.add(id);
+      for (const project of await listAllLocalProjects()) {
+        if (project.templateSlug !== "smart-edit") continue;
+        const data = project.data as { assets?: Record<string, AssetRecord> } | undefined;
+        for (const id of Object.keys(data?.assets ?? {})) referenced.add(id);
       }
       void pruneOrphanAssets(referenced);
     };
@@ -311,38 +261,33 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
     void loadLibraryManifest().then(setManifest);
   }, [libraryOpen, manifest]);
 
-  // "My uploads" lists every image the account has stored, across projects.
+  // "My uploads" lists every image the account has stored, across its
+  // local projects (device-first: this device's records only).
   useEffect(() => {
     if (!libraryOpen || libraryTab !== "uploads") return;
-    try {
+    let alive = true;
+    void listLocalProjects(getAccountKey(session?.user?.email)).then((projects) => {
+      if (!alive) return;
       const records: AssetRecord[] = [];
-      for (const key of Object.keys(localStorage)) {
-        if (!key.startsWith("paper-stish-projects")) continue;
-        try {
-          const list = JSON.parse(localStorage.getItem(key) ?? "[]");
-          if (!Array.isArray(list)) continue;
-          for (const p of list) {
-            const data = p?.data;
-            if (data?.kind !== "smart-edit") continue;
-            for (const asset of Object.values(data.assets ?? {}) as AssetRecord[]) {
-              if (asset?.type === "image") records.push(asset);
-            }
-          }
-        } catch {
-          // skip malformed entries
+      for (const project of projects) {
+        if (project.templateSlug !== "smart-edit") continue;
+        const data = project.data as { assets?: Record<string, AssetRecord> } | undefined;
+        for (const asset of Object.values(data?.assets ?? {})) {
+          if (asset?.type === "image") records.push(asset);
         }
       }
       if (records.length > 0) {
         void hydrateAssets(records).then(() => setUploadsVersion((v) => v + 1));
       }
-    } catch {
-      // storage enumeration is best-effort
-    }
-  }, [libraryOpen, libraryTab]);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [libraryOpen, libraryTab, session?.user?.email]);
 
   /* ── Persistence: debounced draft + project autosave ──────────────── */
 
-  const projectsKey = getAccountStorageKey("paper-stish-projects", session?.user?.email);
+  const account = getAccountKey(session?.user?.email);
 
   const snapshotAssets = useCallback((document: SmartEditDocument): Record<string, AssetRecord> => {
     const out: Record<string, AssetRecord> = {};
@@ -361,37 +306,26 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   }, []);
 
   const writeProjectRecord = useCallback(
-    (extra?: { published?: PublishedRecord | null }) => {
+    async (extra?: { published?: PublishedRecord | null }) => {
       if (status !== "authenticated") return false;
       const state = useEditorStore.getState();
-      try {
-        const raw = localStorage.getItem(projectsKey);
-        const projects = raw ? JSON.parse(raw) : [];
-        if (!Array.isArray(projects)) return false;
-        const updatedAt = new Date().toISOString();
-        const record = {
-          id: projectId,
-          title: state.title,
-          templateSlug: "smart-edit",
-          updatedAt,
-          data: {
-            kind: "smart-edit",
-            document: state.document,
-            assets: snapshotAssets(state.document),
-            ...(extra?.published !== undefined ? { published: extra.published } : {}),
-          },
-        };
-        const index = projects.findIndex((item: ProjectRecord) => item?.id === projectId);
-        if (index >= 0) projects[index] = { ...projects[index], ...record };
-        else projects.unshift(record);
-        localStorage.setItem(projectsKey, JSON.stringify(projects));
-        state.markSaved();
-        return true;
-      } catch {
-        return false;
-      }
+      const ok = await putLocalProject({
+        id: projectId,
+        account,
+        title: state.title,
+        templateSlug: "smart-edit",
+        updatedAt: new Date().toISOString(),
+        data: {
+          kind: "smart-edit",
+          document: state.document,
+          assets: snapshotAssets(state.document),
+          ...(extra?.published !== undefined ? { published: extra.published } : {}),
+        },
+      });
+      if (ok) state.markSaved();
+      return ok;
     },
-    [projectId, projectsKey, snapshotAssets, status],
+    [projectId, account, snapshotAssets, status],
   );
 
   const flushDraft = useCallback(() => {
@@ -441,59 +375,6 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
     return standalone;
   }, []);
 
-  /**
-   * Persist the current state to the server (creates the project on the
-   * first save). Calls are serialized through a queue so a create can never
-   * race an update; if edits land while a save is in flight the newest
-   * state is saved again before markSaved() runs.
-   */
-  const runServerSave = useCallback((): Promise<boolean> => {
-    const run = async (): Promise<boolean> => {
-      if (status !== "authenticated") return false;
-      try {
-        for (;;) {
-          const state = useEditorStore.getState();
-          const standalone = await buildStandaloneDocument();
-          if (estimateDocumentBytes(standalone) > SMART_EDIT_MAX_DOCUMENT_BYTES) {
-            setSyncError(
-              "This project is too large to save (too many large photos). Remove a few images and try again.",
-            );
-            return false;
-          }
-          const body = {
-            title: state.title,
-            document: standalone,
-            assets: snapshotAssets(state.document),
-          };
-          if (!serverSyncedRef.current) {
-            await createProject({ id: projectId, ...body });
-            serverSyncedRef.current = true;
-          } else {
-            await saveProject(projectId, body);
-          }
-          const now = useEditorStore.getState();
-          if (now.document === state.document && now.title === state.title) {
-            useEditorStore.getState().markSaved();
-            setSyncError("");
-            return true;
-          }
-          // Edits landed while saving — loop once more with the newest state.
-        }
-      } catch (err) {
-        setSyncError(
-          err instanceof Error && err.message
-            ? err.message
-            : "Could not save to the server — changes are kept as a local draft.",
-        );
-        return false;
-      }
-    };
-    const previous = saveQueueRef.current;
-    const next = previous.then(run, run);
-    saveQueueRef.current = next.catch(() => false);
-    return next;
-  }, [buildStandaloneDocument, projectId, snapshotAssets, status]);
-
   useEffect(() => {
     if (load.phase !== "ready") return;
     let lastDoc = useEditorStore.getState().document;
@@ -510,8 +391,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
         if (projectTimer.current !== null) window.clearTimeout(projectTimer.current);
         projectTimer.current = window.setTimeout(() => {
           if (useEditorStore.getState().dirty) {
-            writeProjectRecord();
-            void runServerSave();
+            void writeProjectRecord();
           }
         }, 3000);
       }
@@ -522,7 +402,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
       if (projectTimer.current !== null) window.clearTimeout(projectTimer.current);
       flushDraft();
     };
-  }, [load.phase, flushDraft, runServerSave, writeProjectRecord]);
+  }, [load.phase, flushDraft, writeProjectRecord]);
 
   /* ── Unload protection ────────────────────────────────────────────── */
 
@@ -545,22 +425,23 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
       return;
     }
     flushDraft();
-    writeProjectRecord();
-    const ok = await runServerSave();
+    const ok = await writeProjectRecord();
     if (ok) {
+      setSaveError("");
       setSavedFlash(true);
       window.setTimeout(() => setSavedFlash(false), 1400);
+    } else {
+      setSaveError("Could not save this project on this device. Try again.");
     }
-  }, [flushDraft, runServerSave, status, writeProjectRecord]);
+  }, [flushDraft, status, writeProjectRecord]);
 
   const saveAndClose = useCallback(() => {
     flushDraft();
     if (useEditorStore.getState().dirty && status === "authenticated") {
-      writeProjectRecord();
-      void runServerSave();
+      void writeProjectRecord();
     }
     onClose();
-  }, [flushDraft, onClose, runServerSave, status, writeProjectRecord]);
+  }, [flushDraft, onClose, status, writeProjectRecord]);
 
   const publish = useCallback(async () => {
     if (status !== "authenticated") {
@@ -587,25 +468,19 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
         return;
       }
 
-      // Make sure the project is stored on the server before publishing
-      // (creates the row on first publish).
-      const saved = await runServerSave();
-      if (!saved) {
-        setPublishError(
-          "Could not save the project before publishing. Check your connection and try again.",
-        );
-        return;
-      }
-
-      const result = await publishProject(projectId, {
+      // The publish endpoint stores the snapshot server-side; sending the
+      // previous templateId keeps the existing public link working.
+      const result = await publishWebsite({
+        templateSlug: "smart-edit",
         title: useEditorStore.getState().title,
         username: cleanUsername,
         viewerName: cleanViewer,
-        document: standalone,
+        previousTemplateId: published?.templateId,
+        data: { document: standalone },
       });
       const record = publishResultToRecord(result);
       setPublished(record);
-      writeProjectRecord({ published: record });
+      await writeProjectRecord({ published: record });
     } catch (err) {
       setPublishError(
         err instanceof Error && err.message
@@ -617,9 +492,8 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
     }
   }, [
     buildStandaloneDocument,
-    projectId,
+    published,
     publishing,
-    runServerSave,
     session?.user?.email,
     status,
     username,
@@ -851,9 +725,9 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
 
       {/* body */}
       <div className="relative flex min-h-0 flex-1">
-        {syncError && (
+        {saveError && (
           <div className="pointer-events-none absolute left-1/2 top-10 z-40 max-w-[min(90%,420px)] -translate-x-1/2 rounded-full border border-[#e5484d]/35 bg-[#241214]/95 px-14 py-8 text-center text-11 leading-14 text-[#ff8f93] shadow-lg">
-            {syncError}
+            {saveError}
           </div>
         )}
         {/* desktop tool rail */}
@@ -1178,13 +1052,21 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
               </div>
               <button
                 type="button"
+                disabled={publishing}
+                onClick={() => void publish()}
+                className="w-full py-8 text-10 text-white/35 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {publishing ? "Publishing…" : "Publish changes to this link"}
+              </button>
+              <button
+                type="button"
                 onClick={() => {
                   setPublished(null);
                   setViewerName("");
                 }}
-                className="w-full py-8 text-10 text-white/35"
+                className="w-full py-6 text-10 text-white/28"
               >
-                Publish another link
+                Publish under a new link
               </button>
             </div>
           )}

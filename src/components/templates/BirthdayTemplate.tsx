@@ -112,6 +112,12 @@ export function BirthdayTemplate({
     if (editable) inputRef.current?.click();
   };
 
+  // The photo slot is only an interactive button while editing; the public
+  // viewer renders the exact same visuals as an inert element.
+  const PhotoSlot = editable ? "button" : "div";
+  const photoSlotProps =
+    editable ? ({ type: "button", onClick: choosePhoto } as const) : {};
+
   return (
     <article
       className="relative min-h-full w-full overflow-x-hidden"
@@ -121,7 +127,8 @@ export function BirthdayTemplate({
     >
       <PaperTexture />
 
-      <input
+      {editable && (
+        <input
         ref={inputRef}
         type="file"
         accept="image/*"
@@ -130,7 +137,8 @@ export function BirthdayTemplate({
           onPhotoChange?.(event.target.files?.[0]);
           event.currentTarget.value = "";
         }}
-      />
+        />
+      )}
 
       <div className="relative mx-auto w-full max-w-[760px] px-[6.5vw] pb-28 pt-[5vw] sm:px-16 sm:pb-36 sm:pt-16">
         <Handwritten
@@ -157,9 +165,8 @@ export function BirthdayTemplate({
         <section className="relative mt-[10vw] sm:mt-24">
           <Tape />
 
-          <button
-            type="button"
-            onClick={choosePhoto}
+          <PhotoSlot
+            {...photoSlotProps}
             className="group relative block w-full overflow-hidden rounded-[1.1rem] text-left"
             style={{
               aspectRatio: "1.64 / 1",
@@ -207,7 +214,7 @@ export function BirthdayTemplate({
               aria-hidden="true"
               className="absolute inset-0 bg-white/0 transition-colors duration-500 group-hover:bg-white/[0.035]"
             />
-          </button>
+          </PhotoSlot>
         </section>
 
         <section className="relative mt-[7vw] sm:mt-16">

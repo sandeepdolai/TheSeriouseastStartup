@@ -2,6 +2,13 @@
 
 import { slugPart } from "@/lib/slug";
 
+/**
+ * Legacy client-side publishing format (base64 payload in the #data=
+ * fragment). Kept ONLY so previously published links keep decoding —
+ * every new publication is stored server-side and resolved through
+ * /{username}/{viewerName}/{templateId} (see lib/publications.ts).
+ */
+
 export interface PublishedTemplatePayload {
   version: 1;
   templateSlug: string;
@@ -13,6 +20,7 @@ export interface PublishedTemplatePayload {
   publishedAt: string;
 }
 
+/** Legacy encoder — no longer used for new publications. */
 export function encodePublishedPayload(payload: PublishedTemplatePayload) {
   const bytes = new TextEncoder().encode(JSON.stringify(payload));
   let binary = "";
@@ -70,12 +78,3 @@ export function decodePublishedPayload(value: string): PublishedTemplatePayload 
 }
 
 export { slugPart };
-
-export function createTemplateId() {
-  const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
-  let suffix = "";
-  for (let i = 0; i < 2; i += 1) {
-    suffix += alphabet[Math.floor(Math.random() * alphabet.length)];
-  }
-  return "1" + suffix;
-}

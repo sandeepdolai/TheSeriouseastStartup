@@ -123,3 +123,53 @@ Stage Summary:
 - Smart Edit is now fully server-backed: editor → API → Prisma/SQLite; projects survive browsers/devices; publishing stores a publication snapshot and returns a small ID-based URL; public viewer fetches by templateId; ownership enforced server-side everywhere
 - GitHub Pages static export removed (incompatible with required server architecture — and with the pre-existing NextAuth dependency); CI now verifies the production build; deployment target: Vercel or any Node host (needs DATABASE_URL, GOOGLE_CLIENT_ID/SECRET, NEXTAUTH_SECRET env vars)
 - Legacy template (birthday/love) hash publishing and all old #data= Smart Edit links keep working unchanged
+
+---
+Task ID: 6
+Agent: main (Z.ai Code)
+Task: Master Storage Architecture fix — inspect current state (device-first persistence, server publications, deployment)
+
+Work Log:
+- Read the uploaded prompt (upload/Paper_Stish_Master_Storage_Architecture_Prompt.txt): device-first editing (IndexedDB primary, NO continuous server sync of drafts), server-side publications with clean /username/viewer/templateId URLs for ALL template types (Smart Edit + Birthday + Love), public viewer must load from server only, keep legacy #data= links decoding, push to main
+- Cleaned git state: soft-reset the two environment artifact commits (UUID messages containing tool-results/ + upload/), HEAD back to origin/main (dd94831), core.fileMode=false
+- Mapped current architecture: Task 5 (commit dd94831) made Smart Edit SERVER-SYNCED during editing (3s autosave → server PUT, boot fetches server record) — this DIRECTLY CONFLICTS with the new prompt's core rule; normal templates (Birthday/Love) still use localStorage + #data= hash publishing
+- Inspected: next.config.ts (output:standalone, server deployment — Task 5 already removed GH Pages static export), ci.yml (build-only CI), prisma/schema.prisma (User/Post + SmartEditProject + SmartEditPublication w/ FK), lib/{projects,publish,accountStorage,slug,auth,db,smartEditServer}.ts, all 4 smart-edit API routes, [username]/[viewer]/[templateId]/page.tsx (server component, client-fetches publication), PublishedTemplateViewer.tsx (legacy hash decode + smart-edit API fetch), TemplateEditor.tsx (localStorage load/save + hash publish), SmartEditEditor.tsx (server sync + localStorage mirror + IDB drafts), MyProjects.tsx (local + server merge), App.tsx (create/duplicate → localStorage, guest→account migration), SavedTemplates.tsx (localStorage metadata only), smartedit/{api,publish,assets,store}.ts, SmartEditViewer.tsx
+- Verified dev server running (PID 1079, 200s), .env has DATABASE_URL + NEXTAUTH_SECRET (no Google creds — will use temporary test-only credentials provider for E2E, reverted before commit)
+
+Stage Summary (ARCHITECTURE PLAN):
+- Revert Task 5's server-synced editing: DELETE /api/smart-edit/projects* routes + SmartEditProject model + smartedit/api.ts + smartEditServer.ts
+- NEW src/lib/localProjects.ts: IndexedDB `paper-stish-projects` DB (store `projects`, key `${account}::${id}`), account-scoped, one-time legacy localStorage migration (flagged, non-destructive), localStorage fallback only when IDB unavailable
+- NEW unified Prisma `Publication` model (templateId unique, templateSlug, owner→User, username/viewerName/title, data JSON, timestamps) replacing SmartEditPublication; db push
+- NEW POST /api/publish (auth, per-slug validation, republish keeps previousTemplateId when owned by caller, P2002 retry) — the ONLY write API
+- Viewer page becomes true server-side publication lookup (force-dynamic, DB read + validation, try/catch → missing state); PublishedTemplateViewer gets initialPublication prop, keeps legacy #data= fragment decode first, dispatches by templateSlug (smart-edit → SmartEditViewer, birthday/love → templates)
+- SmartEditEditor: remove all server sync; boot = IDB record + IDB draft freshest-wins; save = local only; publish = buildStandaloneDocument → /api/publish with previousTemplateId; uploads tab + prune now read IDB projects (uploads: current account; prune: all accounts)
+- TemplateEditor: IDB load/save; publish → /api/publish clean URL; photo compressed via new exported assets.ts helper (reuse existing compressBitmap, ≤1600px); publish error UI added
+- MyProjects/App: local-only (IDB), remove server list merge; guest→account folding via localProjects migration
+- SavedTemplates: unchanged (lightweight localStorage metadata, allowed); auth gates unchanged (browse/view free; duplicate/save/publish login)
+
+---
+Task ID: 7
+Agent: main (Z.ai Code)
+Task: Master Storage Architecture — implement device-first persistence + server publications for ALL templates, verify, push to main
+
+Work Log:
+- Prisma: replaced SmartEditProject + SmartEditPublication with unified Publication model (templateId unique, templateSlug, owner→User cascade, username/viewerName/title, data JSON snapshot, timestamps, ownerId index); db push + generate; cleaned test rows from db/custom.db before commit
+- NEW src/lib/localProjects.ts: IndexedDB `paper-stish-projects` DB (projects store, key account::id), account-scoped via getAccountKey; one-time non-destructive legacy localStorage migration (flag paper-stish-projects-idb:{account}, folds guest+account keys); localStorage fallback ONLY when IDB unavailable; putLocalProject upsert merges fields + shallow-merges data (preserves `published` across plain saves)
+- NEW src/lib/publications.ts (client+server safe): PUBLISHABLE_TEMPLATE_SLUGS, validateTemplateValues (bounded strings, photoUrl data:/https: only, 4MB cap), validatePublishedPayload, publicationRowToPayload (re-validates DB rows), publishWebsite() → POST /api/publish, buildPublicUrl, publishResultToRecord
+- NEW src/lib/publicationServer.ts: requireUser (session→owner, upserts User), jsonError, readJsonBody
+- NEW POST /api/publish: auth 401; per-slug validation (smart-edit document via shared validateSmartEditDocument 4MB; birthday/love values 4MB); republish updates caller-OWNED publication when previousTemplateId matches (keeps link); foreign/unknown id → fresh 12-char base64url templateId (P2002 retry); returns small link parts only
+- DELETED /api/smart-edit/projects* (4 routes), lib/smartEditServer.ts, smartedit/api.ts — the Task-5 server-synced-drafts architecture contradicted the new device-first rule
+- Viewer page [username]/[viewer]/[templateId]: force-dynamic server-side DB lookup + validation (try/catch → null); PublishedTemplateViewer gets initialPublication, hydration-safe lazy useState validation (content now in server-rendered DOM), legacy #data= fragment decode still first, dispatches smart-edit/birthday/love by templateSlug
+- SmartEditEditor: removed ALL server sync (boot fetch, runServerSave queue, serverSyncedRef, 3s server PUT); boot = IDB record vs IDB draft freshest-wins; Save = local only (no network) with saveError pill; 700ms draft + 3s IDB record autosave kept; publish = buildStandaloneDocument → /api/publish with previousTemplateId; uploads tab reads account's IDB projects; prune references = all accounts (conservative)
+- TemplateEditor: async IDB load/save; publish → /api/publish clean URL (no more #data=); publishError UI in modal; choosePhoto now compresses via new assets.ts compressedPhotoDataUrl (reuse of existing pipeline: 116KB/2400px test photo → 9KB ≤1600px data URL); both editors' post-publish modal now offers "Publish changes to this link" (stable id) + secondary "Publish under a new link"
+- MyProjects/App: local-only IDB lists (server merge removed); duplicate/create write IDB records (awaited before opening editor); guest→account folding via localProjects migration; SavedTemplates unchanged (lightweight localStorage metadata)
+- Birthday/Love templates: photo slot renders inert div (not button) + file input only mounted when editable — public viewers now have ZERO interactive elements (visuals identical)
+- VERIFIED with temporary test-only Credentials provider (PAPER_STISH_TEST_LOGIN=1, REVERTED + removed from .env before commit) via curl + agent-browser: publish 401 unauth / 201+200 auth; republish same id; FOREIGN previousTemplateId creates fresh publication (no overwrite, no leak); invalid slug/photoUrl → 400; birthday flow: duplicate→edit→save→(network log: ZERO project-save API calls)→IDB record verified (localStorage only has migration flag)→reload→My Projects→reopen→"E2E PERSISTENCE TEST 42" restored→publish→clean URL e2etester/maria/8yvAyvweS13q→viewer renders in DOM→wiped ALL browser storage→public link still renders (server-side truth)→edit→"Publish changes to this link"→same templateId MRf13IV9biqD serves v2 content; Smart Edit: create 1:1→text+heart sticker→drag/undo/redo→save→IDB record (2 layers,1 asset)→reload→reopen→text+sticker restored→publish→clean URL→viewer read-only (0 buttons)→move sticker→republish→same id KfO6vaXEyOtb serves moved sticker; Love: duplicate→years 2→7→save→publish→viewer "7 yers with you"; photo upload compressed 116KB→9KB; mobile 390px all 3 viewers no overflow; guest: browse/view free, Duplicate gated, publish 401; home WebGL + carousel regression OK; dev.log clean
+- Validation: tsc --noEmit 27 errors = exact pre-existing baseline (verified via stash diff: 0 new, 16 old fixed); eslint 3 pre-existing only; npm run build PASSES (all routes; viewer route ƒ dynamic; /api/publish compiled); dev restarted + smoke-tested 200s
+- Git: soft-reset the two environment artifact commits first (tool-results/upload junk kept out); staged only relevant files
+
+Stage Summary:
+- ARCHITECTURE: EDIT → IndexedDB (device) → local save/autosave → local recovery → PUBLISH → Paper Stish server (Publication row) → templateId → clean /username/viewer/templateId → server-rendered public viewer. Applies uniformly to Smart Edit, Birthday, Love of My Life; legacy #data= links keep decoding
+- Server APIs: exactly one write endpoint (POST /api/publish, auth + validation + stable republish ids); no draft APIs; unpublished projects can never be fetched (they don't exist server-side)
+- Deployment: server (Vercel/Node) — GitHub Pages static export was already removed (Task 5); build passes with the viewer route server-rendering publications; .env.example documents that production needs a DURABLE DATABASE_URL (SQLite file is fine on Node hosts with persistent volumes; use hosted DB on serverless)
+- Commit: "Implement device-first template and Smart Edit persistence"

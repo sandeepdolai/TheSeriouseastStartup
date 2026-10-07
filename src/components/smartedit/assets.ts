@@ -327,6 +327,22 @@ function canvasToBlob(
   });
 }
 
+/** Read an image file as a compressed, self-contained data URL (≤1600px,
+ *  WebP/JPEG) — used by the normal template editors so local projects and
+ *  published websites stay reasonably sized. */
+export async function compressedPhotoDataUrl(file: File): Promise<string> {
+  if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
+    throw new Error("Only image files can be added.");
+  }
+  if (file.size > IMAGE_MAX_INPUT_BYTES) {
+    throw new Error("That image is too large (15 MB max).");
+  }
+  const bitmap = await loadBitmap(file);
+  const { blob } = await compressBitmap(bitmap.bitmap);
+  bitmap.close();
+  return blobToDataUrl(blob);
+}
+
 function sanitizeName(name: string): string {
   return name.replace(/[^\w\s.\-()]/g, "").slice(0, 60) || "image";
 }

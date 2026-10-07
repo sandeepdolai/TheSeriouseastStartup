@@ -6,16 +6,20 @@ import { LoveLifeTemplate } from "@/components/templates/LoveLifeTemplate";
 import { decodePublishedPayload, type PublishedTemplatePayload } from "@/lib/publish";
 import {
   decodeSmartEditPayload,
-  validateSmartEditPayload,
   type SmartEditPublishedPayload,
 } from "@/components/smartedit/publish";
-import { fetchPublication } from "@/components/smartedit/api";
+import {
+  validatePublishedPayload,
+  type PublishedWebsitePayload,
+} from "@/lib/publications";
 import { SmartEditViewer } from "@/components/smartedit/SmartEditViewer";
 
 interface Props {
   username: string;
   viewerName: string;
   templateId: string;
+  /** Server-resolved publication (already validated server-side). */
+  initialPublication?: PublishedWebsitePayload | null;
 }
 
 type Phase = "loading" | "ready" | "missing";
@@ -23,28 +27,43 @@ type Phase = "loading" | "ready" | "missing";
 /**
  * Public viewer for /{username}/{viewerName}/{templateId}.
  *
+ * • The publication snapshot is resolved SERVER-SIDE by the route and passed
+ *   in — the viewer never reads the author's or the visitor's localStorage,
+ *   IndexedDB or any private project state. The validated publication is
+ *   part of the first render, so the finished website is in the HTML.
  * • Legacy links carry the document in the #data= fragment — still decoded
- *   client-side so previously published websites keep working.
- * • Smart Edit links are ID-based: the document is fetched from the server
- *   through /api/smart-edit/published/{templateId}.
+ *   client-side after hydration so previously published websites keep
+ *   working.
+ * • The correct renderer is chosen from the publication's templateSlug.
  */
-export function PublishedTemplateViewer({ username, viewerName, templateId }: Props) {
+export function PublishedTemplateViewer({
+  username,
+  viewerName,
+  templateId,
+  initialPublication,
+}: Props) {
+  // Validated once from the server-resolved publication — identical on the
+  // server render and the client's first render, so hydration always
+  // matches and the content is server-rendered.
+  const [serverPublication, setServerPublication] = useState(() =>
+    initialPublication ? validatePublishedPayload(initialPublication) : null,
+  );
   const [payload, setPayload] = useState<PublishedTemplatePayload | null>(null);
   const [smartEdit, setSmartEdit] = useState<SmartEditPublishedPayload | null>(null);
-  const [phase, setPhase] = useState<Phase>("loading");
+  const [phase, setPhase] = useState<Phase>(serverPublication ? "ready" : "loading");
 
   useEffect(() => {
     document.documentElement.classList.add("paper-stish-viewer");
-    let alive = true;
 
     const readFragment = () => {
       const hash = window.location.hash.replace(/^#/, "");
       const value = hash.startsWith("data=") ? hash.slice(5) : "";
       if (!value) return false;
-      // Smart Edit payloads carry their own document — try that decoder first.
+      // Legacy #data= link — the payload travels in the fragment.
       const smart = decodeSmartEditPayload(value);
       setSmartEdit(smart);
       setPayload(smart ? null : decodePublishedPayload(value));
+      setServerPublication(null);
       setPhase("ready");
       return true;
     };
@@ -57,39 +76,19 @@ export function PublishedTemplateViewer({ username, viewerName, templateId }: Pr
       };
     }
 
-    // No fragment → resolve the publication by templateId on the server.
-    if (!templateId) {
-      return () => {
-        document.documentElement.classList.remove("paper-stish-viewer");
-      };
-    }
-
-    fetchPublication(templateId)
-      .then((raw) => {
-        if (!alive) return;
-        const validated = validateSmartEditPayload(raw);
-        if (validated) {
-          setSmartEdit(validated);
-          setPhase("ready");
-        } else {
-          setPhase("missing");
-        }
-      })
-      .catch(() => {
-        if (!alive) return;
-        setPhase("missing");
-      });
+    // No fragment: the server already resolved the publication — either it
+    // is rendered above (phase "ready") or this link does not resolve.
+    const finishServerLookup = () => {
+      setPhase((current) => (current === "loading" ? "missing" : current));
+    };
+    finishServerLookup();
 
     return () => {
-      alive = false;
       document.documentElement.classList.remove("paper-stish-viewer");
     };
-  }, [templateId, username, viewerName]);
+  }, [templateId, username, viewerName, initialPublication]);
 
-  // The route always provides templateId; when absent there is nothing to load.
-  const view: Phase = phase === "loading" && !templateId ? "missing" : phase;
-
-  if (view === "loading") {
+  if (phase === "loading") {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#101010]">
         <div
@@ -107,44 +106,64 @@ export function PublishedTemplateViewer({ username, viewerName, templateId }: Pr
     return <SmartEditViewer initialPayload={smartEdit} />;
   }
 
-  if (!payload) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#efede2] px-20 text-center text-[#073b91]">
-        <div>
-          <p
-            className="text-28"
-            style={{ fontFamily: '"Gochi Hand", "Patrick Hand", cursive' }}
-          >
-            This website link is incomplete.
-          </p>
-          <p className="mt-8 font-sans text-13 text-[#073b91]/55">
-            Open the complete Paper Stish link that was generated after publishing.
-          </p>
-        </div>
-      </main>
-    );
+  if (serverPublication) {
+    if (serverPublication.templateSlug === "smart-edit" && serverPublication.document) {
+      return (
+        <SmartEditViewer
+          initialPayload={{
+            version: 1,
+            templateSlug: "smart-edit",
+            title: serverPublication.title,
+            publishedAt: serverPublication.publishedAt,
+            document: serverPublication.document,
+          }}
+        />
+      );
+    }
+
+    if (serverPublication.templateSlug === "birthday-template") {
+      return (
+        <BirthdayTemplate
+          heading={serverPublication.values?.heading ?? "★ HAPPY BIRTHDAY !!"}
+          message={serverPublication.values?.message ?? ""}
+          photoUrl={serverPublication.values?.photoUrl ?? null}
+        />
+      );
+    }
+
+    if (serverPublication.templateSlug === "love-of-my-life") {
+      return (
+        <LoveLifeTemplate
+          years={serverPublication.values?.years ?? "2"}
+          yearsLabel={serverPublication.values?.yearsLabel ?? "yers with you"}
+          message={serverPublication.values?.message ?? ""}
+          photoUrl={serverPublication.values?.photoUrl ?? null}
+        />
+      );
+    }
   }
 
-  if (payload.templateSlug === "birthday-template") {
-    return (
-      <BirthdayTemplate
-        heading={payload.heading}
-        message={payload.message}
-        photoUrl={payload.photoUrl}
-      />
-    );
-  }
+  if (payload) {
+    if (payload.templateSlug === "birthday-template") {
+      return (
+        <BirthdayTemplate
+          heading={payload.heading}
+          message={payload.message}
+          photoUrl={payload.photoUrl}
+        />
+      );
+    }
 
-
-  if (payload.templateSlug === "love-of-my-life") {
-    return (
-      <LoveLifeTemplate
-        years={payload.data?.years ?? "2"}
-        yearsLabel={payload.data?.yearsLabel ?? "yers with you"}
-        message={payload.data?.message ?? payload.message}
-        photoUrl={payload.data?.photoUrl ?? payload.photoUrl}
-      />
-    );
+    if (payload.templateSlug === "love-of-my-life") {
+      return (
+        <LoveLifeTemplate
+          years={payload.data?.years ?? "2"}
+          yearsLabel={payload.data?.yearsLabel ?? "yers with you"}
+          message={payload.data?.message ?? payload.message}
+          photoUrl={payload.data?.photoUrl ?? payload.photoUrl}
+        />
+      );
+    }
   }
 
   return (
@@ -154,10 +173,10 @@ export function PublishedTemplateViewer({ username, viewerName, templateId }: Pr
           className="text-28"
           style={{ fontFamily: '"Gochi Hand", "Patrick Hand", cursive' }}
         >
-          Template unavailable
+          This website link does not exist anymore.
         </p>
         <p className="mt-8 font-sans text-13 text-[#073b91]/55">
-          This published template is not connected to a viewer yet.
+          Check the link you received, or ask the sender to publish it again.
         </p>
       </div>
     </main>

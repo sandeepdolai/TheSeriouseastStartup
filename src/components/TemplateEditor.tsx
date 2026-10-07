@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
-import { getAccountStorageKey } from "@/lib/accountStorage";
+import { getAccountKey, getAccountStorageKey } from "@/lib/accountStorage";
+import { getLocalProject, putLocalProject } from "@/lib/localProjects";
 import {
   BIRTHDAY_DEFAULT_MESSAGE,
   BirthdayTemplate,
@@ -11,11 +12,14 @@ import {
   LOVE_DEFAULT_MESSAGE,
   LoveLifeTemplate,
 } from "./templates/LoveLifeTemplate";
+import { slugPart } from "@/lib/publish";
 import {
-  createTemplateId,
-  encodePublishedPayload,
-  slugPart,
-} from "@/lib/publish";
+  type PublishedRecord,
+  type TemplatePublicationValues,
+  publishResultToRecord,
+  publishWebsite,
+} from "@/lib/publications";
+import { compressedPhotoDataUrl } from "./smartedit/assets";
 
 interface TemplateEditorProps {
   projectId: string;
@@ -23,27 +27,14 @@ interface TemplateEditorProps {
   onClose: () => void;
 }
 
-interface PublishedRecord {
-  username: string;
-  viewerName: string;
-  templateId: string;
-  url: string;
-  publishedAt: string;
-}
-
-interface ProjectRecord {
-  id: string;
-  title: string;
-  templateSlug?: string;
-  data?: {
-    heading?: string;
-    years?: string;
-    yearsLabel?: string;
-    sideNote?: string;
-    message?: string;
-    photoUrl?: string | null;
-    published?: PublishedRecord | null;
-  };
+interface TemplateProjectData {
+  heading?: string;
+  years?: string;
+  yearsLabel?: string;
+  sideNote?: string;
+  message?: string;
+  photoUrl?: string | null;
+  published?: PublishedRecord | null;
 }
 
 const BIRTHDAY_HEADING = "★ HAPPY BIRTHDAY !!";
@@ -53,7 +44,7 @@ export function TemplateEditor({
   templateSlug,
   onClose,
 }: TemplateEditorProps) {
-  const [project, setProject] = useState<ProjectRecord | null>(null);
+  const [project, setProject] = useState<{ title: string } | null>(null);
   const [heading, setHeading] = useState(BIRTHDAY_HEADING);
   const [years, setYears] = useState("2");
   const [yearsLabel, setYearsLabel] = useState("years with you");
@@ -65,6 +56,7 @@ export function TemplateEditor({
   const [username, setUsername] = useState("");
   const [viewerName, setViewerName] = useState("");
   const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState("");
   const [published, setPublished] = useState<PublishedRecord | null>(null);
   const [copied, setCopied] = useState(false);
   const [authRequired, setAuthRequired] = useState(false);
@@ -75,14 +67,11 @@ export function TemplateEditor({
 
   useEffect(() => {
     if (status === "loading") return;
-    try {
-      const raw = localStorage.getItem(getAccountStorageKey("paper-stish-projects", session?.user?.email));
-      const projects = raw ? JSON.parse(raw) : [];
-      const current = Array.isArray(projects)
-        ? projects.find((item) => item?.id === projectId)
-        : null;
-
-      if (!current) return;
+    let alive = true;
+    void (async () => {
+      // Device-first: the editable project lives in this device's store.
+      const record = await getLocalProject(getAccountKey(session?.user?.email), projectId);
+      if (!alive || !record) return;
 
       const defaults = loveTemplate
         ? {
@@ -100,89 +89,74 @@ export function TemplateEditor({
             message: BIRTHDAY_DEFAULT_MESSAGE,
           };
 
-      setProject(current);
-      setHeading(current.data?.heading ?? defaults.heading);
-      setYears(current.data?.years ?? defaults.years);
-      setYearsLabel(current.data?.yearsLabel ?? defaults.yearsLabel);
-      setSideNote(current.data?.sideNote ?? defaults.sideNote);
-      setMessage(current.data?.message ?? defaults.message);
-      setPhotoUrl(current.data?.photoUrl ?? null);
-      setPublished(current.data?.published ?? null);
+      const data = (record.data ?? {}) as TemplateProjectData;
+      setProject({ title: record.title });
+      setHeading(data.heading ?? defaults.heading);
+      setYears(data.years ?? defaults.years);
+      setYearsLabel(data.yearsLabel ?? defaults.yearsLabel);
+      setSideNote(data.sideNote ?? defaults.sideNote);
+      setMessage(data.message ?? defaults.message);
+      setPhotoUrl(data.photoUrl ?? null);
+      setPublished(data.published ?? null);
 
       const savedUsername = localStorage.getItem(getAccountStorageKey("paper-stish-username", session?.user?.email));
       if (savedUsername) setUsername(savedUsername);
-    } catch {
-      // Local-first editor remains usable if stored data is malformed.
-    }
+    })();
+    return () => {
+      alive = false;
+    };
   }, [projectId, loveTemplate, session?.user?.email, status]);
 
-  const collectData = () => ({
+  const collectValues = (): TemplatePublicationValues => ({
     heading,
     years,
     yearsLabel,
     sideNote,
     message,
     photoUrl,
-    published,
   });
 
-  const save = () => {
+  const save = async () => {
     if (status !== "authenticated") {
       setAuthRequiredAction("save");
       setAuthRequired(true);
       return;
     }
 
-    try {
-      const raw = localStorage.getItem(getAccountStorageKey("paper-stish-projects", session?.user?.email));
-      const projects = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(projects)) return;
-
-      const updatedAt = new Date().toISOString();
-      const data = collectData();
-      const next = projects.map((item) =>
-        item?.id === projectId
-          ? {
-              ...item,
-              data: {
-                ...(item.data ?? {}),
-                ...data,
-              },
-              updatedAt,
-            }
-          : item,
-      );
-
-      localStorage.setItem(getAccountStorageKey("paper-stish-projects", session?.user?.email), JSON.stringify(next));
-      setProject((current) =>
-        current
-          ? {
-              ...current,
-              data: {
-                ...(current.data ?? {}),
-                ...data,
-              },
-            }
-          : current,
-      );
+    // Save means: persist my current unfinished work on this device.
+    const ok = await putLocalProject({
+      id: projectId,
+      account: getAccountKey(session?.user?.email),
+      templateSlug,
+      updatedAt: new Date().toISOString(),
+      data: { ...collectValues() },
+    });
+    if (ok) {
       setSaved(true);
       window.setTimeout(() => setSaved(false), 1400);
-    } catch {
-      // Keep the editor responsive when browser storage rejects the write.
     }
   };
 
   const choosePhoto = (file: File | undefined) => {
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") setPhotoUrl(reader.result);
-    };
-    reader.readAsDataURL(file);
+    void (async () => {
+      try {
+        // Compress on the way in so local projects and published websites
+        // stay reasonably sized (≤1600px, self-contained data URL).
+        setPhotoUrl(await compressedPhotoDataUrl(file));
+      } catch {
+        // Fall back to the raw file for anything the compressor can't read.
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === "string") setPhotoUrl(reader.result);
+        };
+        reader.readAsDataURL(file);
+      }
+    })();
   };
 
-  const publish = () => {
+  const publish = async () => {
     if (status !== "authenticated") {
       setAuthRequiredAction("publish");
       setAuthRequired(true);
@@ -196,71 +170,38 @@ export function TemplateEditor({
 
     try {
       setPublishing(true);
+      setPublishError("");
       localStorage.setItem(getAccountStorageKey("paper-stish-username", session?.user?.email), username.trim());
 
-      const templateId = createTemplateId();
-      const publishedAt = new Date().toISOString();
-      const payload = encodePublishedPayload({
-        version: 1,
+      // Publishing is the server sync point: the snapshot is stored
+      // server-side and the public link only ever carries the templateId.
+      // Sending the previous templateId keeps an existing link working.
+      const result = await publishWebsite({
         templateSlug,
         title: project?.title ?? "Paper Stish",
-        heading,
-        message,
-        photoUrl,
-        data: {
-          heading,
-          years,
-          yearsLabel,
-          sideNote,
-          message,
-          photoUrl,
-        },
-        publishedAt,
-      });
-
-      const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-      const path =
-        basePath +
-        "/" +
-        cleanUsername +
-        "/" +
-        cleanViewerName +
-        "/" +
-        templateId;
-      const url = window.location.origin + path + "#data=" + payload;
-
-      const record: PublishedRecord = {
         username: cleanUsername,
         viewerName: cleanViewerName,
-        templateId,
-        url,
-        publishedAt,
-      };
+        previousTemplateId: published?.templateId,
+        data: { values: collectValues() },
+      });
 
+      const record = publishResultToRecord(result);
       setPublished(record);
-
-      const raw = localStorage.getItem(getAccountStorageKey("paper-stish-projects", session?.user?.email));
-      const projects = raw ? JSON.parse(raw) : [];
-      if (Array.isArray(projects)) {
-        const data = collectData();
-        const next = projects.map((item) =>
-          item?.id === projectId
-            ? {
-                ...item,
-                data: {
-                  ...(item.data ?? {}),
-                  ...data,
-                },
-                updatedAt: publishedAt,
-              }
-            : item,
-        );
-        localStorage.setItem(getAccountStorageKey("paper-stish-projects", session?.user?.email), JSON.stringify(next));
-      }
-    } catch {
-      // Keep the editor usable if the browser rejects a large publish payload.
+      await putLocalProject({
+        id: projectId,
+        account: getAccountKey(session?.user?.email),
+        templateSlug,
+        updatedAt: record.publishedAt,
+        data: { ...collectValues(), published: record } as Record<string, unknown>,
+      });
+    } catch (err) {
+      setPublishError(
+        err instanceof Error && err.message
+          ? err.message
+          : "Something went wrong while publishing. Try again.",
+      );
     } finally {
-      window.setTimeout(() => setPublishing(false), 300);
+      setPublishing(false);
     }
   };
 
@@ -469,10 +410,15 @@ export function TemplateEditor({
                   <p className="mt-5 break-all font-mono text-11 leading-16 text-white/75">
                     {typeof window !== "undefined" ? window.location.origin : ""}/
                     {slugPart(username, "your-name")}/
-                    {slugPart(viewerName, "their-name")}/
-                    1xx
+                    {slugPart(viewerName, "their-name")}/…
                   </p>
                 </div>
+
+                {publishError && (
+                  <p className="mt-12 rounded-[13px] border border-[#e5484d]/35 bg-[#241214] px-12 py-10 text-11 leading-15 text-[#ff8f93]">
+                    {publishError}
+                  </p>
+                )}
 
                 <button
                   type="button"
@@ -532,13 +478,21 @@ export function TemplateEditor({
 
                 <button
                   type="button"
+                  disabled={publishing}
+                  onClick={() => void publish()}
+                  className="mt-10 w-full py-8 text-10 text-white/35 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {publishing ? "Publishing…" : "Publish changes to this link"}
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     setPublished(null);
                     setViewerName("");
                   }}
-                  className="mt-10 w-full py-8 text-10 text-white/35"
+                  className="mt-4 w-full py-6 text-10 text-white/28"
                 >
-                  Publish another link
+                  Publish under a new link
                 </button>
               </>
             )}

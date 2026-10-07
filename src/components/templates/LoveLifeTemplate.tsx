@@ -96,6 +96,12 @@ export function LoveLifeTemplate({
     if (editable) photoInputRef.current?.click();
   };
 
+  // The photo slot is only an interactive button while editing; the public
+  // viewer renders the exact same visuals as an inert element.
+  const PhotoSlot = editable ? "button" : "div";
+  const photoSlotProps =
+    editable ? ({ type: "button", onClick: choosePhoto } as const) : {};
+
   // The original page paints the paper texture on the root element, sized to
   // the collage width and offset so the pattern sits behind the composition.
   const stageWidth = fitToContainer
@@ -139,7 +145,8 @@ export function LoveLifeTemplate({
 
   return (
     <article className="w-full" style={articleStyle}>
-      <input
+      {editable && (
+        <input
         ref={photoInputRef}
         type="file"
         accept="image/*"
@@ -148,7 +155,8 @@ export function LoveLifeTemplate({
           onPhotoChange?.(event.target.files?.[0]);
           event.currentTarget.value = "";
         }}
-      />
+        />
+      )}
 
       <svg
         width="0"
@@ -193,10 +201,9 @@ export function LoveLifeTemplate({
       <section style={stageStyle} aria-label="Two years with you — anniversary collage">
         {/* polaroid: photo window behind, frame image on top */}
         <div style={polaroidStyle}>
-          <button
-            type="button"
-            onClick={choosePhoto}
-            aria-label="Add your photo"
+          <PhotoSlot
+            {...photoSlotProps}
+            aria-label={editable ? "Add your photo" : undefined}
             className="absolute z-[1] block overflow-hidden bg-black focus-visible:[outline:0.8cqw_solid_#f1e1b9] focus-visible:[outline-offset:-1cqw]"
             style={{
               left: "7.2%",
@@ -225,7 +232,7 @@ export function LoveLifeTemplate({
                 TAP TO ADD YOUR PHOTO
               </span>
             )}
-          </button>
+          </PhotoSlot>
 
           <img
             src={LOVE_ASSETS.frame}
