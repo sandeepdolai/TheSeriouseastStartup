@@ -311,6 +311,7 @@ export function App() {
 
   const createAdminTemplate = useCallback(async () => {
     if (status !== "authenticated" || !isAdminEmail(accountEmail)) return;
+    if (overlay) closeOverlay();
     const now = new Date().toISOString();
     const id = `template-draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const ok = await putLocalProject({
@@ -327,7 +328,7 @@ export function App() {
       },
     });
     if (ok) await openSmartEdit(id);
-  }, [accountEmail, openSmartEdit, status]);
+  }, [accountEmail, closeOverlay, openSmartEdit, overlay, status]);
 
   const createSmartEdit = useCallback(
     (ratio: CanvasRatio) => {
