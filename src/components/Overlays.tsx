@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { ease, tween } from "@/gl/react";
+import { isAdminEmail } from "@/lib/admin";
 
 interface OverlayProps {
   open: boolean;
@@ -118,10 +119,12 @@ export function ProfileOverlay({
   open,
   onMyProjects,
   onSmartEdit,
+  onAdminTemplates,
 }: OverlayProps & {
   onMyProjects?: () => void;
   onMyTemplates?: () => void;
   onSmartEdit?: () => void;
+  onAdminTemplates?: () => void;
 }) {
   const { ref, visible } = useReveal(open);
   const { data: session, status } = useSession();
@@ -198,6 +201,9 @@ export function ProfileOverlay({
 
               <div data-reveal className="mt-10 flex flex-col gap-8">
                 <ProfileAction icon={<SparkIcon />} onClick={onSmartEdit}>Smart Edit</ProfileAction>
+                {isAdminEmail(session.user?.email) && (
+                  <ProfileAction icon={<SparkIcon />} onClick={onAdminTemplates}>Admin Templates</ProfileAction>
+                )}
                 <ProfileAction icon={<UserIcon />} onClick={onMyProjects}>My Projects</ProfileAction>
                 <ProfileAction>Manage subscription</ProfileAction>
               </div>
