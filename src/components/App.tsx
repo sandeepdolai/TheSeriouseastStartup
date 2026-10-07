@@ -67,9 +67,8 @@ export function App() {
   const [returning, setReturning] = useState<string | null>(null);
   const [accountGateOpen, setAccountGateOpen] = useState(false);
   const [pendingAccountAction, setPendingAccountAction] = useState<
-    | { type: "create-smart-edit"; ratio: CanvasRatio }
-    | null
-  >;
+    { type: "create-smart-edit"; ratio: CanvasRatio } | null
+  >(null);
 
   const busy = useRef(false);
   /** ONE Smart Edit open-or-create flow at a time. Rapid taps on either
@@ -139,7 +138,7 @@ export function App() {
     });
   }, [folio]);
 
-  const wipeTo = useCallback(async (next: "my" | "home" | "saved") => {
+  const wipeTo = useCallback(async (next: "my" | "home") => {
     if (busy.current) return;
     busy.current = true;
     folio.openHole(window.innerWidth / 2, window.innerHeight / 2);
@@ -150,9 +149,9 @@ export function App() {
     folio.closeHole();
     await wait(220);
     if (next === "my") setMyEntered(true);
-    if (next === "saved") setSavedEntered(true);
     busy.current = false;
   }, [folio]);
+
 
   const openProject = useCallback(async (slug: string, fromCard: boolean) => {
     if (busy.current || overlay) return;
@@ -360,7 +359,7 @@ export function App() {
     else if (view === "project") closeProject();
     else if (view === "smart-edit") closeSmartEdit();
     else if (view === "my") wipeTo("home");
-  }, [view, overlay, closeOverlay, closeProject, closeTemplateEditor, closeSmartEdit, wipeTo]);
+  }, [view, overlay, closeOverlay, closeProject, closeSmartEdit, wipeTo]);
 
   const goMy = useCallback(() => {
     if (busy.current || (view !== "home" && view !== "my")) return;
@@ -384,7 +383,6 @@ export function App() {
           entered={myEntered}
           onOpenProject={(projectId, templateSlug) => {
             if (templateSlug === "smart-edit") void openSmartEdit(projectId);
-            else if (templateSlug) void openTemplateEditor(projectId, templateSlug);
           }}
           onCreateSmartEdit={createSmartEdit}
         />
@@ -432,8 +430,6 @@ export function App() {
           onClose={closeProject}
           onPrev={(slug) => switchProject(slug)}
           onNext={(slug) => switchProject(slug)}
-          onDuplicate={duplicateTemplate}
-          onSaveTemplate={saveTemplate}
           interactive
         />
       )}
