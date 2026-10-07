@@ -791,6 +791,16 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
           <IconButton label="Redo" onClick={() => useEditorStore.getState().redo()} disabled={!canRedo}>
             <IconRedo />
           </IconButton>
+          {selectedLayer?.type === "text" && (
+            <button
+              type="button"
+              onClick={editSelectedText}
+              className="whitespace-nowrap rounded-full border border-white/12 bg-white/5 px-11 py-9 text-11 tracking-[-0.02em] text-white transition-transform duration-300 hover:bg-white/10 hover:scale-[1.02] active:scale-[0.98] s:px-14"
+              aria-label="Edit selected text"
+            >
+              Edit Text
+            </button>
+          )}
           <button
             type="button"
             onClick={save}
