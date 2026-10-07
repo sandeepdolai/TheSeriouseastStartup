@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useFolio } from "@/gl/react";
 import { FEATURED } from "@/lib/projects";
-import { HomeCarousel } from "./HomeCarousel";
+import { TemplateBrowser } from "./TemplateBrowser";
 import { Hud } from "./Hud";
 import { MyProjects } from "./MyProjects";
 import { SmartEditEditor } from "./smartedit/SmartEditEditor";
@@ -12,6 +12,7 @@ import { type CanvasRatio, createDocument } from "./smartedit/types";
 import { ProjectSheet } from "./ProjectSheet";
 import { ProfileOverlay } from "./Overlays";
 import { getAccountKey } from "@/lib/accountStorage";
+import { isAdminEmail } from "@/lib/admin";
 import { listLocalProjects, putLocalProject } from "@/lib/localProjects";
 
 type View = "home" | "my" | "project" | "smart-edit";
@@ -308,6 +309,26 @@ export function App() {
     [openSmartEdit, accountEmail],
   );
 
+  const createAdminTemplate = useCallback(async () => {
+    if (status !== "authenticated" || !isAdminEmail(accountEmail)) return;
+    const now = new Date().toISOString();
+    const id = `template-draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const ok = await putLocalProject({
+      id,
+      account: getAccountKey(accountEmail),
+      title: "New Template",
+      templateSlug: "admin-template",
+      createdAt: now,
+      updatedAt: now,
+      data: {
+        kind: "smart-edit-template",
+        document: createDocument("4:5"),
+        assets: {},
+      },
+    });
+    if (ok) await openSmartEdit(id);
+  }, [accountEmail, openSmartEdit, status]);
+
   const createSmartEdit = useCallback(
     (ratio: CanvasRatio) => {
       if (status !== "authenticated") {
@@ -368,14 +389,7 @@ export function App() {
 
   return (
     <>
-      <HomeCarousel
-        folio={folio}
-        enabled={view === "home" && !overlay}
-        returning={returning}
-        hidden={carouselHidden || view !== "home"}
-        onSelect={(slug) => openProject(slug, true)}
-        apiRef={carouselApi}
-      />
+      {view === "home" && !overlay && <TemplateBrowser onOpenEditor={openSmartEdit} />}
 
       {view === "my" && (
         <MyProjects
@@ -475,6 +489,7 @@ export function App() {
         open={overlay === "profile"}
         onMyProjects={goMy}
         onSmartEdit={smartEditQuickAction}
+        onAdminTemplates={createAdminTemplate}
       />
 
       <Hud
