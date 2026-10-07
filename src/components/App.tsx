@@ -387,14 +387,6 @@ export function App() {
         />
       )}
 
-      {view === "editor" && editorProjectId && editorTemplateSlug && (
-        <TemplateEditor
-          projectId={editorProjectId}
-          templateSlug={editorTemplateSlug}
-          onClose={closeTemplateEditor}
-        />
-      )}
-
       {view === "smart-edit" && smartEditProjectId && (
         <SmartEditEditor projectId={smartEditProjectId} onClose={closeSmartEdit} />
       )}
@@ -448,9 +440,7 @@ export function App() {
               <div>
                 <p className="text-20 tracking-[-0.05em]">Create your account</p>
                 <p className="mt-6 text-11 leading-15 text-white/42">
-                  {pendingAccountAction?.type === "create-smart-edit"
-                    ? "Sign up with Google to create Smart Edit projects in your Paper Stish account."
-                    : "Sign up with Google to duplicate or save templates to your Paper Stish account."}
+                  Sign up with Google to create Smart Edit projects in your Paper Stish account.
                 </p>
               </div>
               <button
