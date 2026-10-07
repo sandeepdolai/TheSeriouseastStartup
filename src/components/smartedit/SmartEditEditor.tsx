@@ -765,7 +765,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
             value={title}
             onChange={(e) => useEditorStore.getState().setTitle(e.target.value.slice(0, 60))}
             aria-label="Project title"
-            className="mx-auto mt-2 hidden w-full max-w-[220px] truncate rounded-8 border border-transparent bg-transparent text-center text-10 text-white/45 outline-none focus:border-white/20 s:block"
+            className="mx-auto mt-2 block w-full max-w-[220px] truncate rounded-8 border border-transparent bg-transparent text-center text-10 text-white/45 outline-none focus:border-white/20"
           />
         </div>
 
