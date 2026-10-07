@@ -78,6 +78,12 @@ export function App() {
   >(null);
 
   const busy = useRef(false);
+  /** ONE Smart Edit open-or-create flow at a time. Rapid taps on either
+   *  entry point (Profile → Smart Edit, My Projects → New Smart Edit) can
+   *  never run concurrent flows — so they can never create duplicate
+   *  project records (the project id is generated exactly once, inside
+   *  this gate). */
+  const smartEditAction = useRef(false);
   const carouselApi = useRef<{ center: (slug: string) => void }>({ center: () => {} });
 
   const project = FEATURED.find((p) => p.slug === projectSlug) ?? null;
@@ -313,25 +319,31 @@ export function App() {
 
   const performCreateSmartEdit = useCallback(
     async (ratio: CanvasRatio) => {
-      const id = `project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const createdAt = new Date().toISOString();
-      // One stable project id, created once, stored on this device.
-      const ok = await putLocalProject({
-        id,
-        account: getAccountKey(accountEmail),
-        title: "Smart Edit",
-        templateSlug: "smart-edit",
-        createdAt,
-        updatedAt: createdAt,
-        data: {
-          kind: "smart-edit",
-          document: createDocument(ratio),
-          assets: {},
-          published: null,
-        },
-      });
-      if (!ok) return; // storage unavailable — do not open an empty editor
-      void openSmartEdit(id);
+      if (smartEditAction.current) return; // one creation at a time
+      smartEditAction.current = true;
+      try {
+        const id = `project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const createdAt = new Date().toISOString();
+        // One stable project id, created once, stored on this device.
+        const ok = await putLocalProject({
+          id,
+          account: getAccountKey(accountEmail),
+          title: "Smart Edit",
+          templateSlug: "smart-edit",
+          createdAt,
+          updatedAt: createdAt,
+          data: {
+            kind: "smart-edit",
+            document: createDocument(ratio),
+            assets: {},
+            published: null,
+          },
+        });
+        if (!ok) return; // storage unavailable — do not open an empty editor
+        await openSmartEdit(id);
+      } finally {
+        smartEditAction.current = false;
+      }
     },
     [openSmartEdit, accountEmail],
   );
@@ -349,21 +361,35 @@ export function App() {
   );
 
   const smartEditQuickAction = useCallback(() => {
+    if (smartEditAction.current) return; // rapid-tap guard: one flow at a time
+    smartEditAction.current = true;
     if (overlay) closeOverlay();
     // Open the most recent Smart Edit project on this device, or start a
-    // fresh one (device-first: no server round-trip).
-    void listLocalProjects(getAccountKey(accountEmail)).then((local) => {
-      const smartProjects = local
-        .filter((item) => item.templateSlug === "smart-edit" && item.id)
-        .sort((a, b) =>
-          String(b.updatedAt ?? b.createdAt ?? "").localeCompare(
-            String(a.updatedAt ?? a.createdAt ?? ""),
-          ),
+    // fresh one (device-first: no server round-trip). The gate is held for
+    // the whole async flow, so repeated taps can neither open twice nor
+    // create a second project while the first is still being created.
+    void listLocalProjects(getAccountKey(accountEmail))
+      .then((local) => {
+        const smartProjects = local.filter(
+          (item) => item.templateSlug === "smart-edit" && item.id,
         );
-      const localId = smartProjects[0]?.id ?? null;
-      if (localId) void openSmartEdit(localId);
-      else void createSmartEdit("4:5");
-    });
+        // listLocalProjects is already newest-first (updatedAt/createdAt
+        // descending) — the most recently updated project for this account.
+        const localId = smartProjects[0]?.id ?? null;
+        if (localId) {
+          return openSmartEdit(localId).finally(() => {
+            smartEditAction.current = false;
+          });
+        }
+        // No Smart Edit project on this device yet: hand off to the SAME
+        // creation path My Projects uses (it re-acquires the gate and holds
+        // it through create + editor open — exactly one new project).
+        smartEditAction.current = false;
+        createSmartEdit("4:5");
+      })
+      .catch(() => {
+        smartEditAction.current = false;
+      });
   }, [accountEmail, closeOverlay, createSmartEdit, openSmartEdit, overlay]);
 
   const performDuplicateTemplate = useCallback(async (template: (typeof FEATURED)[number]) => {

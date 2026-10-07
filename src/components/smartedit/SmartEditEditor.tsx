@@ -58,7 +58,7 @@ import {
   listUploads,
 } from "./assets";
 import { makeImageLayer, makeTextLayer, useEditorStore } from "./store";
-import { layoutTextLayer } from "./textLayout";
+import { clearTextLayoutCache, layoutTextLayer, onFontsChanged } from "./textLayout";
 import { SmartEditCanvas } from "./SmartEditCanvas";
 import { SelectionOverlay } from "./selectionOverlay";
 import { exportDocument } from "./exportRenderer";
@@ -146,6 +146,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   const fontFileRef = useRef<HTMLInputElement>(null);
   const imageFileRef = useRef<HTMLInputElement>(null);
   const mainRef = useRef<HTMLElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const workspaceRef = useRef<HTMLDivElement>(null);
 
@@ -439,6 +440,47 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
     return () => vv.removeEventListener("resize", apply);
   }, []);
 
+  /* ── Header height (runtime) ───────────────────────────────────── */
+  // --se-header-h = the real rendered height of the editor header, measured
+  // live (ResizeObserver). Mobile sheets start exactly at its bottom edge —
+  // no rem-coupled constant, correct through any viewport / font scale.
+  useEffect(() => {
+    const main = mainRef.current;
+    const header = headerRef.current;
+    if (!main || !header) return;
+    const apply = () => {
+      main.style.setProperty("--se-header-h", `${Math.round(header.getBoundingClientRect().height)}px`);
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, []);
+
+  /* ── Font metrics → text re-measurement ────────────────────────── */
+  // Text layers may have been measured with FALLBACK font metrics (fonts
+  // load asynchronously; font-display: swap). When the real typefaces
+  // arrive, re-derive every text height from fresh metrics so the stored
+  // document — and with it the selection overlay — matches the re-rendered
+  // text exactly. No history entry: this is a measurement correction.
+  useEffect(() => {
+    if (load.phase !== "ready") return;
+    const remeasure = () => {
+      useEditorStore.getState().remeasureTextLayers();
+    };
+    const offFonts = onFontsChanged(remeasure);
+    let alive = true;
+    document.fonts?.ready.then(() => {
+      if (!alive) return;
+      clearTextLayoutCache();
+      remeasure();
+    });
+    return () => {
+      alive = false;
+      offFonts();
+    };
+  }, [load.phase]);
+
   /* ── Mode isolation: sheets vs text editing ────────────────────── */
   // Opening any sheet/modal leaves text-editing mode (the typed text is
   // already committed to the store) — no caret stays active behind an open
@@ -719,7 +761,10 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
       }}
     >
       {/* header */}
-      <header className="relative z-30 grid h-72 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-8 border-b border-white/8 px-15 s:h-82 s:px-25">
+      <header
+        ref={headerRef}
+        className="relative z-30 grid h-72 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-8 border-b border-white/8 px-15 s:h-82 s:px-25"
+      >
         <button
           type="button"
           onClick={saveAndClose}
@@ -1479,6 +1524,10 @@ function TextProperties({
 function ImageProperties({ layer }: { layer: Layer }) {
   const updateLayer = useEditorStore((s) => s.updateLayer);
   if (layer.type === "text") return null;
+  // Normalize rotation into [-180, 180) for the slider: handle rotations can
+  // be stored as e.g. 350°, and clamping that into the slider's [-180, 180]
+  // domain would corrupt the pose on the next touch (−10° ≡ 350°).
+  const sliderRotation = (((layer.rotation % 360) + 540) % 360) - 180;
   return (
     <section className="rounded-[15px] border border-white/8 bg-white/[0.02] p-12">
       <p className="text-11 tracking-[-0.02em] text-white/70">{layer.type === "sticker" ? "Sticker" : "Image"}</p>
@@ -1501,14 +1550,14 @@ function ImageProperties({ layer }: { layer: Layer }) {
       <div className="mt-6">
         <div className="flex items-center justify-between">
           <span className="text-10 text-white/45">Rotation</span>
-          <span className="text-10 text-white/55">{Math.round(((layer.rotation % 360) + 360) % 360)}°</span>
+          <span className="text-10 text-white/55">{Math.round(sliderRotation)}°</span>
         </div>
         <input
           type="range"
           min={-180}
           max={180}
           step={1}
-          value={clamp(layer.rotation, -180, 180)}
+          value={sliderRotation}
           onChange={(e) => updateLayer(layer.id, { rotation: Number(e.target.value) })}
           aria-label="Rotation"
           className="mt-6 h-30 w-full accent-white"

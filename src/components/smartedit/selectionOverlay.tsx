@@ -32,6 +32,7 @@ import {
   type RefObject,
 } from "react";
 import { type Layer } from "./types";
+import { textLayerHeight } from "./textLayout";
 import { useEditorStore } from "./store";
 import {
   type DragMode,
@@ -255,7 +256,13 @@ function SelectionFrame({
     maxY: geom.boxH - EDGE_MARGIN,
   };
 
-  const f = layerFrameScreen(layer, geom, canvasWidth, canvasHeight);
+  // Text frames derive their height from the LIVE measurement (current font
+  // metrics, freshly re-wrapped) — the stored layer.height can be stale when
+  // a font finished loading after the last text edit (font-display: swap),
+  // which would detach the bounding box from the rendered text.
+  const frameLayer =
+    layer.type === "text" ? { ...layer, height: textLayerHeight(layer) } : layer;
+  const f = layerFrameScreen(frameLayer, geom, canvasWidth, canvasHeight);
 
   const rot = layer.rotation;
   const nw = frameCorner(f, rot, "nw");
@@ -296,57 +303,63 @@ function SelectionFrame({
         }}
       />
 
-      {/* rotate stem — from the frame's top edge to the (clamped) handle */}
-      <svg
-        className="absolute inset-0 size-full overflow-visible"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <line
-          x1={rotateAnchor.x}
-          y1={rotateAnchor.y}
-          x2={rotC.x}
-          y2={rotC.y}
-          stroke="#fff"
-          strokeWidth={1.5}
-          strokeLinecap="round"
-        />
-      </svg>
-
-      {/* corner resize handles (clamped into the usable workspace) */}
-      <Handle pos={nwC} cursor="nwse-resize" label="Resize" onPointerDown={(e) => onBeginDrag(e, "resize-corner", layer)} />
-      <Handle pos={neC} cursor="nesw-resize" label="Resize" onPointerDown={(e) => onBeginDrag(e, "resize-corner", layer)} />
-      <Handle pos={swC} cursor="nesw-resize" label="Resize" onPointerDown={(e) => onBeginDrag(e, "resize-corner", layer)} />
-      <Handle pos={seC} cursor="nwse-resize" label="Resize" onPointerDown={(e) => onBeginDrag(e, "resize-corner", layer)} />
-
-      {/* text width handles */}
-      {layer.type === "text" && (
+      {/* transform controls — hidden for locked layers: the frame keeps
+          indicating the selection, but no dead (no-op) handles are shown */}
+      {!layer.locked && (
         <>
+          {/* rotate stem — from the frame's top edge to the (clamped) handle */}
+          <svg
+            className="absolute inset-0 size-full overflow-visible"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <line
+              x1={rotateAnchor.x}
+              y1={rotateAnchor.y}
+              x2={rotC.x}
+              y2={rotC.y}
+              stroke="#fff"
+              strokeWidth={1.5}
+              strokeLinecap="round"
+            />
+          </svg>
+
+          {/* corner resize handles (clamped into the usable workspace) */}
+          <Handle pos={nwC} cursor="nwse-resize" label="Resize" onPointerDown={(e) => onBeginDrag(e, "resize-corner", layer)} />
+          <Handle pos={neC} cursor="nesw-resize" label="Resize" onPointerDown={(e) => onBeginDrag(e, "resize-corner", layer)} />
+          <Handle pos={swC} cursor="nesw-resize" label="Resize" onPointerDown={(e) => onBeginDrag(e, "resize-corner", layer)} />
+          <Handle pos={seC} cursor="nwse-resize" label="Resize" onPointerDown={(e) => onBeginDrag(e, "resize-corner", layer)} />
+
+          {/* text width handles */}
+          {layer.type === "text" && (
+            <>
+              <Handle
+                pos={{ x: clampX(frameCorner(f, rot, "w").x), y: clampY(frameCorner(f, rot, "w").y) }}
+                cursor="ew-resize"
+                label="Change text width"
+                pill
+                onPointerDown={(e) => onBeginDrag(e, "resize-width", layer)}
+              />
+              <Handle
+                pos={{ x: clampX(frameCorner(f, rot, "e").x), y: clampY(frameCorner(f, rot, "e").y) }}
+                cursor="ew-resize"
+                label="Change text width"
+                pill
+                onPointerDown={(e) => onBeginDrag(e, "resize-width", layer)}
+              />
+            </>
+          )}
+
+          {/* rotate handle */}
           <Handle
-            pos={{ x: clampX(frameCorner(f, rot, "w").x), y: clampY(frameCorner(f, rot, "w").y) }}
-            cursor="ew-resize"
-            label="Change text width"
-            pill
-            onPointerDown={(e) => onBeginDrag(e, "resize-width", layer)}
-          />
-          <Handle
-            pos={{ x: clampX(frameCorner(f, rot, "e").x), y: clampY(frameCorner(f, rot, "e").y) }}
-            cursor="ew-resize"
-            label="Change text width"
-            pill
-            onPointerDown={(e) => onBeginDrag(e, "resize-width", layer)}
+            pos={rotC}
+            cursor="grab"
+            label="Rotate"
+            dark
+            onPointerDown={(e) => onBeginDrag(e, "rotate", layer)}
           />
         </>
       )}
-
-      {/* rotate handle */}
-      <Handle
-        pos={rotC}
-        cursor="grab"
-        label="Rotate"
-        dark
-        onPointerDown={(e) => onBeginDrag(e, "rotate", layer)}
-      />
     </>
   );
 }

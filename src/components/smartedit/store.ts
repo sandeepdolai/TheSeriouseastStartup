@@ -54,6 +54,9 @@ export interface EditorStore {
   /** remove the newest history snapshot (drag ended without changes) */
   dropLastSnapshot: () => void;
   updateText: (id: string, patch: Partial<TextLayer>) => void;
+  /** Re-derive every text layer's height from current font metrics (fonts
+   *  finished loading) — pure measurement correction, no history entry. */
+  remeasureTextLayers: () => void;
   reorderLayer: (id: string, direction: 1 | -1) => void;
   moveLayerToIndex: (id: string, index: number) => void;
   setBackground: (color: string) => void;
@@ -203,6 +206,20 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
         future: [],
         dirty: true,
       };
+    }),
+
+  remeasureTextLayers: () =>
+    set((s) => {
+      let changed = false;
+      const layers = s.document.layers.map((l) => {
+        if (l.type !== "text") return l;
+        const height = textLayerHeight(l);
+        if (height === l.height) return l;
+        changed = true;
+        return { ...l, height } as Layer;
+      });
+      if (!changed) return s;
+      return { document: { ...s.document, layers } };
     }),
 
   reorderLayer: (id, direction) =>

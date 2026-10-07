@@ -130,6 +130,13 @@ export async function ensureFontsReady(fonts: { family: string; weight: number }
 const fontListeners = new Set<() => void>();
 let fontHooked = false;
 
+/** Drop all cached wraps — call when font metrics may have changed (e.g.
+ *  document.fonts.ready resolved) so the next measurement re-measures with
+ *  the real typeface instead of the fallback it was first measured with. */
+export function clearTextLayoutCache(): void {
+  wrapCache.clear();
+}
+
 export function onFontsChanged(cb: () => void): () => void {
   if (typeof document === "undefined") return () => undefined;
   if (!fontHooked && document.fonts) {

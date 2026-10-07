@@ -168,6 +168,12 @@ export function ToolButton({
  *     reachable at all times — the sheet never covers it
  *   • sheet content can never be clipped behind the keyboard or browser UI
  *
+ * The header height is measured at runtime by the editor (--se-header-h),
+ * so the sheet always starts exactly at the header's bottom edge — no
+ * rem-coupled magic number. A scrim dims the editor behind the sheet so it
+ * reads as a proper modal: the canvas (and any selection UI on it) is
+ * clearly inactive while touches belong to the sheet.
+ *
  * The sheet itself is a flex column: fixed header row + scrollable body
  * (flex-1 min-h-0) — no magic pixel heights, so the content is always
  * reachable and scrolls naturally at any viewport / font scale.
@@ -183,9 +189,9 @@ export function SheetShell({
 }) {
   return (
     <div
-      className="fixed left-0 right-0 z-[70] flex flex-col justify-end"
+      className="fixed left-0 right-0 z-[70] flex flex-col justify-end bg-black/45"
       style={{
-        top: "calc(7.2rem + env(safe-area-inset-top))",
+        top: "calc(var(--se-header-h, 7.2rem) + env(safe-area-inset-top))",
         bottom: "var(--se-kb, 0px)",
       }}
       onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => {

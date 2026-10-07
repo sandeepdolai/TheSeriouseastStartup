@@ -219,3 +219,58 @@ Work Log:
 Stage Summary:
 - Root causes fixed: (1) no workspace boundary → workspace is now a clipped, isolated region and the selection overlay lives inside it with viewport-aware handle clamping; (2) two parallel geometry systems → one transform.ts conversion shared by rendering + hit-testing + drags; (3) editor showed un-clipped art → canvas overflow:clip matches viewer/export; (4) sheet magic numbers + keyboard clipping → flex-structured sheets anchored below the reachable header and above --se-kb; (5) caret/sheet state leaks → sheet-open commits editing, Edit words closes the sheet, selection preserved; (6) textarea 2-row default → auto-height; (7) overflow:hidden scroll-container desync → overflow:clip everywhere
 - All 18 acceptance criteria from the prompt verified (mobile sheet contained/scrollable/safe-area, canvas blocked behind sheets, three distinct text modes, aligned boxes/handles at all sizes/rotations, no chrome interference, large objects transformable, no device-specific hacks, responsive scaling consistent, touch transforms working, existing functionality + desktop intact, no redesign)
+
+---
+Task ID: 9
+Agent: main (Z.ai Code)
+Task: Smart Edit Intermittent Bug + Two Entry Points Master Fix (upload/Paper_Stish_Smart_Edit_Intermittent_Bug_and_Two_Entry_Points_Master_Prompt.txt) — inspection phase
+
+Work Log:
+- Read the full prompt (948 lines): fix intermittent mobile UI/transform/selection bugs + unify the two Smart Edit entry points (My Projects → New Smart Edit, Profile → Smart Edit) into ONE race-safe system
+- Synced local main to origin/main 1889a81 (previous local HEAD 185a5c4 was a content-twin of remote 4f08595; prompts preserved untracked in upload/)
+- Inspected: transform.ts, selectionOverlay.tsx, SmartEditCanvas.tsx, SmartEditEditor.tsx (full), editor-ui.tsx, store.ts, types.ts, textLayout.ts, SmartEditPreview.tsx, App.tsx, MyProjects.tsx, Overlays.tsx (Profile action), lib/localProjects.ts, lib/auth.ts, globals.css touch-action rules, layout.tsx viewport + font-display:swap
+- Confirmed both entry points already share ONE system (localProjects IndexedDB → openSmartEdit → SmartEditEditor → publish/viewer); gap = race-safety + redundant sort
+
+ROOT CAUSES IDENTIFIED (for this fix round):
+- RC1 INTERMITTENT SELECTION MISALIGNMENT: text layer.height is only recomputed in updateText/updateLayerLive/makeTextLayer; fonts use font-display:swap so first measurement happens with fallback metrics; when the real font loads (loadingdone/fonts.ready) the DOM re-renders with correct wrapping but layer.height stays stale → selection box diverges from rendered text until the next text edit. layer.height's only overlay consumer is the selection frame. FIX: (a) SelectionOverlay derives text frame height LIVE via textLayerHeight() (wrap cache is cleared on font events), (b) new store action remeasureTextLayers() called by the editor on font lifecycle events, (c) export clearTextLayoutCache() for the fonts.ready path.
+- RC2 SHEET NOT READING AS MODAL: SheetShell backdrop is fully transparent → canvas + selection handles + action bar look interactive behind an open sheet but taps hit the backdrop (closing the sheet) — the "confusing overlapping selection/caret states" complaint. FIX: bg-black/45 scrim on the backdrop (ModalShell already uses bg-black/55).
+- RC3 MAGIC COUPLING: sheet top hardcodes calc(7.2rem + env(safe-area-inset-top)) to mirror header h-72. FIX: runtime header measurement (ResizeObserver) → --se-header-h var on <main>; SheetShell falls back to 7.2rem.
+- RC4 DEAD HANDLES ON LOCKED LAYERS: locked selected layer (selectable via Layers panel) renders resize/rotate handles that silently no-op. FIX: frame outline only when layer.locked.
+- RC5 ROTATION SLIDER CORRUPTION: ImageProperties slider value=clamp(rotation,-180,180) — handle-rotating past 180° (e.g. 350°) pins the slider at 180 while label shows 350°; touching the slider jumps rotation. FIX: normalize to [-180,180) for value+label.
+- RC6 RACE — DUPLICATE PROJECTS: smartEditQuickAction has NO in-flight guard (async listLocalProjects → createSmartEdit); two rapid taps both see "no projects" and both create → orphan duplicate records (openSmartEdit's busy-flag only blocks the second VIEW transition, not the record creation). performCreateSmartEdit likewise has no gate (ratio-button double-tap). FIX: single smartEditAction gate ref held across the whole open-or-create flow in App.tsx.
+- RC7 REDUNDANT SORT: quickAction re-sorts by ISO-string localeCompare although listLocalProjects already guarantees newest-first (Date.parse-based). FIX: use the list order directly.
+
+Stage Summary:
+- Fix plan: 6 files — textLayout.ts (+clearTextLayoutCache), store.ts (+remeasureTextLayers), selectionOverlay.tsx (live text height + locked handles), editor-ui.tsx (scrim + --se-header-h), SmartEditEditor.tsx (header RO + font remeasure effect + rotation slider), App.tsx (race-safe entry-point gate)
+- Everything else stays untouched (verified already-one-system: same editor/store/autosave/publish/viewer, project id generated once at creation, account-scoped IndexedDB, IDs reused on open)
+
+---
+Task ID: 9 (implementation + verification)
+Agent: main (Z.ai Code)
+Task: Smart Edit Intermittent Bug + Two Entry Points Master Fix — implement, verify, push
+
+Work Log:
+- textLayout.ts: exported clearTextLayoutCache() (drop cached wraps when font metrics change)
+- store.ts: new remeasureTextLayers() action — re-derives every text layer height from current metrics, no history entry (pure measurement correction)
+- selectionOverlay.tsx: (a) text frames now derive height LIVE via textLayerHeight() instead of trusting the stored layer.height (font-display:swap made stored heights stale after late font loads — the intermittent bounding-box misalignment); (b) transform handles + rotate stem hidden for LOCKED layers (frame-only selection indication, no dead no-op handles)
+- editor-ui.tsx SheetShell: (a) bg-black/45 scrim on the backdrop — the open sheet now reads as a proper modal (canvas + selection UI clearly inactive; header still fully reachable above it); (b) top uses runtime-measured var(--se-header-h, 7.2rem) instead of the rem-coupled 7.2rem constant
+- SmartEditEditor.tsx: (a) header height measured live via ResizeObserver → --se-header-h on <main>; (b) font-lifecycle effect: onFontsChanged (loadingdone) + document.fonts.ready (with cache clear) → remeasureTextLayers(); (c) ImageProperties rotation slider normalizes to [-180,180) — handle rotations stored as e.g. 350° no longer clamp-corrupt to 180° on the next slider touch
+- App.tsx: ONE race-safe gate (smartEditAction ref) held across the whole open-or-create flow: performCreateSmartEdit check-and-sets the gate and releases it in finally after the editor-open transition; smartEditQuickAction holds it across the async listing, hands off to the SAME createSmartEdit path when no project exists, releases on open-completion/error; redundant ISO-string re-sort removed (listLocalProjects is already newest-first)
+- E2E VERIFIED with agent-browser (temporary test-only Credentials provider behind PAPER_STISH_TEST_LOGIN=1, REVERTED + env flag removed + test Publication row deleted before commit; .env keeps only the non-test DATABASE_URL/NEXTAUTH_SECRET/NEXTAUTH_URL):
+  * ENTRY POINTS — TEST C: no project + Profile→Smart Edit = exactly ONE record; rapid double-tap (25ms apart) = still exactly ONE; repeat tap = same project reopened. TEST A: My Projects→New Smart Edit→Square→edit text→Save→close→reopen from My Projects = SAME project id + restored content (still 1 record). TEST D: Profile→Smart Edit opened the My-Projects-created project (same id, no duplicate). TEST E: second project created (ratio-panel double-tap 30ms apart = ONE record), saved, Profile→Smart Edit opened the MOST RECENTLY UPDATED project (SECOND PROJECT content, not the first). Total records after all tests: exactly 2 ✓
+  * ALIGNMENT (the intermittent bug): selection frame vs rendered text layer = dx 0 / dy 0 / dh 0 EXACT at 390, 360 and 412px; after switching font to Caveat Brush (async Google Font) the frame re-tracked the re-wrapped single-line text exactly (78.9→39.4px height, same left/top)
+  * SHEETS: Library/Layers sheet top === header bottom (gap 0.0px) at 390/412; sheet fully within viewport (bottom 915 = viewport 915); content scrollable (1094>769, scrolled to 200); scrim verified pixel-exact — canvas cream #f4efe6 reads (134,131,126) = 0.55× behind the open sheet; canvas blocked (elementFromPoint = backdrop) while header Undo/Redo reachable (elementFromPoint = button)
+  * HANDLES: all 7 handles inside workspace bounds at 360/412; text dragged to top edge → topmost handle 176px vs header 72 / action-bar bottom 132 → 44px clearance, no chrome interference; locked layer = frame only (1 overlay child, 0 handle buttons)
+  * TRANSFORMS: move exact (frame center = pointer release point), corner resize 80→184px proportional, rotate handle drag to 190.14°, rotation slider shows normalized -170 (no clamp corruption), slider nudge -170→-168 consistent, undo (resize) → undo (move) → redo all restore exact geometry
+  * PUBLISH + VIEWER: POST /api/publish 201 → clean URL /e2etester/maria/sWLKEpOAiHI0 (no #data=) → public viewer renders artwork with ZERO interactive elements, content "SECOND PROJECT"; DB row verified then deleted (cleanup)
+  * REGRESSIONS: desktop 1280 (tool rail + right inspector + canvas, header var 70px), desktop library panel (selection handles still rendered, canvas interactive beside it), home WebGL carousel alive, My Projects cards render both projects, mobile 390 editor end-to-end
+  * VLM visual verification: sheet/header/bounds + selection handles/action-bar/no-chrome-overlap confirmed on screenshots
+- Validation: bun run lint = 2 pre-existing errors only (Overlays.tsx/SavedTemplates.tsx set-state-in-effect, untouched files — exact baseline); tsc --noEmit = 35 errors ALL pre-existing (identical profile to stashed baseline via git stash comparison: 25 App.tsx folio-null + 3 publish route + 1 publish + 1 scene + 1 viewer + 4 skills/examples) — ZERO new; dev server compiles clean, GET / 200
+- Cleanup before commit: auth.ts reverted to committed state, PAPER_STISH_TEST_LOGIN removed from .env, test Publication row deleted, db/custom.db + .zscripts/dev.pid restored to HEAD, temp scripts removed
+- Git: staged only the 6 source files + worklog.md
+
+Stage Summary:
+- Intermittent selection misalignment root-caused to stale text heights after async font loads (font-display:swap) — fixed at both the overlay (live derivation) and the document (font-event remeasurement) levels
+- Sheets now behave as proper modals (scrim + runtime header anchoring) while keeping the header reachable and content scrollable
+- Both Smart Edit entry points provably ONE system: same creation path, same IndexedDB storage, same editor — now race-safe (rapid taps can never create duplicate projects), newest-project pick simplified to the storage layer's guaranteed order
+- All prompt acceptance criteria verified at 360/390/412 + desktop; no redesign, no removed functionality, no device-specific hacks
