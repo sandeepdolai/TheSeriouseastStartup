@@ -159,6 +159,19 @@ export function ToolButton({
 
 /* ── Sheet shell (mobile bottom sheet) ──────────────────────────────────── */
 
+/**
+ * The sheet backdrop spans from just below the Smart Edit header down to
+ * the top of the on-screen keyboard (--se-kb, maintained by the editor via
+ * the visualViewport API):
+ *   • the background canvas cannot receive touches while the sheet is open
+ *   • the fixed header (Close / Undo / Redo / Save / Publish) stays
+ *     reachable at all times — the sheet never covers it
+ *   • sheet content can never be clipped behind the keyboard or browser UI
+ *
+ * The sheet itself is a flex column: fixed header row + scrollable body
+ * (flex-1 min-h-0) — no magic pixel heights, so the content is always
+ * reachable and scrolls naturally at any viewport / font scale.
+ */
 export function SheetShell({
   title,
   onClose,
@@ -170,16 +183,20 @@ export function SheetShell({
 }) {
   return (
     <div
-      className="fixed inset-0 z-[70] flex flex-col justify-end"
+      className="fixed left-0 right-0 z-[70] flex flex-col justify-end"
+      style={{
+        top: "calc(7.2rem + env(safe-area-inset-top))",
+        bottom: "var(--se-kb, 0px)",
+      }}
       onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        className="max-h-[74svh] rounded-t-[22px] border-t border-white/10 bg-[#151515] shadow-[0_-20px_60px_rgba(0,0,0,0.5)]"
+        className="flex max-h-[calc(100%-14px)] flex-col rounded-t-[22px] border-t border-white/10 bg-[#151515] shadow-[0_-20px_60px_rgba(0,0,0,0.5)]"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <div className="flex items-center justify-between px-20 pb-8 pt-12">
+        <div className="flex shrink-0 items-center justify-between px-20 pb-8 pt-12">
           <p className="text-15 tracking-[-0.03em]">{title}</p>
           <button
             type="button"
@@ -190,7 +207,7 @@ export function SheetShell({
             <IconClose />
           </button>
         </div>
-        <div className="max-h-[calc(74svh-52px)] overflow-y-auto overscroll-contain px-15 pb-20">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-15 pb-20">{children}</div>
       </div>
     </div>
   );
@@ -198,6 +215,11 @@ export function SheetShell({
 
 /* ── Modal shell ────────────────────────────────────────────────────────── */
 
+/**
+ * Centered modal. The backdrop stops at the top of the on-screen keyboard
+ * (--se-kb) so inputs near the bottom of the modal stay visible and tappable
+ * on mobile; on desktop the value is 0 and the modal behaves as before.
+ */
 export function ModalShell({
   title,
   subtitle,
@@ -213,14 +235,15 @@ export function ModalShell({
 }) {
   return (
     <div
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/55 px-15 backdrop-blur-[10px]"
+      className="fixed left-0 right-0 top-0 z-[90] flex items-center justify-center bg-black/55 px-15 backdrop-blur-[10px]"
+      style={{ bottom: "var(--se-kb, 0px)" }}
       onPointerDown={(e: ReactPointerEvent<HTMLDivElement>) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
-        className="max-h-[86svh] w-full overflow-y-auto rounded-[22px] border border-white/10 bg-[#121212] p-18 text-white shadow-2xl"
-        style={{ maxWidth: `${width / 10}rem` }}
+        className="w-full overflow-y-auto rounded-[22px] border border-white/10 bg-[#121212] p-18 text-white shadow-2xl"
+        style={{ maxWidth: `${width / 10}rem`, maxHeight: "min(86svh, calc(100% - 3rem))" }}
       >
         <div className="flex items-start justify-between gap-15">
           <div>

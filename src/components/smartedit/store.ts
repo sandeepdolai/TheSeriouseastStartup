@@ -100,7 +100,11 @@ export const useEditorStore = create<EditorStore>((set, get) => ({
   setTitle: (title) => set({ title, dirty: true }),
 
   select: (id) => set({ selection: id }),
-  startEditing: (id) => set({ editingId: id, selection: id }),
+  // Entering text-editing mode selects the layer; LEAVING it keeps the
+  // layer selected (the editor returns to layer-selection mode — the text
+  // itself is already committed to the document).
+  startEditing: (id) =>
+    set(id ? { editingId: id, selection: id } : { editingId: null }),
   bumpAssets: () => set((s) => ({ assetsVersion: s.assetsVersion + 1 })),
   bumpFonts: () => set((s) => ({ fontsVersion: s.fontsVersion + 1 })),
 

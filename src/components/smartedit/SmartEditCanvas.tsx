@@ -8,7 +8,14 @@
    same markup serves the editor, My Projects previews and the public viewer.
 
    interactive=true connects the component to the editor store (selection,
-   move / resize / rotate, text editing). interactive=false is a pure renderer.
+   move / text editing). Resizing + rotating live on the workspace-level
+   SelectionOverlay (selectionOverlay.tsx) which shares the transform math in
+   transform.ts; layer *movement* drags start here on the layers themselves.
+
+   The wrapper always clips to the document bounds (overflow:hidden) — the
+   editor therefore shows exactly what the public viewer and the PNG/JPG
+   export render. Layers may still extend beyond the canvas in document
+   coordinates; their visible portion remains interactive.
 ─────────────────────────────────────────────────────────────────────────── */
 
 import {
@@ -22,18 +29,25 @@ import {
   useState,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
+  type RefObject,
 } from "react";
 import {
   type Layer,
   type SmartEditDocument,
   type TextLayer,
-  clamp,
   isImageLike,
-  snapRotation,
 } from "./types";
 import { layoutTextLayer, onFontsChanged } from "./textLayout";
 import { assetUrl, onAssetsChanged } from "./assets";
 import { useEditorStore } from "./store";
+import {
+  type DragMode,
+  type DragState,
+  applyTransform,
+  beginTransform,
+  screenToDesign,
+  transformUnchanged,
+} from "./transform";
 
 /* ── Canvas design dims via context (for % / cqh math) ──────────────────── */
 
@@ -66,26 +80,6 @@ function useRuntimeTick() {
     };
   }, []);
   return tick;
-}
-
-/* ── Scale variable: keeps selection handles a constant screen size ─────── */
-
-function useScaleVar(
-  wrapperRef: React.RefObject<HTMLDivElement | null>,
-  designWidth: number,
-) {
-  useLayoutEffect(() => {
-    const el = wrapperRef.current;
-    if (!el) return;
-    const apply = () => {
-      const rect = el.getBoundingClientRect();
-      if (rect.width > 0) el.style.setProperty("--se-scale", String(rect.width / designWidth));
-    };
-    apply();
-    const observer = new ResizeObserver(apply);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [wrapperRef, designWidth]);
 }
 
 /* ── Layer view ─────────────────────────────────────────────────────────── */
@@ -174,15 +168,10 @@ const LayerView = memo(function LayerView({
 
 /* ── Editor interactions ────────────────────────────────────────────────── */
 
-type DragMode = "move" | "rotate" | "resize-corner" | "resize-width";
-
-interface DragState {
-  mode: DragMode;
-  layerId: string;
-  startPointer: { x: number; y: number };
-  startLayer: Layer;
-  startAngle: number;
-  startDistance: number;
+interface DragStateRefs {
+  drag: DragState | null;
+  pending: { clientX: number; clientY: number } | null;
+  frame: number | null;
 }
 
 export interface SmartEditCanvasProps {
@@ -190,6 +179,12 @@ export interface SmartEditCanvasProps {
   interactive?: boolean;
   className?: string;
   style?: CSSProperties;
+  /**
+   * External handle to the canvas surface element. The editor shell passes
+   * one so the workspace SelectionOverlay measures + converts pointer
+   * coordinates against the exact same element this component renders into.
+   */
+  surfaceRef?: RefObject<HTMLDivElement | null>;
 }
 
 export function SmartEditCanvas({
@@ -197,20 +192,18 @@ export function SmartEditCanvas({
   interactive = false,
   className,
   style,
+  surfaceRef,
 }: SmartEditCanvasProps) {
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<DragState | null>(null);
-  const frameRef = useRef<number | null>(null);
-  const pendingMoveRef = useRef<{ clientX: number; clientY: number } | null>(null);
+  const localWrapperRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = surfaceRef ?? localWrapperRef;
+  const refs = useRef<DragStateRefs>({ drag: null, pending: null, frame: null });
   const tapRef = useRef<{ id: string; time: number } | null>(null);
 
   const storeDocument = useEditorStore((s) => (interactive ? s.document : null));
-  const selection = useEditorStore((s) => (interactive ? s.selection : null));
   const editingId = useEditorStore((s) => (interactive ? s.editingId : null));
   const assetsVersion = useEditorStore((s) => (interactive ? s.assetsVersion : 0));
 
   const document = interactive ? storeDocument! : staticDocument;
-  useScaleVar(wrapperRef, document.canvas.width);
   useRuntimeTick();
   void assetsVersion;
 
@@ -220,15 +213,20 @@ export function SmartEditCanvas({
     (clientX: number, clientY: number) => {
       const el = wrapperRef.current;
       if (!el) return { x: 0, y: 0 };
-      const rect = el.getBoundingClientRect();
-      const scale = rect.width / document.canvas.width || 1;
-      return {
-        x: (clientX - rect.left) / scale,
-        y: (clientY - rect.top) / scale,
-      };
+      return screenToDesign(clientX, clientY, el, document.canvas.width);
     },
-    [document.canvas.width],
+    [document.canvas.width, wrapperRef],
   );
+
+  const applyDrag = useCallback(() => {
+    const pending = refs.current.pending;
+    const drag = refs.current.drag;
+    if (!pending || !drag) return;
+    refs.current.pending = null;
+    const pointer = toDesignUnits(pending.clientX, pending.clientY);
+    const patch = applyTransform(drag, pointer, document.canvas.width);
+    if (patch) store.getState().updateLayerLive(drag.layerId, patch);
+  }, [document.canvas.width, store, toDesignUnits]);
 
   const beginDrag = useCallback(
     (event: ReactPointerEvent<Element>, mode: DragMode, layer: Layer) => {
@@ -241,84 +239,22 @@ export function SmartEditCanvas({
         // bubble to the wrapper handlers.
       }
       const pointer = toDesignUnits(event.clientX, event.clientY);
-      dragRef.current = {
-        mode,
-        layerId: layer.id,
-        startPointer: pointer,
-        startLayer: { ...layer },
-        startAngle: Math.atan2(pointer.y - layer.y, pointer.x - layer.x),
-        startDistance: Math.hypot(pointer.x - layer.x, pointer.y - layer.y),
-      };
+      refs.current.drag = beginTransform(mode, layer, pointer);
       store.getState().snapshot();
     },
     [interactive, store, toDesignUnits],
   );
 
-  const applyDrag = useCallback(() => {
-    const pending = pendingMoveRef.current;
-    const drag = dragRef.current;
-    if (!pending || !drag) return;
-    pendingMoveRef.current = null;
-    const pointer = toDesignUnits(pending.clientX, pending.clientY);
-    const start = drag.startLayer;
-    const state = store.getState();
-
-    if (drag.mode === "move") {
-      state.updateLayerLive(drag.layerId, {
-        x: start.x + (pointer.x - drag.startPointer.x),
-        y: start.y + (pointer.y - drag.startPointer.y),
-      });
-      return;
-    }
-
-    if (drag.mode === "rotate") {
-      const angle = Math.atan2(pointer.y - start.y, pointer.x - start.x);
-      let deg = start.rotation + ((angle - drag.startAngle) * 180) / Math.PI;
-      deg = ((deg % 360) + 360) % 360;
-      state.updateLayerLive(drag.layerId, { rotation: snapRotation(deg) });
-      return;
-    }
-
-    if (drag.mode === "resize-corner") {
-      const ratio =
-        drag.startDistance > 4
-          ? Math.hypot(pointer.x - start.x, pointer.y - start.y) / drag.startDistance
-          : 1;
-      if (start.type === "text") {
-        state.updateLayerLive(drag.layerId, {
-          fontSize: clamp(Math.round(start.fontSize * ratio), 8, 720),
-          width: clamp(Math.round(start.width * ratio), 60, document.canvas.width * 2),
-        });
-      } else {
-        state.updateLayerLive(drag.layerId, {
-          width: Math.max(24, Math.round(start.width * ratio)),
-          height: Math.max(24, Math.round(start.height * ratio)),
-        });
-      }
-      return;
-    }
-
-    if (drag.mode === "resize-width" && start.type === "text") {
-      const rad = (start.rotation * Math.PI) / 180;
-      const dx = pointer.x - start.x;
-      const dy = pointer.y - start.y;
-      const projection = dx * Math.cos(rad) + dy * Math.sin(rad);
-      state.updateLayerLive(drag.layerId, {
-        width: clamp(Math.round(Math.abs(projection) * 2), 60, document.canvas.width * 2),
-      });
-    }
-  }, [document.canvas.width, store, toDesignUnits]);
-
   const endDrag = useCallback(
     (event: ReactPointerEvent<Element>) => {
-      const drag = dragRef.current;
+      const drag = refs.current.drag;
       if (!drag) return;
-      if (frameRef.current !== null) {
-        cancelAnimationFrame(frameRef.current);
-        frameRef.current = null;
+      if (refs.current.frame !== null) {
+        cancelAnimationFrame(refs.current.frame);
+        refs.current.frame = null;
       }
-      dragRef.current = null;
-      pendingMoveRef.current = null;
+      refs.current.drag = null;
+      refs.current.pending = null;
       try {
         (event.currentTarget as Element).releasePointerCapture?.(event.pointerId);
       } catch {
@@ -326,18 +262,7 @@ export function SmartEditCanvas({
       }
       const state = store.getState();
       const current = state.document.layers.find((l) => l.id === drag.layerId);
-      const start = drag.startLayer;
-      const unchanged =
-        !current ||
-        (current.x === start.x &&
-          current.y === start.y &&
-          current.width === start.width &&
-          current.height === start.height &&
-          current.rotation === start.rotation &&
-          (current.type !== "text" ||
-            start.type !== "text" ||
-            current.fontSize === start.fontSize));
-      if (unchanged) state.dropLastSnapshot();
+      if (transformUnchanged(drag.startLayer, current)) state.dropLastSnapshot();
     },
     [store],
   );
@@ -393,12 +318,12 @@ export function SmartEditCanvas({
 
   const onPointerMove = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
-      if (!dragRef.current) return;
+      if (!refs.current.drag) return;
       event.preventDefault();
-      pendingMoveRef.current = { clientX: event.clientX, clientY: event.clientY };
-      if (frameRef.current === null) {
-        frameRef.current = requestAnimationFrame(() => {
-          frameRef.current = null;
+      refs.current.pending = { clientX: event.clientX, clientY: event.clientY };
+      if (refs.current.frame === null) {
+        refs.current.frame = requestAnimationFrame(() => {
+          refs.current.frame = null;
           applyDrag();
         });
       }
@@ -406,7 +331,6 @@ export function SmartEditCanvas({
     [applyDrag],
   );
 
-  const selectedLayer = document.layers.find((l) => l.id === selection) ?? null;
   const editingLayer = document.layers.find((l) => l.id === editingId && l.type === "text") ?? null;
 
   return (
@@ -419,7 +343,11 @@ export function SmartEditCanvas({
           aspectRatio: `${document.canvas.width} / ${document.canvas.height}`,
           containerType: "size",
           background: document.background.type === "color" ? document.background.color : "#fff",
-          overflow: interactive ? "visible" : "hidden",
+          // `clip` (not `hidden`): clip WITHOUT creating a scroll container —
+          // browser focus/scroll-into-view can never shift the rendered
+          // layers inside the canvas box (a scrolled overflow:hidden canvas
+          // would desynchronise rendering from the selection overlay).
+          overflow: "clip",
           touchAction: interactive ? "none" : "auto",
           userSelect: interactive ? "none" : "auto",
           WebkitUserSelect: interactive ? "none" : "auto",
@@ -452,12 +380,9 @@ export function SmartEditCanvas({
           ) : null,
         )}
 
-        {/* selection frame */}
-        {interactive && selectedLayer && !editingId && (
-          <SelectionFrame layer={selectedLayer} onBeginDrag={beginDrag} />
-        )}
-
-        {/* text editing overlay */}
+        {/* text editing overlay — lives on the canvas so it aligns with the
+            text layer through the exact same % / cqh transform. Selection,
+            resize and rotate controls live on the workspace SelectionOverlay. */}
         {interactive && editingLayer && (
           <TextEditorOverlay
             layer={editingLayer as TextLayer}
@@ -469,136 +394,12 @@ export function SmartEditCanvas({
   );
 }
 
-/* ── Selection frame + handles ──────────────────────────────────────────── */
-
-function handleBox(): CSSProperties {
-  return {
-    position: "absolute",
-    width: "calc(14px / var(--se-scale, 1))",
-    height: "calc(14px / var(--se-scale, 1))",
-    borderRadius: "999px",
-    background: "#fff",
-    border: "calc(1.5px / var(--se-scale, 1)) solid rgba(10,10,10,0.85)",
-    boxShadow: "0 calc(1px / var(--se-scale, 1)) calc(3px / var(--se-scale, 1)) rgba(0,0,0,0.3)",
-  };
-}
-
-/** 34px (screen) touch-friendly hit area wrapping a handle */
-function hitArea(extra: CSSProperties = {}): CSSProperties {
-  return {
-    position: "absolute",
-    width: "calc(34px / var(--se-scale, 1))",
-    height: "calc(34px / var(--se-scale, 1))",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    touchAction: "none",
-    pointerEvents: "auto",
-    ...extra,
-  };
-}
-
-function SelectionFrame({
-  layer,
-  onBeginDrag,
-}: {
-  layer: Layer;
-  onBeginDrag: (event: ReactPointerEvent<Element>, mode: DragMode, layer: Layer) => void;
-}) {
-  const { width: cw, height: ch } = useContext(CanvasDims);
-
-  return (
-    <div
-      style={{
-        position: "absolute",
-        left: pctX(layer.x, cw),
-        top: pctY(layer.y, ch),
-        width: pctX(layer.width, cw),
-        height: pctY(layer.height, ch),
-        transform: `translate(-50%, -50%) rotate(${layer.rotation}deg)`,
-        zIndex: 900,
-        pointerEvents: "none",
-      }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          borderRadius: "calc(2px / var(--se-scale, 1))",
-          outline: "calc(1.5px / var(--se-scale, 1)) solid #fff",
-          boxShadow: "0 0 0 calc(1px / var(--se-scale, 1)) rgba(10,10,10,0.35)",
-        }}
-      />
-
-      {/* corner resize handles */}
-      <div style={hitArea({ left: 0, top: 0, transform: "translate(-50%, -50%)", cursor: "nwse-resize" })} onPointerDown={(e) => onBeginDrag(e, "resize-corner", layer)}>
-        <div style={{ ...handleBox(), cursor: "nwse-resize" }} />
-      </div>
-      <div style={hitArea({ right: 0, top: 0, transform: "translate(50%, -50%)", cursor: "nesw-resize" })} onPointerDown={(e) => onBeginDrag(e, "resize-corner", layer)}>
-        <div style={{ ...handleBox(), cursor: "nesw-resize" }} />
-      </div>
-      <div style={hitArea({ left: 0, bottom: 0, transform: "translate(-50%, 50%)", cursor: "nesw-resize" })} onPointerDown={(e) => onBeginDrag(e, "resize-corner", layer)}>
-        <div style={{ ...handleBox(), cursor: "nesw-resize" }} />
-      </div>
-      <div style={hitArea({ right: 0, bottom: 0, transform: "translate(50%, 50%)", cursor: "nwse-resize" })} onPointerDown={(e) => onBeginDrag(e, "resize-corner", layer)}>
-        <div style={{ ...handleBox(), cursor: "nwse-resize" }} />
-      </div>
-
-      {/* text width handles */}
-      {layer.type === "text" && (
-        <>
-          <div style={hitArea({ left: 0, top: "50%", transform: "translate(-50%, -50%)", cursor: "ew-resize" })} onPointerDown={(e) => onBeginDrag(e, "resize-width", layer)}>
-            <div style={{ ...handleBox(), borderRadius: "calc(3px / var(--se-scale, 1))", cursor: "ew-resize" }} />
-          </div>
-          <div style={hitArea({ right: 0, top: "50%", transform: "translate(50%, -50%)", cursor: "ew-resize" })} onPointerDown={(e) => onBeginDrag(e, "resize-width", layer)}>
-            <div style={{ ...handleBox(), borderRadius: "calc(3px / var(--se-scale, 1))", cursor: "ew-resize" }} />
-          </div>
-        </>
-      )}
-
-      {/* rotate handle */}
-      <div
-        style={{
-          position: "absolute",
-          left: "50%",
-          top: 0,
-          transform: "translate(-50%, -100%)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          pointerEvents: "none",
-        }}
-      >
-        <div style={hitArea({ position: "relative", cursor: "grab" })} onPointerDown={(e) => onBeginDrag(e, "rotate", layer)}>
-          <div
-            style={{
-              ...handleBox(),
-              background: "#0a0a0a",
-              border: "calc(1.5px / var(--se-scale, 1)) solid #fff",
-              cursor: "grab",
-            }}
-          />
-        </div>
-        <div
-          style={{
-            width: "calc(1.5px / var(--se-scale, 1))",
-            height: "calc(12px / var(--se-scale, 1))",
-            background: "#fff",
-            boxShadow: "0 0 0 calc(1px / var(--se-scale, 1)) rgba(10,10,10,0.35)",
-            marginTop: "calc(-2px / var(--se-scale, 1))",
-            marginBottom: "calc(1px / var(--se-scale, 1))",
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
 /* ── Text editing overlay ───────────────────────────────────────────────── */
 
 function TextEditorOverlay({ layer, onDone }: { layer: TextLayer; onDone: () => void }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const updateText = useEditorStore((s) => s.updateText);
+  const tick = useRuntimeTick();
   const { width: cw, height: ch } = useContext(CanvasDims);
 
   useLayoutEffect(() => {
@@ -607,6 +408,23 @@ function TextEditorOverlay({ layer, onDone }: { layer: TextLayer; onDone: () => 
     el.focus();
     el.setSelectionRange(el.value.length, el.value.length);
   }, []);
+
+  // Auto-height: the textarea always shows every line it contains (its own
+  // wrapping is the ground truth while typing) — no clipped lines, no scroll.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight + 2}px`;
+  }, [
+    layer.text,
+    layer.fontSize,
+    layer.fontWeight,
+    layer.width,
+    layer.lineHeight,
+    layer.fontFamily,
+    tick,
+  ]);
 
   return (
     <textarea

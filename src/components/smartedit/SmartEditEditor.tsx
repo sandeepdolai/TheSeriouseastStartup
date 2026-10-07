@@ -60,6 +60,7 @@ import {
 import { makeImageLayer, makeTextLayer, useEditorStore } from "./store";
 import { layoutTextLayer } from "./textLayout";
 import { SmartEditCanvas } from "./SmartEditCanvas";
+import { SelectionOverlay } from "./selectionOverlay";
 import { exportDocument } from "./exportRenderer";
 import {
   SMART_EDIT_MAX_DOCUMENT_BYTES,
@@ -144,6 +145,9 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   const projectTimer = useRef<number | null>(null);
   const fontFileRef = useRef<HTMLInputElement>(null);
   const imageFileRef = useRef<HTMLInputElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const workspaceRef = useRef<HTMLDivElement>(null);
 
   /* ── Project load + draft recovery ─────────────────────────────────── */
 
@@ -417,6 +421,39 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [flushDraft]);
 
+  /* ── Keyboard height (visual viewport) ───────────────────────────── */
+  // --se-kb = how far the on-screen keyboard (or other browser UI) covers
+  // the bottom of the layout viewport. Sheets and modals anchor above it so
+  // their content can never end up behind the keyboard. Android browsers
+  // resize the layout viewport itself, so the value stays 0 there.
+  useEffect(() => {
+    const main = mainRef.current;
+    const vv = window.visualViewport;
+    if (!main || !vv) return;
+    const apply = () => {
+      const covered = Math.max(0, window.innerHeight - vv.height);
+      main.style.setProperty("--se-kb", `${Math.round(covered)}px`);
+    };
+    apply();
+    vv.addEventListener("resize", apply);
+    return () => vv.removeEventListener("resize", apply);
+  }, []);
+
+  /* ── Mode isolation: sheets vs text editing ────────────────────── */
+  // Opening any sheet/modal leaves text-editing mode (the typed text is
+  // already committed to the store) — no caret stays active behind an open
+  // sheet. Closing a sheet never touches the editing state.
+  const sheetsOpen =
+    libraryOpen || inspectorOpen || exportOpen || publishOpen || !!authGate;
+  const prevSheetsOpenRef = useRef(false);
+  useEffect(() => {
+    if (sheetsOpen && !prevSheetsOpenRef.current) {
+      const state = useEditorStore.getState();
+      if (state.editingId) state.startEditing(null);
+    }
+    prevSheetsOpenRef.current = sheetsOpen;
+  }, [sheetsOpen]);
+
   /* ── Save / publish / export ──────────────────────────────────────── */
 
   const save = useCallback(async () => {
@@ -594,9 +631,10 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   }, []);
 
   const editSelectedText = useCallback(() => {
+    // Enter text-editing mode directly on the canvas — the inspector must
+    // not be open at the same time (distinct editing states).
     const state = useEditorStore.getState();
     if (state.selection) state.startEditing(state.selection);
-    setInspectorOpen(true);
   }, []);
 
   /* ── Keyboard shortcuts ───────────────────────────────────────────── */
@@ -671,7 +709,15 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   }
 
   return (
-    <main className="fixed inset-0 z-50 flex min-h-0 flex-col bg-[#0a0a0a] text-white">
+    <main
+      ref={mainRef}
+      className="fixed inset-0 z-50 flex min-h-0 flex-col bg-[#0a0a0a] text-white"
+      style={{
+        paddingTop: "env(safe-area-inset-top)",
+        paddingLeft: "env(safe-area-inset-left)",
+        paddingRight: "env(safe-area-inset-right)",
+      }}
+    >
       {/* header */}
       <header className="relative z-30 grid h-72 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-8 border-b border-white/8 px-15 s:h-82 s:px-25">
         <button
@@ -765,8 +811,14 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
           </div>
         </nav>
 
-        {/* canvas */}
-        <div className="relative min-h-0 min-w-0 flex-1 bg-[#0d0d0d]">
+        {/* canvas workspace — THE editor workspace boundary (TOP: header,
+            MIDDLE: this region, BOTTOM: dock). Clipped (`clip`, never a
+            scroll container) + isolated so canvas art and selection UI can
+            never reach the fixed application chrome. */}
+        <div
+          ref={workspaceRef}
+          className="relative isolate min-h-0 min-w-0 flex-1 overflow-clip bg-[#0d0d0d]"
+        >
           <div
             className="absolute inset-0 flex items-center justify-center px-12 py-12 s:px-20 s:py-20"
             style={{ containerType: "size" }}
@@ -774,6 +826,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
             {load.phase === "ready" ? (
               <SmartEditCanvas
                 interactive
+                surfaceRef={canvasRef}
                 document={doc}
                 style={{
                   width: `min(100cqw, ${(doc.canvas.width / doc.canvas.height) * 100}cqh)`,
@@ -792,6 +845,10 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
             )}
           </div>
 
+          {/* selection / transform interaction layer — clipped to the
+              workspace; handles clamp into the usable region */}
+          {load.phase === "ready" && <SelectionOverlay canvasRef={canvasRef} />}
+
           {load.phase === "ready" && doc.layers.length === 0 && !editingId && (
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-6 text-center">
               <p className="text-15 tracking-[-0.03em] text-white/30">Your canvas is empty</p>
@@ -801,7 +858,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
 
           {/* floating selection actions */}
           {load.phase === "ready" && selectedLayer && !editingId && (
-            <div className="pointer-events-auto absolute left-1/2 top-10 z-10 flex -translate-x-1/2 items-center gap-4 rounded-full border border-white/10 bg-[#151515]/95 p-4 shadow-xl backdrop-blur">
+            <div className="pointer-events-auto absolute left-1/2 top-10 z-20 flex -translate-x-1/2 items-center gap-4 rounded-full border border-white/10 bg-[#151515]/95 p-4 shadow-xl backdrop-blur">
               {selectedLayer.type === "text" && (
                 <IconButton label="Edit text" onClick={editSelectedText} className="size-34">
                   <IconEdit />
@@ -824,7 +881,10 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
         {/* desktop inspector */}
         {load.phase === "ready" && (
           <aside className="hidden w-300 shrink-0 flex-col overflow-y-auto border-l border-white/8 bg-[#0e0e0e] s:flex">
-            <InspectorContent onImportFont={() => fontFileRef.current?.click()} />
+            <InspectorContent
+              onImportFont={() => fontFileRef.current?.click()}
+              onEditWords={() => setInspectorOpen(false)}
+            />
           </aside>
         )}
       </div>
@@ -920,7 +980,10 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
       {inspectorOpen && load.phase === "ready" && (
         <div className="s:hidden">
           <SheetShell title="Layers" onClose={() => setInspectorOpen(false)}>
-            <InspectorContent onImportFont={() => fontFileRef.current?.click()} />
+            <InspectorContent
+              onImportFont={() => fontFileRef.current?.click()}
+              onEditWords={() => setInspectorOpen(false)}
+            />
           </SheetShell>
         </div>
       )}
@@ -1167,7 +1230,13 @@ function LibraryContent({
 
 /* ── Inspector: properties + layers ───────────────────────────────────── */
 
-function InspectorContent({ onImportFont }: { onImportFont: () => void }) {
+function InspectorContent({
+  onImportFont,
+  onEditWords,
+}: {
+  onImportFont: () => void;
+  onEditWords: () => void;
+}) {
   const doc = useEditorStore((s) => s.document);
   const selection = useEditorStore((s) => s.selection);
   const title = useEditorStore((s) => s.title);
@@ -1201,7 +1270,12 @@ function InspectorContent({ onImportFont }: { onImportFont: () => void }) {
 
       {!selected && <BackgroundSection />}
       {selected?.type === "text" && (
-        <TextProperties layer={selected} fontOptions={fontOptions} onImportFont={onImportFont} />
+        <TextProperties
+          layer={selected}
+          fontOptions={fontOptions}
+          onImportFont={onImportFont}
+          onEditWords={onEditWords}
+        />
       )}
       {selected && selected.type !== "text" && <ImageProperties layer={selected} />}
 
@@ -1254,10 +1328,12 @@ function TextProperties({
   layer,
   fontOptions,
   onImportFont,
+  onEditWords,
 }: {
   layer: TextLayer;
   fontOptions: { id: string; family: string; name: string; weights: number[] }[];
   onImportFont: () => void;
+  onEditWords: () => void;
 }) {
   const updateText = useEditorStore((s) => s.updateText);
   const startEditing = useEditorStore((s) => s.startEditing);
@@ -1272,7 +1348,12 @@ function TextProperties({
         <p className="text-11 tracking-[-0.02em] text-white/70">Text</p>
         <button
           type="button"
-          onClick={() => startEditing(layer.id)}
+          onClick={() => {
+            // Close the sheet first: typing happens on the canvas, never
+            // behind an open inspector.
+            onEditWords();
+            startEditing(layer.id);
+          }}
           className="rounded-full bg-white/10 px-10 py-6 text-10 text-white/80 hover:bg-white/16"
         >
           Edit words
