@@ -791,7 +791,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
               disabled={publishingTemplate}
               className="whitespace-nowrap rounded-full bg-white px-12 py-9 text-11 tracking-[-0.02em] text-black transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-45 s:px-14"
             >
-              {publishingTemplate ? "Publishing…" : "Publish Template"}
+              {publishingTemplate ? "Publishing…" : "Publish to All Users"}
             </button>
           )}
           <IconButton label="Download" onClick={() => setExportOpen(true)}>
