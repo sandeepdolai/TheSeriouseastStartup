@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
-import { getAccountKey, getAccountStorageKey } from "@/lib/accountStorage";
+import { getAccountKey } from "@/lib/accountStorage";
 import { getLocalProject, putLocalProject } from "@/lib/localProjects";
 import {
   BIRTHDAY_DEFAULT_MESSAGE,
@@ -12,13 +12,6 @@ import {
   LOVE_DEFAULT_MESSAGE,
   LoveLifeTemplate,
 } from "./templates/LoveLifeTemplate";
-import { slugPart } from "@/lib/publish";
-import {
-  type PublishedRecord,
-  type TemplatePublicationValues,
-  publishResultToRecord,
-  publishWebsite,
-} from "@/lib/publications";
 import { compressedPhotoDataUrl } from "./smartedit/assets";
 
 interface TemplateEditorProps {
@@ -34,7 +27,6 @@ interface TemplateProjectData {
   sideNote?: string;
   message?: string;
   photoUrl?: string | null;
-  published?: PublishedRecord | null;
 }
 
 const BIRTHDAY_HEADING = "★ HAPPY BIRTHDAY !!";
@@ -52,15 +44,6 @@ export function TemplateEditor({
   const [message, setMessage] = useState(BIRTHDAY_DEFAULT_MESSAGE);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-  const [publishOpen, setPublishOpen] = useState(false);
-  const [username, setUsername] = useState("");
-  const [viewerName, setViewerName] = useState("");
-  const [publishing, setPublishing] = useState(false);
-  const [publishError, setPublishError] = useState("");
-  const [published, setPublished] = useState<PublishedRecord | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [authRequired, setAuthRequired] = useState(false);
-  const [authRequiredAction, setAuthRequiredAction] = useState<"save" | "publish" | null>(null);
   const { data: session, status } = useSession();
 
   const loveTemplate = templateSlug === "love-of-my-life";
@@ -68,9 +51,12 @@ export function TemplateEditor({
   useEffect(() => {
     if (status === "loading") return;
     let alive = true;
+
     void (async () => {
-      // Device-first: the editable project lives in this device's store.
-      const record = await getLocalProject(getAccountKey(session?.user?.email), projectId);
+      const record = await getLocalProject(
+        getAccountKey(session?.user?.email),
+        projectId,
+      );
       if (!alive || !record) return;
 
       const defaults = loveTemplate
@@ -97,17 +83,14 @@ export function TemplateEditor({
       setSideNote(data.sideNote ?? defaults.sideNote);
       setMessage(data.message ?? defaults.message);
       setPhotoUrl(data.photoUrl ?? null);
-      setPublished(data.published ?? null);
-
-      const savedUsername = localStorage.getItem(getAccountStorageKey("paper-stish-username", session?.user?.email));
-      if (savedUsername) setUsername(savedUsername);
     })();
+
     return () => {
       alive = false;
     };
   }, [projectId, loveTemplate, session?.user?.email, status]);
 
-  const collectValues = (): TemplatePublicationValues => ({
+  const collectValues = () => ({
     heading,
     years,
     yearsLabel,
@@ -118,19 +101,18 @@ export function TemplateEditor({
 
   const save = async () => {
     if (status !== "authenticated") {
-      setAuthRequiredAction("save");
-      setAuthRequired(true);
+      await signIn("google");
       return;
     }
 
-    // Save means: persist my current unfinished work on this device.
     const ok = await putLocalProject({
       id: projectId,
       account: getAccountKey(session?.user?.email),
       templateSlug,
       updatedAt: new Date().toISOString(),
-      data: { ...collectValues() },
+      data: collectValues(),
     });
+
     if (ok) {
       setSaved(true);
       window.setTimeout(() => setSaved(false), 1400);
@@ -142,11 +124,8 @@ export function TemplateEditor({
 
     void (async () => {
       try {
-        // Compress on the way in so local projects and published websites
-        // stay reasonably sized (≤1600px, self-contained data URL).
         setPhotoUrl(await compressedPhotoDataUrl(file));
       } catch {
-        // Fall back to the raw file for anything the compressor can't read.
         const reader = new FileReader();
         reader.onload = () => {
           if (typeof reader.result === "string") setPhotoUrl(reader.result);
@@ -154,67 +133,6 @@ export function TemplateEditor({
         reader.readAsDataURL(file);
       }
     })();
-  };
-
-  const publish = async () => {
-    if (status !== "authenticated") {
-      setAuthRequiredAction("publish");
-      setAuthRequired(true);
-      return;
-    }
-
-    const cleanUsername = slugPart(username, "");
-    const cleanViewerName = slugPart(viewerName, "");
-
-    if (!cleanUsername || !cleanViewerName || publishing) return;
-
-    try {
-      setPublishing(true);
-      setPublishError("");
-      localStorage.setItem(getAccountStorageKey("paper-stish-username", session?.user?.email), username.trim());
-
-      // Publishing is the server sync point: the snapshot is stored
-      // server-side and the public link only ever carries the templateId.
-      // Sending the previous templateId keeps an existing link working.
-      const result = await publishWebsite({
-        templateSlug,
-        title: project?.title ?? "Paper Stish",
-        username: cleanUsername,
-        viewerName: cleanViewerName,
-        previousTemplateId: published?.templateId,
-        data: { values: collectValues() },
-      });
-
-      const record = publishResultToRecord(result);
-      setPublished(record);
-      await putLocalProject({
-        id: projectId,
-        account: getAccountKey(session?.user?.email),
-        templateSlug,
-        updatedAt: record.publishedAt,
-        data: { ...collectValues(), published: record } as Record<string, unknown>,
-      });
-    } catch (err) {
-      setPublishError(
-        err instanceof Error && err.message
-          ? err.message
-          : "Something went wrong while publishing. Try again.",
-      );
-    } finally {
-      setPublishing(false);
-    }
-  };
-
-  const copyPublishedLink = async () => {
-    if (!published?.url) return;
-
-    try {
-      await navigator.clipboard.writeText(published.url);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1400);
-    } catch {
-      // Clipboard permissions are browser-controlled.
-    }
   };
 
   const templateReady =
@@ -246,13 +164,6 @@ export function TemplateEditor({
             className="whitespace-nowrap rounded-full border border-white/12 bg-white/5 px-13 py-10 text-12 tracking-[-0.02em] text-white transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] s:px-16"
           >
             {saved ? "Saved" : "Save"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setPublishOpen(true)}
-            className="whitespace-nowrap rounded-full bg-white px-13 py-10 text-12 tracking-[-0.02em] text-black transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] s:px-16"
-          >
-            Publish
           </button>
         </div>
       </header>
@@ -319,186 +230,6 @@ export function TemplateEditor({
           </label>
         </div>
       </div>
-
-      {publishOpen && (
-        <div
-          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/55 px-15 backdrop-blur-[10px]"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setPublishOpen(false);
-          }}
-        >
-          <div className="w-full max-w-[470px] rounded-[22px] border border-white/10 bg-[#121212] p-18 shadow-2xl">
-            {authRequired && !published ? (
-              <>
-                <div className="flex items-start justify-between gap-15">
-                  <div>
-                    <p className="text-20 tracking-[-0.05em]">Create your account</p>
-                    <p className="mt-6 text-11 leading-15 text-white/42">
-                      {authRequiredAction === "save" ? "Sign up with Google to save this project to your Paper Stish account." : "Sign up with Google to publish this website and create your personal link."}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPublishOpen(false);
-                      setAuthRequired(false);
-                      setAuthRequiredAction(null);
-                    }}
-                    className="flex size-32 items-center justify-center rounded-full bg-white/7 text-white/65"
-                    aria-label="Close account dialog"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => signIn("google")}
-                  className="mt-22 flex h-48 w-full items-center justify-center gap-9 rounded-full bg-white text-13 text-black transition-transform duration-300 hover:scale-[1.01] active:scale-[0.99]"
-                >
-                  Continue with Google
-                </button>
-
-                <p className="mt-12 text-center text-10 leading-14 text-white/32">
-                  Your template can be created and edited without an account. An account is required to save or publish.
-                </p>
-              </>
-            ) : !published ? (
-              <>
-                <div className="flex items-start justify-between gap-15">
-                  <div>
-                    <p className="text-20 tracking-[-0.05em]">Publish website</p>
-                    <p className="mt-6 text-11 leading-15 text-white/42">
-                      Choose the names used in the personal website link.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setPublishOpen(false)}
-                    className="flex size-32 items-center justify-center rounded-full bg-white/7 text-white/65"
-                    aria-label="Close publish dialog"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <div className="mt-20 grid gap-13">
-                  <label className="grid gap-7">
-                    <span className="text-10 text-white/45">Your name</span>
-                    <input
-                      autoFocus
-                      value={username}
-                      onChange={(event) => setUsername(event.target.value)}
-                      placeholder="alex"
-                      className="w-full rounded-[13px] border border-white/10 bg-white/5 px-12 py-11 text-13 text-white outline-none focus:border-white/25"
-                    />
-                  </label>
-
-                  <label className="grid gap-7">
-                    <span className="text-10 text-white/45">Person this is for</span>
-                    <input
-                      value={viewerName}
-                      onChange={(event) => setViewerName(event.target.value)}
-                      placeholder="olivia"
-                      className="w-full rounded-[13px] border border-white/10 bg-white/5 px-12 py-11 text-13 text-white outline-none focus:border-white/25"
-                    />
-                  </label>
-                </div>
-
-                <div className="mt-18 rounded-[15px] border border-white/8 bg-white/[0.025] p-12">
-                  <p className="text-10 text-white/38">Your link will look like</p>
-                  <p className="mt-5 break-all font-mono text-11 leading-16 text-white/75">
-                    {typeof window !== "undefined" ? window.location.origin : ""}/
-                    {slugPart(username, "your-name")}/
-                    {slugPart(viewerName, "their-name")}/…
-                  </p>
-                </div>
-
-                {publishError && (
-                  <p className="mt-12 rounded-[13px] border border-[#e5484d]/35 bg-[#241214] px-12 py-10 text-11 leading-15 text-[#ff8f93]">
-                    {publishError}
-                  </p>
-                )}
-
-                <button
-                  type="button"
-                  disabled={
-                    publishing ||
-                    !slugPart(username, "") ||
-                    !slugPart(viewerName, "")
-                  }
-                  onClick={publish}
-                  className="mt-15 w-full rounded-full bg-white py-12 text-12 text-black disabled:cursor-not-allowed disabled:opacity-35"
-                >
-                  {publishing ? "Publishing…" : "Publish website"}
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="flex items-start justify-between gap-15">
-                  <div>
-                    <p className="text-20 tracking-[-0.05em]">Your website is ready</p>
-                    <p className="mt-6 text-11 leading-15 text-white/42">
-                      This link opens the finished website directly.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setPublishOpen(false)}
-                    className="flex size-32 items-center justify-center rounded-full bg-white/7 text-white/65"
-                    aria-label="Close publish dialog"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <div className="mt-18 rounded-[15px] border border-white/8 bg-white/[0.025] p-12">
-                  <p className="break-all font-mono text-11 leading-17 text-white/75">
-                    {published.url}
-                  </p>
-                </div>
-
-                <div className="mt-13 grid grid-cols-2 gap-9">
-                  <button
-                    type="button"
-                    onClick={copyPublishedLink}
-                    className="rounded-full bg-white py-11 text-11 text-black"
-                  >
-                    {copied ? "Copied" : "Copy link"}
-                  </button>
-                  <a
-                    href={published.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center justify-center rounded-full border border-white/12 py-11 text-11 text-white"
-                  >
-                    Open website
-                  </a>
-                </div>
-
-                <button
-                  type="button"
-                  disabled={publishing}
-                  onClick={() => void publish()}
-                  className="mt-10 w-full py-8 text-10 text-white/35 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {publishing ? "Publishing…" : "Publish changes to this link"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPublished(null);
-                    setViewerName("");
-                  }}
-                  className="mt-4 w-full py-6 text-10 text-white/28"
-                >
-                  Publish under a new link
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </main>
   );
 }
