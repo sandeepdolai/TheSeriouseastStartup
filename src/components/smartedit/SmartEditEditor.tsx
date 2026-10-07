@@ -23,6 +23,7 @@ import {
 } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { getAccountKey } from "@/lib/accountStorage";
+import { isAdminEmail } from "@/lib/admin";
 import {
   getLocalProject,
   listAllLocalProjects,
@@ -111,6 +112,9 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   const [uploadsVersion, setUploadsVersion] = useState(0);
   const [saveError, setSaveError] = useState("");
   const [textEditorOpen, setTextEditorOpen] = useState(false);
+  const [adminTemplateDraft, setAdminTemplateDraft] = useState(false);
+  const [publishingTemplate, setPublishingTemplate] = useState(false);
+  const [templatePublishError, setTemplatePublishError] = useState("");
 
   const title = useEditorStore((s) => s.title);
   const doc = useEditorStore((s) => s.document);
@@ -152,6 +156,12 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
         document?: SmartEditDocument;
         assets?: Record<string, AssetRecord>;
       } | null;
+
+      if (alive) {
+        setAdminTemplateDraft(
+          isAdminEmail(session?.user?.email) && record?.templateSlug === "admin-template",
+        );
+      }
 
       const draft = await idb.getDraft<{
         document: SmartEditDocument;
@@ -440,6 +450,99 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
 
   /* ── Save / publish / export ──────────────────────────────────────── */
 
+  const publishTemplate = useCallback(async () => {
+    if (!adminTemplateDraft || !isAdminEmail(session?.user?.email) || publishingTemplate) return;
+
+    const state = useEditorStore.getState();
+    const templateTitle = state.title.trim();
+    if (!templateTitle) {
+      setTemplatePublishError("Give the template a name first.");
+      return;
+    }
+
+    setPublishingTemplate(true);
+    setTemplatePublishError("");
+
+    try {
+      const document = structuredClone(state.document);
+      const assets = snapshotAssets(document);
+
+      for (const layer of document.layers) {
+        if (!isImageLike(layer)) continue;
+        const record = assets[layer.assetId];
+        if (!record) continue;
+
+        let url = record.url ?? "";
+        if (record.provider === "local") {
+          url = (await assetDataUrl(record.id)) ?? "";
+        }
+        if (!url) throw new Error(`The asset "${record.name}" is not available for publishing.`);
+
+        layer.url = url;
+        assets[record.id] = {
+          ...record,
+          provider: "bundled",
+          url,
+          storeKey: undefined,
+        };
+      }
+
+      for (const font of document.fonts ?? []) {
+        if (font.source !== "user") continue;
+        const record = assets[font.id];
+        if (!record) continue;
+
+        const dataUrl = font.dataUrl || (
+          record.provider === "local" ? await assetDataUrl(record.id) : record.url
+        );
+        if (!dataUrl) throw new Error(`The font "${record.name}" is not available for publishing.`);
+
+        font.dataUrl = dataUrl;
+        assets[record.id] = {
+          ...record,
+          provider: "bundled",
+          url: dataUrl,
+          storeKey: undefined,
+        };
+      }
+
+      const res = await fetch("/api/templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: templateTitle,
+          document,
+          assets,
+        }),
+      });
+
+      if (!res.ok) {
+        let message = "Could not publish the template.";
+        try {
+          const body = (await res.json()) as { error?: string };
+          if (body.error) message = body.error;
+        } catch {
+          // keep default message
+        }
+        throw new Error(message);
+      }
+
+      setSavedFlash(true);
+      window.setTimeout(() => setSavedFlash(false), 1800);
+    } catch (err) {
+      setTemplatePublishError(
+        err instanceof Error ? err.message : "Could not publish the template.",
+      );
+    } finally {
+      setPublishingTemplate(false);
+    }
+  }, [
+    adminTemplateDraft,
+    publishingTemplate,
+    session?.user?.email,
+    snapshotAssets,
+  ]);
+
   const save = useCallback(async () => {
     if (status !== "authenticated") {
       setAuthGate("save");
@@ -683,6 +786,16 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
               Edit Text
             </button>
           )}
+          {adminTemplateDraft && (
+            <button
+              type="button"
+              onClick={() => void publishTemplate()}
+              disabled={publishingTemplate}
+              className="whitespace-nowrap rounded-full bg-white px-12 py-9 text-11 tracking-[-0.02em] text-black transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-45 s:px-14"
+            >
+              {publishingTemplate ? "Publishing…" : "Publish Template"}
+            </button>
+          )}
           <IconButton label="Download" onClick={() => setExportOpen(true)}>
             <IconDownload />
           </IconButton>
@@ -698,9 +811,9 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
 
       {/* body */}
       <div className="relative flex min-h-0 flex-1">
-        {saveError && (
-          <div className="pointer-events-none absolute left-1/2 top-10 z-40 max-w-[min(90%,420px)] -translate-x-1/2 rounded-full border border-[#e5484d]/35 bg-[#241214]/95 px-14 py-8 text-center text-11 leading-14 text-[#ff8f93] shadow-lg">
-            {saveError}
+        {(saveError || templatePublishError) && (
+          <div className="pointer-events-none absolute left-1/2 top-10 z-40 max-w-[min(90%,520px)] -translate-x-1/2 rounded-full border border-[#e5484d]/35 bg-[#241214]/95 px-14 py-8 text-center text-11 leading-14 text-[#ff8f93] shadow-lg">
+            {templatePublishError || saveError}
           </div>
         )}
         {/* desktop tool rail */}
