@@ -117,7 +117,6 @@ function ProfileAction({
 export function ProfileOverlay({
   open,
   onMyProjects,
-  onMyTemplates,
   onSmartEdit,
 }: OverlayProps & {
   onMyProjects?: () => void;
@@ -163,7 +162,7 @@ export function ProfileOverlay({
                 <div className="min-w-0">
                   <p className="text-15 leading-17 tracking-[-0.02em]">Sign in with Google</p>
                   <p className="mt-5 text-12 leading-15 tracking-[-0.01em] text-white/50">
-                    Save your projects and templates to your Paper Stish account.
+                    Save your projects to your Paper Stish account.
                   </p>
                 </div>
               </div>
@@ -200,7 +199,6 @@ export function ProfileOverlay({
               <div data-reveal className="mt-10 flex flex-col gap-8">
                 <ProfileAction icon={<SparkIcon />} onClick={onSmartEdit}>Smart Edit</ProfileAction>
                 <ProfileAction icon={<UserIcon />} onClick={onMyProjects}>My Projects</ProfileAction>
-                <ProfileAction onClick={onMyTemplates}>My Templates</ProfileAction>
                 <ProfileAction>Manage subscription</ProfileAction>
               </div>
 
