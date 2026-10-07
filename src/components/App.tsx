@@ -7,8 +7,6 @@ import { FEATURED } from "@/lib/projects";
 import { HomeCarousel } from "./HomeCarousel";
 import { Hud } from "./Hud";
 import { MyProjects } from "./MyProjects";
-import { SavedTemplates } from "./SavedTemplates";
-import { TemplateEditor } from "./TemplateEditor";
 import { SmartEditEditor } from "./smartedit/SmartEditEditor";
 import { type CanvasRatio, createDocument } from "./smartedit/types";
 import { ProjectSheet } from "./ProjectSheet";
@@ -16,7 +14,7 @@ import { ProfileOverlay } from "./Overlays";
 import { getAccountKey, getAccountStorageKey } from "@/lib/accountStorage";
 import { listLocalProjects, putLocalProject } from "@/lib/localProjects";
 
-type View = "home" | "my" | "project" | "saved" | "editor" | "smart-edit";
+type View = "home" | "my" | "project" | "smart-edit";
 type Overlay = "profile" | null;
 
 export function App() {
@@ -64,18 +62,14 @@ export function App() {
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [sheetEntered, setSheetEntered] = useState(false);
   const [myEntered, setMyEntered] = useState(false);
-  const [savedEntered, setSavedEntered] = useState(false);
-  const [editorProjectId, setEditorProjectId] = useState<string | null>(null);
-  const [editorTemplateSlug, setEditorTemplateSlug] = useState<string | null>(null);
   const [smartEditProjectId, setSmartEditProjectId] = useState<string | null>(null);
   const [carouselHidden, setCarouselHidden] = useState(false);
   const [returning, setReturning] = useState<string | null>(null);
   const [accountGateOpen, setAccountGateOpen] = useState(false);
   const [pendingAccountAction, setPendingAccountAction] = useState<
-    | { type: "duplicate" | "save-template"; templateSlug: string }
     | { type: "create-smart-edit"; ratio: CanvasRatio }
     | null
-  >(null);
+  >;
 
   const busy = useRef(false);
   /** ONE Smart Edit open-or-create flow at a time. Rapid taps on either
@@ -152,7 +146,6 @@ export function App() {
     await wait(500);
     setView(next);
     setMyEntered(false);
-    setSavedEntered(false);
     await wait(120);
     folio.closeHole();
     await wait(220);
@@ -259,36 +252,6 @@ export function App() {
   }, [swipe]);
 
 
-  const openTemplateEditor = useCallback(async (projectId: string, templateSlug: string) => {
-    if (busy.current) return;
-    busy.current = true;
-    setEditorProjectId(projectId);
-    setEditorTemplateSlug(templateSlug);
-    folio.openHole(window.innerWidth / 2, window.innerHeight / 2);
-    await wait(500);
-    setView("editor");
-    setMyEntered(false);
-    setSavedEntered(false);
-    folio.closeHole();
-    await wait(220);
-    busy.current = false;
-  }, [folio]);
-
-  const closeTemplateEditor = useCallback(async () => {
-    if (busy.current) return;
-    busy.current = true;
-    folio.openHole(window.innerWidth / 2, window.innerHeight / 2);
-    await wait(420);
-    setView("my");
-    setEditorProjectId(null);
-    setEditorTemplateSlug(null);
-    setMyEntered(false);
-    folio.closeHole();
-    await wait(220);
-    setMyEntered(true);
-    busy.current = false;
-  }, [folio]);
-
   const openSmartEdit = useCallback(async (projectId: string) => {
     if (busy.current) return;
     busy.current = true;
@@ -297,7 +260,6 @@ export function App() {
     await wait(500);
     setView("smart-edit");
     setMyEntered(false);
-    setSavedEntered(false);
     folio.closeHole();
     await wait(220);
     busy.current = false;
@@ -392,87 +354,18 @@ export function App() {
       });
   }, [accountEmail, closeOverlay, createSmartEdit, openSmartEdit, overlay]);
 
-  const performDuplicateTemplate = useCallback(async (template: (typeof FEATURED)[number]) => {
-    const id = `project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    // Every duplicated project becomes an independent local project.
-    const ok = await putLocalProject({
-      id,
-      account: getAccountKey(accountEmail),
-      title: template.title,
-      templateSlug: template.slug,
-      thumbnail: template.media[0],
-      createdAt: new Date().toISOString(),
-    });
-    if (!ok) return; // storage unavailable — do not open an empty editor
-    void openTemplateEditor(id, template.slug);
-  }, [openTemplateEditor, accountEmail]);
-
-  const performSaveTemplate = useCallback((template: (typeof FEATURED)[number]) => {
-    const templates = readLocalArray(getAccountStorageKey("paper-stish-templates", accountEmail));
-    if (templates.some((item) => item.templateSlug === template.slug)) return;
-    templates.unshift({
-      id: `template-${template.slug}`,
-      title: template.title,
-      thumbnail: template.media[0],
-      templateSlug: template.slug,
-      savedAt: new Date().toISOString(),
-    });
-    localStorage.setItem(getAccountStorageKey("paper-stish-templates", accountEmail), JSON.stringify(templates));
-  }, [accountEmail]);
-
-  const duplicateTemplate = useCallback((template: (typeof FEATURED)[number]) => {
-    if (status !== "authenticated") {
-      setPendingAccountAction({ type: "duplicate", templateSlug: template.slug });
-      setAccountGateOpen(true);
-      return;
-    }
-    void performDuplicateTemplate(template);
-  }, [performDuplicateTemplate, status]);
-
-  const saveTemplate = useCallback((template: (typeof FEATURED)[number]) => {
-    if (status !== "authenticated") {
-      setPendingAccountAction({ type: "save-template", templateSlug: template.slug });
-      setAccountGateOpen(true);
-      return;
-    }
-    performSaveTemplate(template);
-  }, [performSaveTemplate, status]);
-
-  useEffect(() => {
-    if (status !== "authenticated" || !pendingAccountAction) return;
-    const action = pendingAccountAction;
-    setPendingAccountAction(null);
-    setAccountGateOpen(false);
-    if (action.type === "duplicate") {
-      const template = FEATURED.find((item) => item.slug === action.templateSlug);
-      if (template) void performDuplicateTemplate(template);
-    } else if (action.type === "save-template") {
-      const template = FEATURED.find((item) => item.slug === action.templateSlug);
-      if (template) void performSaveTemplate(template);
-    } else if (action.type === "create-smart-edit") {
-      void performCreateSmartEdit(action.ratio);
-    }
-  }, [pendingAccountAction, performDuplicateTemplate, performSaveTemplate, performCreateSmartEdit, status]);
-
   const goHome = useCallback(() => {
     if (busy.current) return;
     if (overlay) closeOverlay();
     else if (view === "project") closeProject();
-    else if (view === "editor") closeTemplateEditor();
     else if (view === "smart-edit") closeSmartEdit();
-    else if (view === "my" || view === "saved") wipeTo("home");
+    else if (view === "my") wipeTo("home");
   }, [view, overlay, closeOverlay, closeProject, closeTemplateEditor, closeSmartEdit, wipeTo]);
 
   const goMy = useCallback(() => {
     if (busy.current || (view !== "home" && view !== "my")) return;
     if (overlay) closeOverlay();
     wipeTo("my");
-  }, [view, overlay, closeOverlay, wipeTo]);
-
-  const goSaved = useCallback(() => {
-    if (busy.current || (view !== "home" && view !== "my")) return;
-    if (overlay) closeOverlay();
-    wipeTo("saved");
   }, [view, overlay, closeOverlay, wipeTo]);
 
   return (
@@ -496,8 +389,6 @@ export function App() {
           onCreateSmartEdit={createSmartEdit}
         />
       )}
-
-      {view === "saved" && <SavedTemplates entered={savedEntered} />}
 
       {view === "editor" && editorProjectId && editorTemplateSlug && (
         <TemplateEditor
@@ -523,8 +414,6 @@ export function App() {
           onClose={closeProject}
           onPrev={(slug) => switchProject(slug)}
           onNext={(slug) => switchProject(slug)}
-          onDuplicate={duplicateTemplate}
-          onSaveTemplate={saveTemplate}
         />
       )}
 
@@ -591,7 +480,7 @@ export function App() {
             </button>
 
             <p className="mt-12 text-center text-10 leading-14 text-white/32">
-              You can browse templates without an account. An account is required to duplicate, save, or publish.
+              An account is required to create Smart Edit projects.
             </p>
           </div>
         </div>
@@ -600,7 +489,6 @@ export function App() {
       <ProfileOverlay
         open={overlay === "profile"}
         onMyProjects={goMy}
-        onMyTemplates={goSaved}
         onSmartEdit={smartEditQuickAction}
       />
 
@@ -608,7 +496,6 @@ export function App() {
         view={view}
         overlay={overlay}
         onProfile={() => toggleOverlay("profile")}
-        onSaved={goSaved}
         onHome={goHome}
         onMy={goMy}
       />
