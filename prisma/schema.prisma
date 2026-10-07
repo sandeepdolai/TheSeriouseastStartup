@@ -62,3 +62,18 @@ model Publication {
 
   @@index([ownerId])
 }
+
+
+model CommunityTemplate {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  document    String
+  assets      String
+  published   Boolean  @default(true)
+  publishedBy String
+  publishedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([published, publishedAt])
+}
