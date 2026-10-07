@@ -10,8 +10,6 @@ interface Props {
   onClose: () => void;
   onPrev: (slug: string) => void;
   onNext: (slug: string) => void;
-  onDuplicate: (project: Project) => void;
-  onSaveTemplate: (project: Project) => void;
   entered: boolean;
   incoming?: boolean;
   swipePhase?: "idle" | "drag" | "commit" | "cancel";
@@ -35,24 +33,6 @@ function wrap(min: number, max: number, value: number) {
   return ((((value - min) % range) + range) % range) + min;
 }
 
-function DuplicateIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2.1">
-      <rect x="8" y="8" width="11" height="11" rx="1.8" />
-      <path d="M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function SaveIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2.1">
-      <path d="M5 3h11l3 3v15H5z" strokeLinejoin="round" />
-      <path d="M8 3v6h8V3M8 21v-6h8v6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 function CloseIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2.2">
@@ -72,7 +52,6 @@ function TrophyIcon() {
 }
 
 const MEDIA_ASPECTS: Record<string, number[]> = {
-  "love-of-my-life": [1080 / 1550],
   "nathan-riley": [2048 / 1172, 1787 / 900, 1798 / 905, 1792 / 904],
   "casa-di-solare": [2048 / 1204, 1280 / 596, 1280 / 644],
   "the-lookback": [1250 / 720, 1620 / 1080, 1500 / 1897, 1500 / 1000],
@@ -431,14 +410,7 @@ export function ProjectSheet({
           <div className="mt-15 s:mt-20 max-w-[40rem] text-14 s:text-16 tracking-[-0.035em] text-black" {...reveal(0.22)}>
             {project.description}
           </div>
-          <div className="mt-30 s:mt-45 flex items-start gap-8" {...reveal(0.34)}>
-            <button type="button" onClick={() => onDuplicate(project)} className="relative inline-flex items-center rounded-full h-[2em] aspect-square justify-center px-2 bg-black text-white pointer-events-auto transition-transform duration-300 hover:scale-105" aria-label={"Duplicate " + project.title}>
-              <DuplicateIcon className="size-[1.05em]" />
-            </button>
-            <button type="button" onClick={() => onSaveTemplate(project)} className="relative inline-flex items-center rounded-full h-[2em] px-[1.25em] bg-[#eee] text-black pointer-events-auto transition-colors duration-300 hover:bg-[#e2e2e2]" aria-label={"Save " + project.title + " to My Templates"}>
-              <span className="label whitespace-nowrap">Save</span>
-            </button>
-          </div>
+          <div className="mt-30 s:mt-45" {...reveal(0.34)} />
         </div>
         <div className="relative w-full flex-1 min-h-0 overflow-hidden s:w-auto s:flex-none s:h-full">
           <div ref={mediaRef} className="flex w-full flex-col items-center gap-y-30 s:gap-y-60 s:w-700 s:shrink-0 pb-80 has-hover:pb-0 will-change-transform">
