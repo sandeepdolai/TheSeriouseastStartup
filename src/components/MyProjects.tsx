@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { getAccountKey } from "@/lib/accountStorage";
 import { listLocalProjects } from "@/lib/localProjects";
-import { BirthdayTemplate, BIRTHDAY_DEFAULT_MESSAGE } from "./templates/BirthdayTemplate";
-import { LoveLifeTemplate, LOVE_DEFAULT_MESSAGE } from "./templates/LoveLifeTemplate";
 import { SmartEditPreview } from "./smartedit/SmartEditPreview";
 import { CANVAS_RATIOS, type AssetRecord, type CanvasRatio, type SmartEditDocument } from "./smartedit/types";
 
@@ -24,12 +22,6 @@ interface LocalProject {
   updatedAt?: string;
   templateSlug?: string;
   data?: {
-    heading?: string;
-    years?: string;
-    yearsLabel?: string;
-    sideNote?: string;
-    message?: string;
-    photoUrl?: string | null;
     kind?: string;
     document?: SmartEditDocument;
     assets?: Record<string, AssetRecord>;
@@ -166,21 +158,7 @@ export function MyProjects({ entered, onOpenProject, onCreateSmartEdit }: Props)
                   className="absolute inset-0 transition-transform duration-700 ease-out group-hover:scale-[0.985]"
                   style={{ containerType: "size" }}
                 >
-                  {project.templateSlug === "birthday-template" ? (
-                    <BirthdayTemplate
-                      heading={project.data?.heading ?? "★ HAPPY BIRTHDAY !!"}
-                      message={project.data?.message ?? BIRTHDAY_DEFAULT_MESSAGE}
-                      photoUrl={project.data?.photoUrl ?? null}
-                    />
-                  ) : project.templateSlug === "love-of-my-life" ? (
-                    <LoveLifeTemplate
-                      years={project.data?.years ?? "2"}
-                      yearsLabel={project.data?.yearsLabel ?? "yers with you"}
-                      message={project.data?.message ?? LOVE_DEFAULT_MESSAGE}
-                      photoUrl={project.data?.photoUrl ?? null}
-                      fitToContainer
-                    />
-                  ) : project.templateSlug === "smart-edit" && project.data?.document ? (
+                  {project.templateSlug === "smart-edit" && project.data?.document ? (
                     <SmartEditPreview
                       document={project.data.document}
                       assets={Object.values(project.data.assets ?? {}) as AssetRecord[]}
