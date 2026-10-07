@@ -817,6 +817,9 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
               Edit Text
             </button>
           )}
+          <IconButton label="Download" onClick={() => setExportOpen(true)}>
+            <IconDownload />
+          </IconButton>
           <button
             type="button"
             onClick={save}
