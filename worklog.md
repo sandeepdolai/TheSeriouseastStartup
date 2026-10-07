@@ -58,3 +58,43 @@ Stage Summary:
 - Template now renders pixel-identical to the supplied HTML across all viewports; full Paper Stish flow works: Library → View → Duplicate/Save (account-gated) → My Projects → Editor (text + photo editing) → Publish → public viewer
 - New files: public/templates/love-{paper-texture,polaroid-frame,cats,bow}.webp, love-of-my-life-art.webp, love-favorite-person-art.webp, love-of-my-life.webp (thumbnail)
 - Changed files: LoveLifeTemplate.tsx (rewrite), MyProjects.tsx (fit mode), ProjectSheet.tsx (aspect + single-item scroll clamp), TemplateEditor.tsx (publish key fix), projects.ts (thumbnail path), bun.lock (resynced to package.json)
+
+---
+Task ID: 3
+Agent: main (Z.ai Code)
+Task: Paper Stish Smart Edit — Phase 1-2: inspect codebase + define architecture
+
+Work Log:
+- Read all core files: App.tsx (view state machine home/my/project/saved/editor), Hud.tsx, Overlays.tsx (ProfileOverlay actions), HomeCarousel.tsx (WebGL template library), ProjectSheet.tsx (Template View + Duplicate/Save gating), TemplateEditor.tsx (editor + publish modal), MyProjects.tsx, SavedTemplates.tsx, PublishedTemplateViewer.tsx, [username]/[viewer]/[templateId] route, lib/projects.ts, lib/publish.ts, lib/accountStorage.ts, prisma schema, next.config.ts, workflows, globals.css
+- Key findings: production = GitHub Pages STATIC EXPORT (output:"export" when GITHUB_ACTIONS=true) → no server/DB in production; ALL persistence is client-side (account-scoped localStorage keys paper-stish-projects/templates/username:{email|guest}); publishing = base64 payload in URL hash #data= on /[username]/[viewer]/[templateId]; auth = NextAuth Google (empty creds in sandbox); styling = Tailwind v4 re-based 0.1rem units + custom `s:` breakpoint (650px) + .label class + fluid root font-size; viewer mode relaxes fixed body via html.paper-stish-viewer
+- MyProjects.tsx already contains UNUSED EditorRatio type + ratio-panel-in + my-create-pop keyframes → intended create-card design confirmed
+- Fonts already globally available via globals.css Google Fonts import (Anton, Caveat Brush, Gochi Hand, Patrick Hand, Dancing Script, Oswald) + local ABC Diatype variable → these become the built-in Smart Edit font registry (zero new font assets needed)
+
+Stage Summary (SMART EDIT ARCHITECTURE DECISIONS):
+- Document/layer model in src/components/smartedit/: SmartEditDocument {version, canvas {width,height}, background {type:"color",color}, layers[], fonts[]} — design units, CSS-%/cqh-based single renderer (SmartEditCanvas) shared by editor/preview/viewer at any size
+- Layer types: text | image | sticker with common transform (x,y,width,height,rotation,opacity,visible,locked) + type-specific props; layer array order = z-order
+- Persistence: IndexedDB (paper-stish-smart-edit: assets + drafts stores) for blobs/drafts (autosave 700ms debounce) + account-scoped localStorage paper-stish-projects (same as existing, so My Projects works unchanged) with asset refs (id→registry), durable across browser close
+- Asset abstraction: AssetRecord {id,type,provider:"bundled"|"local"|"cloudinary",url,width,height}; Cloudinary adapter via unsigned upload env vars (NEXT_PUBLIC_SMART_EDIT_CLOUDINARY_CLOUD_NAME/UPLOAD_PRESET), LocalProvider (IndexedDB) fallback when unset; library manifest /smart-edit/library/manifest.json overridable by NEXT_PUBLIC_SMART_EDIT_LIBRARY_URL
+- Publish: extend existing pattern — payload {version:1, templateSlug:"smart-edit", document (self-contained: all assets resolved to absolute/data URLs, user fonts embedded as data URLs)} in #data= hash on the existing public route; own encode/decode in smartedit module, existing lib/publish.ts untouched
+- Export: Canvas2D renderer (exportRenderer.ts) drawing document at 1x/2x (PNG/JPG) sharing the text-wrap algorithm (textLayout.ts, canvas measureText) with the DOM renderer for parity
+- Entry points: ProfileOverlay "Smart Edit" action (signed-in) + My Projects "New Smart Edit" create card with ratio panel (4:5, 1:1, 9:16, 16:9); creation account-gated like Duplicate (extends pendingAccountAction union)
+- History: zustand store with past/future snapshot stacks (structuredClone), commit on discrete ops + drag end; text edits debounced
+- No new dependencies (zustand already installed); no changes to home carousel/HUD/template UI
+
+---
+Task ID: 4
+Agent: main (Z.ai Code)
+Task: Paper Stish Smart Edit — implement the full feature (Phases 2–30) and validate
+
+Work Log:
+- Built src/components/smartedit/ module: types.ts (document/layer model, canvas ratios, font registry), textLayout.ts (shared canvas-measure wrap engine for DOM+export parity), assets.ts (IndexedDB wrapper, asset registry with object-URL resolution, image upload pipeline with WebP/JPEG compression ≤1600px, Cloudinary unsigned-upload adapter behind env vars with local fallback, library manifest loader, user font import via FontFace + IndexedDB persistence, orphan pruning), store.ts (zustand document+selection+history with snapshot undo/redo, layer factories), SmartEditCanvas.tsx (single CSS-%/cqh renderer for editor/preview/viewer + pointer interactions: move, proportional corner resize, text width resize, rotate with 15° snap, double-tap text edit, constant-screen-size handles via --se-scale, rAF-throttled drags), SmartEditPreview.tsx (My Projects cards), SmartEditViewer.tsx (public read-only viewer with embedded font registration), SmartEditEditor.tsx (shell: header undo/redo/save/publish, desktop tool rail + right inspector, mobile bottom dock + sheets, library with stickers/photos/uploads tabs, layers panel with visibility/lock/reorder/delete, text properties font/weight/size/colour/align, background swatches, export PNG/JPG at 1×/2×, publish modal, auth gate, debounced autosave 700ms draft + 3s project record, beforeunload guard, keyboard shortcuts), exportRenderer.ts (Canvas2D artwork-only export), publish.ts (self-contained payload encode + strict decode validation), editor-ui.tsx (design-language atoms/icons)
+- Created public/smart-edit/library/: 22 hand-drawn SVG stickers + manifest.json (stickers + 10 photos reusing existing template/project assets)
+- Integration (surgical): App.tsx (smart-edit view, open/close with hole transitions, createSmartEdit with account gate + pending-action continuation, profile quick action opens most recent or creates 4:5, dynamic gate copy), Overlays.tsx (Smart Edit ProfileAction with SparkIcon), MyProjects.tsx (New Smart Edit create card + ratio panel using pre-existing keyframes, SmartEditPreview branch), PublishedTemplateViewer.tsx (smart-edit decode branch), Hud.tsx (view type extended), .env.example (Cloudinary + library manifest docs)
+- Fixes found during self-testing: setPointerCapture wrapped in try/catch (stale pointer ids aborted drags), profile overlay closes on Smart Edit action, title included in draft + autosave trigger, uploads library tab hydrates all account images from project records
+- Browser-verified with agent-browser (temporary test-only credentials provider, reverted before commit): editor open/recovery, text add/type/font(Caveat Brush)/colour, library stickers add, upload→compress→IndexedDB→layer, move/resize/rotate via mouse + touch, undo/redo multi-step, duplicate/delete, save→account localStorage, refresh→draft+asset recovery (new blob URLs from IDB), rename, export PNG 2160×2160 (VLM-verified artwork-only with correct fonts/colours), publish→/alex/olivia2/155 with 4KB self-contained hash payload, public viewer renders artwork with zero editor chrome (VLM: "strictly visual content without any interactive web elements"), mobile 390×844 layout (dock/sheets/canvas/touch), guest account gate with dynamic copy, invalid-payload viewer error state, regressions (home carousel + WebGL, Love template View/Duplicate/editor, mixed My Projects)
+- Validation: tsc --noEmit clean for all new/changed files (remaining errors pre-existing in untouched files), eslint smartedit module 0 problems (3 remaining repo errors are pre-existing set-state-in-effect), dev server compiles clean
+
+Stage Summary:
+- Smart Edit fully functional end-to-end: Library → create (4 ratios) → edit (text/stickers/photos/fonts) → save/autosave → recover → export PNG/JPG → publish → public viewer, all inside the existing Paper Stish shell with unchanged template flows
+- Storage: localStorage account-scoped project records (existing system) + IndexedDB blobs/drafts (paper-stish-smart-edit DB); Cloudinary-ready via env vars with local fallback; no new dependencies
+- Not verifiable in sandbox: real Google OAuth (empty creds — same as existing app) and GitHub Pages static export build (bun run build not run per sandbox rules; code is client-only + static-export compatible)

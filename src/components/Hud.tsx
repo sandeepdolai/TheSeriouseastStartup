@@ -3,7 +3,7 @@
 import { SITE } from "@/lib/projects";
 
 interface HudProps {
-  view: "home" | "my" | "project" | "saved";
+  view: "home" | "my" | "project" | "saved" | "editor" | "smart-edit";
   overlay: "profile" | null;
   onProfile: () => void;
   onSaved: () => void;

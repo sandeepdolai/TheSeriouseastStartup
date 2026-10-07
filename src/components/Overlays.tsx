@@ -118,9 +118,11 @@ export function ProfileOverlay({
   open,
   onMyProjects,
   onMyTemplates,
+  onSmartEdit,
 }: OverlayProps & {
   onMyProjects?: () => void;
   onMyTemplates?: () => void;
+  onSmartEdit?: () => void;
 }) {
   const { ref, visible } = useReveal(open);
   const { data: session, status } = useSession();
@@ -196,6 +198,7 @@ export function ProfileOverlay({
               </div>
 
               <div data-reveal className="mt-10 flex flex-col gap-8">
+                <ProfileAction icon={<SparkIcon />} onClick={onSmartEdit}>Smart Edit</ProfileAction>
                 <ProfileAction icon={<UserIcon />} onClick={onMyProjects}>My Projects</ProfileAction>
                 <ProfileAction onClick={onMyTemplates}>My Templates</ProfileAction>
                 <ProfileAction>Manage subscription</ProfileAction>

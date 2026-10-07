@@ -9,11 +9,13 @@ import { Hud } from "./Hud";
 import { MyProjects } from "./MyProjects";
 import { SavedTemplates } from "./SavedTemplates";
 import { TemplateEditor } from "./TemplateEditor";
+import { SmartEditEditor } from "./smartedit/SmartEditEditor";
+import { type CanvasRatio, createDocument } from "./smartedit/types";
 import { ProjectSheet } from "./ProjectSheet";
 import { ProfileOverlay } from "./Overlays";
 import { getAccountStorageKey, getAccountKey } from "@/lib/accountStorage";
 
-type View = "home" | "my" | "project" | "saved" | "editor";
+type View = "home" | "my" | "project" | "saved" | "editor" | "smart-edit";
 type Overlay = "profile" | null;
 
 export function App() {
@@ -63,11 +65,14 @@ export function App() {
   const [savedEntered, setSavedEntered] = useState(false);
   const [editorProjectId, setEditorProjectId] = useState<string | null>(null);
   const [editorTemplateSlug, setEditorTemplateSlug] = useState<string | null>(null);
+  const [smartEditProjectId, setSmartEditProjectId] = useState<string | null>(null);
   const [carouselHidden, setCarouselHidden] = useState(false);
   const [returning, setReturning] = useState<string | null>(null);
   const [accountGateOpen, setAccountGateOpen] = useState(false);
   const [pendingAccountAction, setPendingAccountAction] = useState<
-    { type: "duplicate" | "save-template"; templateSlug: string } | null
+    | { type: "duplicate" | "save-template"; templateSlug: string }
+    | { type: "create-smart-edit"; ratio: CanvasRatio }
+    | null
   >(null);
 
   const busy = useRef(false);
@@ -276,6 +281,85 @@ export function App() {
     busy.current = false;
   }, [folio]);
 
+  const openSmartEdit = useCallback(async (projectId: string) => {
+    if (busy.current) return;
+    busy.current = true;
+    setSmartEditProjectId(projectId);
+    folio.openHole(window.innerWidth / 2, window.innerHeight / 2);
+    await wait(500);
+    setView("smart-edit");
+    setMyEntered(false);
+    setSavedEntered(false);
+    folio.closeHole();
+    await wait(220);
+    busy.current = false;
+  }, [folio]);
+
+  const closeSmartEdit = useCallback(async () => {
+    if (busy.current) return;
+    busy.current = true;
+    folio.openHole(window.innerWidth / 2, window.innerHeight / 2);
+    await wait(420);
+    setView("my");
+    setSmartEditProjectId(null);
+    setMyEntered(false);
+    folio.closeHole();
+    await wait(220);
+    setMyEntered(true);
+    busy.current = false;
+  }, [folio]);
+
+  const performCreateSmartEdit = useCallback(
+    (ratio: CanvasRatio) => {
+      const id = `project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const key = getAccountStorageKey("paper-stish-projects", accountEmail);
+      const projects = readLocalArray(key);
+      projects.unshift({
+        id,
+        title: "Smart Edit",
+        templateSlug: "smart-edit",
+        createdAt: new Date().toISOString(),
+        data: {
+          kind: "smart-edit",
+          document: createDocument(ratio),
+          assets: {},
+          published: null,
+        },
+      });
+      localStorage.setItem(key, JSON.stringify(projects));
+      void openSmartEdit(id);
+    },
+    [openSmartEdit, accountEmail],
+  );
+
+  const createSmartEdit = useCallback(
+    (ratio: CanvasRatio) => {
+      if (status !== "authenticated") {
+        setPendingAccountAction({ type: "create-smart-edit", ratio });
+        setAccountGateOpen(true);
+        return;
+      }
+      performCreateSmartEdit(ratio);
+    },
+    [performCreateSmartEdit, status],
+  );
+
+  const smartEditQuickAction = useCallback(() => {
+    if (overlay) closeOverlay();
+    // Open the most recent Smart Edit project, or start a fresh one.
+    const projects = readLocalArray(
+      getAccountStorageKey("paper-stish-projects", accountEmail),
+    );
+    const smartProjects = projects
+      .filter((item) => item?.templateSlug === "smart-edit" && item?.id)
+      .sort((a, b) => String(b?.updatedAt ?? b?.createdAt ?? "").localeCompare(String(a?.updatedAt ?? a?.createdAt ?? "")));
+    if (smartProjects[0]?.id) {
+      void openSmartEdit(String(smartProjects[0].id));
+    } else {
+      createSmartEdit("4:5");
+    }
+  }, [accountEmail, closeOverlay, createSmartEdit, openSmartEdit, overlay]);
+
   const performDuplicateTemplate = useCallback((template: (typeof FEATURED)[number]) => {
     const id = `project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const projects = readLocalArray(getAccountStorageKey("paper-stish-projects", accountEmail));
@@ -324,21 +408,27 @@ export function App() {
   useEffect(() => {
     if (status !== "authenticated" || !pendingAccountAction) return;
     const action = pendingAccountAction;
-    const template = FEATURED.find((item) => item.slug === action.templateSlug);
     setPendingAccountAction(null);
     setAccountGateOpen(false);
-    if (!template) return;
-    if (action.type === "duplicate") performDuplicateTemplate(template);
-    else performSaveTemplate(template);
-  }, [pendingAccountAction, performDuplicateTemplate, performSaveTemplate, status]);
+    if (action.type === "duplicate") {
+      const template = FEATURED.find((item) => item.slug === action.templateSlug);
+      if (template) performDuplicateTemplate(template);
+    } else if (action.type === "save-template") {
+      const template = FEATURED.find((item) => item.slug === action.templateSlug);
+      if (template) performSaveTemplate(template);
+    } else if (action.type === "create-smart-edit") {
+      performCreateSmartEdit(action.ratio);
+    }
+  }, [pendingAccountAction, performDuplicateTemplate, performSaveTemplate, performCreateSmartEdit, status]);
 
   const goHome = useCallback(() => {
     if (busy.current) return;
     if (overlay) closeOverlay();
     else if (view === "project") closeProject();
     else if (view === "editor") closeTemplateEditor();
+    else if (view === "smart-edit") closeSmartEdit();
     else if (view === "my" || view === "saved") wipeTo("home");
-  }, [view, overlay, closeOverlay, closeProject, closeTemplateEditor, wipeTo]);
+  }, [view, overlay, closeOverlay, closeProject, closeTemplateEditor, closeSmartEdit, wipeTo]);
 
   const goMy = useCallback(() => {
     if (busy.current || (view !== "home" && view !== "my")) return;
@@ -367,8 +457,10 @@ export function App() {
         <MyProjects
           entered={myEntered}
           onOpenProject={(projectId, templateSlug) => {
-            if (templateSlug) void openTemplateEditor(projectId, templateSlug);
+            if (templateSlug === "smart-edit") void openSmartEdit(projectId);
+            else if (templateSlug) void openTemplateEditor(projectId, templateSlug);
           }}
+          onCreateSmartEdit={createSmartEdit}
         />
       )}
 
@@ -380,6 +472,10 @@ export function App() {
           templateSlug={editorTemplateSlug}
           onClose={closeTemplateEditor}
         />
+      )}
+
+      {view === "smart-edit" && smartEditProjectId && (
+        <SmartEditEditor projectId={smartEditProjectId} onClose={closeSmartEdit} />
       )}
 
       {view === "project" && project && swipe.active && swipe.targetSlug && (
@@ -435,7 +531,9 @@ export function App() {
               <div>
                 <p className="text-20 tracking-[-0.05em]">Create your account</p>
                 <p className="mt-6 text-11 leading-15 text-white/42">
-                  Sign up with Google to duplicate or save templates to your Paper Stish account.
+                  {pendingAccountAction?.type === "create-smart-edit"
+                    ? "Sign up with Google to create Smart Edit projects in your Paper Stish account."
+                    : "Sign up with Google to duplicate or save templates to your Paper Stish account."}
                 </p>
               </div>
               <button
@@ -466,7 +564,12 @@ export function App() {
         </div>
       )}
 
-      <ProfileOverlay open={overlay === "profile"} onMyProjects={goMy} onMyTemplates={goSaved} />
+      <ProfileOverlay
+        open={overlay === "profile"}
+        onMyProjects={goMy}
+        onMyTemplates={goSaved}
+        onSmartEdit={smartEditQuickAction}
+      />
 
       <Hud
         view={view}

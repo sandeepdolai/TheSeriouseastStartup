@@ -1,0 +1,1549 @@
+"use client";
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Paper Stish — Smart Edit editor shell.
+
+   Layout (Paper Stish native — same surfaces, transitions and dark language
+   as the template editor):
+   • header: close · title · undo/redo · save · publish
+   • desktop (s:): tool rail on the left, canvas centre, inspector right
+   • mobile: bottom tool dock, panels as bottom sheets
+   Persistence: debounced local draft (IndexedDB) + account-scoped project
+   records in the existing paper-stish-projects storage + autosave.
+─────────────────────────────────────────────────────────────────────────── */
+
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { signIn, useSession } from "next-auth/react";
+import { getAccountStorageKey } from "@/lib/accountStorage";
+import {
+  type AssetRecord,
+  type Layer,
+  type LibraryManifest,
+  type SmartEditDocument,
+  type TextLayer,
+  BUILTIN_FONTS,
+  clamp,
+  isImageLike,
+  safeColor,
+} from "./types";
+import {
+  assetDataUrl,
+  assetUrl,
+  getAsset,
+  hydrateAssets,
+  idb,
+  importFontFile,
+  importImageFile,
+  libraryItemToAsset,
+  loadLibraryManifest,
+  registerAsset,
+  resolvePublicPath,
+  restoreUserFont,
+  pruneOrphanAssets,
+  listUploads,
+} from "./assets";
+import { makeImageLayer, makeTextLayer, useEditorStore } from "./store";
+import { layoutTextLayer } from "./textLayout";
+import { SmartEditCanvas } from "./SmartEditCanvas";
+import { exportDocument } from "./exportRenderer";
+import {
+  type PublishedRecord,
+  buildPublicUrl,
+  encodeSmartEditPayload,
+  estimatePayloadBytes,
+  slugPart,
+  createTemplateId,
+} from "./publish";
+import {
+  AuthGate,
+  IconDelete,
+  IconDelete as DelIcon,
+  IconDown,
+  IconDownload,
+  IconDuplicate,
+  IconEdit,
+  IconEye,
+  IconEyeOff,
+  IconLayers,
+  IconLibrary,
+  IconLock,
+  IconRedo,
+  IconText,
+  IconUndo,
+  IconUnlock,
+  IconUp,
+  IconUpload,
+  IconButton,
+  ModalShell,
+  SheetShell,
+  ToolButton,
+} from "./editor-ui";
+
+const PUBLISH_MAX_BYTES = 2_400_000;
+
+interface SmartEditEditorProps {
+  projectId: string;
+  onClose: () => void;
+}
+
+interface ProjectRecord {
+  id: string;
+  title: string;
+  templateSlug?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  data?: {
+    kind?: string;
+    document?: SmartEditDocument;
+    assets?: Record<string, AssetRecord>;
+    published?: PublishedRecord | null;
+  };
+}
+
+type LoadState = { phase: "loading" } | { phase: "ready" } | { phase: "missing" };
+
+export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
+  const { data: session, status } = useSession();
+  const [load, setLoad] = useState<LoadState>({ phase: "loading" });
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<"png" | "jpg">("png");
+  const [exportScale, setExportScale] = useState(2);
+  const [exporting, setExporting] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [username, setUsername] = useState("");
+  const [viewerName, setViewerName] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const [published, setPublished] = useState<PublishedRecord | null>(null);
+  const [publishError, setPublishError] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [authGate, setAuthGate] = useState<"save" | "publish" | null>(null);
+  const [savedFlash, setSavedFlash] = useState(false);
+  const [libraryTab, setLibraryTab] = useState<"stickers" | "photos" | "uploads">("stickers");
+  const [manifest, setManifest] = useState<LibraryManifest | null>(null);
+  const [libraryError, setLibraryError] = useState("");
+  const [uploadsVersion, setUploadsVersion] = useState(0);
+
+  const title = useEditorStore((s) => s.title);
+  const doc = useEditorStore((s) => s.document);
+  const selection = useEditorStore((s) => s.selection);
+  const editingId = useEditorStore((s) => s.editingId);
+  const canUndo = useEditorStore((s) => s.past.length > 0);
+  const canRedo = useEditorStore((s) => s.future.length > 0);
+  const dirty = useEditorStore((s) => s.dirty);
+  const selectedLayer = useMemo(
+    () => doc.layers.find((l) => l.id === selection) ?? null,
+    [doc.layers, selection],
+  );
+
+  const bootedRef = useRef(false);
+  const draftTimer = useRef<number | null>(null);
+  const projectTimer = useRef<number | null>(null);
+  const fontFileRef = useRef<HTMLInputElement>(null);
+  const imageFileRef = useRef<HTMLInputElement>(null);
+
+  /* ── Project load + draft recovery ─────────────────────────────────── */
+
+  useEffect(() => {
+    if (status === "loading") return;
+    if (bootedRef.current) return;
+    bootedRef.current = true;
+    let alive = true;
+
+    const boot = async () => {
+      const email = session?.user?.email ?? null;
+      let record: ProjectRecord | null = null;
+      try {
+        const raw = localStorage.getItem(getAccountStorageKey("paper-stish-projects", email));
+        const projects = raw ? JSON.parse(raw) : [];
+        if (Array.isArray(projects)) {
+          record = projects.find((p: ProjectRecord) => p?.id === projectId) ?? null;
+        }
+      } catch {
+        record = null;
+      }
+
+      const draft = await idb.getDraft<{
+        document: SmartEditDocument;
+        title?: string;
+        savedAt: number;
+      }>(projectId);
+      const projectNewer =
+        record?.updatedAt && draft?.savedAt ? Date.parse(record.updatedAt) >= draft.savedAt : true;
+
+      let loaded: SmartEditDocument | null = null;
+      if (record?.data?.document && projectNewer) loaded = record.data.document;
+      else if (draft?.document) loaded = draft.document;
+      else if (record?.data?.document) loaded = record.data.document;
+
+      if (!loaded || !loaded.canvas || !Array.isArray(loaded.layers)) {
+        if (alive) setLoad({ phase: "missing" });
+        return;
+      }
+
+      const assets = Object.values(record?.data?.assets ?? {}) as AssetRecord[];
+      await hydrateAssets(assets);
+
+      // Re-register user fonts (FontFace) referenced by the document.
+      await Promise.all(
+        (loaded.fonts ?? [])
+          .filter((f) => f.source === "user")
+          .map(async (f) => {
+            const asset = assets.find((a) => a.id === f.id);
+            if (asset) await restoreUserFont(asset);
+          }),
+      );
+
+      if (record?.data?.published) setPublished(record.data.published);
+      const savedUsername = localStorage.getItem(
+        getAccountStorageKey("paper-stish-username", session?.user?.email),
+      );
+      if (savedUsername) setUsername(savedUsername);
+
+      useEditorStore
+        .getState()
+        .reset(projectId, (!projectNewer && draft?.title) || record?.title || "Smart Edit", loaded);
+      if (alive) setLoad({ phase: "ready" });
+
+      // Housekeeping: drop stored blobs no project references anymore.
+      const referenced = new Set<string>();
+      try {
+        for (const key of Object.keys(localStorage)) {
+          if (!key.startsWith("paper-stish-projects")) continue;
+          try {
+            const list = JSON.parse(localStorage.getItem(key) ?? "[]");
+            if (!Array.isArray(list)) continue;
+            for (const p of list) {
+              const data = p?.data;
+              if (data?.kind !== "smart-edit") continue;
+              for (const id of Object.keys(data.assets ?? {})) referenced.add(id);
+            }
+          } catch {
+            // skip malformed entries
+          }
+        }
+      } catch {
+        // storage enumeration is best-effort
+      }
+      void pruneOrphanAssets(referenced);
+    };
+
+    void boot();
+    return () => {
+      alive = false;
+    };
+  }, [projectId, session?.user?.email, status]);
+
+  /* ── Library manifest ─────────────────────────────────────────────── */
+
+  useEffect(() => {
+    if (!libraryOpen || manifest) return;
+    void loadLibraryManifest().then(setManifest);
+  }, [libraryOpen, manifest]);
+
+  // "My uploads" lists every image the account has stored, across projects.
+  useEffect(() => {
+    if (!libraryOpen || libraryTab !== "uploads") return;
+    try {
+      const records: AssetRecord[] = [];
+      for (const key of Object.keys(localStorage)) {
+        if (!key.startsWith("paper-stish-projects")) continue;
+        try {
+          const list = JSON.parse(localStorage.getItem(key) ?? "[]");
+          if (!Array.isArray(list)) continue;
+          for (const p of list) {
+            const data = p?.data;
+            if (data?.kind !== "smart-edit") continue;
+            for (const asset of Object.values(data.assets ?? {}) as AssetRecord[]) {
+              if (asset?.type === "image") records.push(asset);
+            }
+          }
+        } catch {
+          // skip malformed entries
+        }
+      }
+      if (records.length > 0) {
+        void hydrateAssets(records).then(() => setUploadsVersion((v) => v + 1));
+      }
+    } catch {
+      // storage enumeration is best-effort
+    }
+  }, [libraryOpen, libraryTab]);
+
+  /* ── Persistence: debounced draft + project autosave ──────────────── */
+
+  const projectsKey = getAccountStorageKey("paper-stish-projects", session?.user?.email);
+
+  const snapshotAssets = useCallback((document: SmartEditDocument): Record<string, AssetRecord> => {
+    const out: Record<string, AssetRecord> = {};
+    for (const layer of document.layers) {
+      if (isImageLike(layer)) {
+        const record = getAsset(layer.assetId);
+        if (record) out[record.id] = record;
+      }
+    }
+    for (const font of document.fonts ?? []) {
+      if (font.source !== "user") continue;
+      const record = getAsset(font.id);
+      if (record) out[record.id] = record;
+    }
+    return out;
+  }, []);
+
+  const writeProjectRecord = useCallback(
+    (extra?: { published?: PublishedRecord | null }) => {
+      if (status !== "authenticated") return false;
+      const state = useEditorStore.getState();
+      try {
+        const raw = localStorage.getItem(projectsKey);
+        const projects = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(projects)) return false;
+        const updatedAt = new Date().toISOString();
+        const next = projects.map((item: ProjectRecord) =>
+          item?.id === projectId
+            ? {
+                ...item,
+                title: state.title,
+                updatedAt,
+                data: {
+                  ...(item.data ?? {}),
+                  kind: "smart-edit",
+                  document: state.document,
+                  assets: snapshotAssets(state.document),
+                  ...(extra?.published !== undefined ? { published: extra.published } : {}),
+                },
+              }
+            : item,
+        );
+        localStorage.setItem(projectsKey, JSON.stringify(next));
+        state.markSaved();
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [projectId, projectsKey, snapshotAssets, status],
+  );
+
+  const flushDraft = useCallback(() => {
+    const state = useEditorStore.getState();
+    if (!state.projectId) return;
+    void idb.putDraft(projectId, {
+      document: state.document,
+      title: state.title,
+      savedAt: Date.now(),
+    });
+  }, [projectId]);
+
+  useEffect(() => {
+    if (load.phase !== "ready") return;
+    let lastDoc = useEditorStore.getState().document;
+    let lastTitle = useEditorStore.getState().title;
+    const unsubscribe = useEditorStore.subscribe((state) => {
+      if (state.document === lastDoc && state.title === lastTitle) return;
+      lastDoc = state.document;
+      lastTitle = state.title;
+
+      if (draftTimer.current !== null) window.clearTimeout(draftTimer.current);
+      draftTimer.current = window.setTimeout(flushDraft, 700);
+
+      if (state.dirty) {
+        if (projectTimer.current !== null) window.clearTimeout(projectTimer.current);
+        projectTimer.current = window.setTimeout(() => {
+          if (useEditorStore.getState().dirty) writeProjectRecord();
+        }, 3000);
+      }
+    });
+    return () => {
+      unsubscribe();
+      if (draftTimer.current !== null) window.clearTimeout(draftTimer.current);
+      if (projectTimer.current !== null) window.clearTimeout(projectTimer.current);
+      flushDraft();
+    };
+  }, [load.phase, flushDraft, writeProjectRecord]);
+
+  /* ── Unload protection ────────────────────────────────────────────── */
+
+  useEffect(() => {
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!useEditorStore.getState().dirty) return;
+      flushDraft();
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [flushDraft]);
+
+  /* ── Save / publish / export ──────────────────────────────────────── */
+
+  const save = useCallback(() => {
+    if (status !== "authenticated") {
+      setAuthGate("save");
+      return;
+    }
+    flushDraft();
+    const ok = writeProjectRecord();
+    if (ok) {
+      setSavedFlash(true);
+      window.setTimeout(() => setSavedFlash(false), 1400);
+    }
+  }, [flushDraft, status, writeProjectRecord]);
+
+  const saveAndClose = useCallback(() => {
+    flushDraft();
+    if (useEditorStore.getState().dirty && status === "authenticated") {
+      writeProjectRecord();
+    }
+    onClose();
+  }, [flushDraft, onClose, status, writeProjectRecord]);
+
+  /** Self-contained document: every asset resolves to an absolute/data url. */
+  const buildStandaloneDocument = useCallback(async (): Promise<SmartEditDocument> => {
+    const state = useEditorStore.getState();
+    const standalone: SmartEditDocument = JSON.parse(JSON.stringify(state.document));
+    const usedFontIds = new Set(
+      standalone.layers.filter((l) => l.type === "text").map((l) => (l as TextLayer).fontId),
+    );
+
+    for (const layer of standalone.layers) {
+      if (!isImageLike(layer)) continue;
+      if (layer.url && /^(https?:|data:|blob:)/.test(layer.url)) continue;
+      const record = getAsset(layer.assetId);
+      if (!record) {
+        layer.url = PLACEHOLDER_GIF;
+        continue;
+      }
+      if (record.provider === "bundled") {
+        layer.url = window.location.origin + resolvePublicPath(record.url ?? "");
+      } else if (record.provider === "cloudinary" && record.url) {
+        layer.url = record.url;
+      } else {
+        layer.url = (await assetDataUrl(layer.assetId)) ?? PLACEHOLDER_GIF;
+      }
+    }
+
+    standalone.fonts = (standalone.fonts ?? []).filter(
+      (font) => font.source === "user" && usedFontIds.has(font.id),
+    );
+    for (const font of standalone.fonts) {
+      font.dataUrl = await assetDataUrl(font.id);
+    }
+    return standalone;
+  }, []);
+
+  const publish = useCallback(async () => {
+    if (status !== "authenticated") {
+      setAuthGate("publish");
+      return;
+    }
+    const cleanUsername = slugPart(username, "");
+    const cleanViewer = slugPart(viewerName, "");
+    if (!cleanUsername || !cleanViewer || publishing) return;
+
+    try {
+      setPublishing(true);
+      setPublishError("");
+      localStorage.setItem(
+        getAccountStorageKey("paper-stish-username", session?.user?.email),
+        username.trim(),
+      );
+
+      const standalone = await buildStandaloneDocument();
+      const payload = {
+        version: 1 as const,
+        templateSlug: "smart-edit" as const,
+        title: useEditorStore.getState().title,
+        publishedAt: new Date().toISOString(),
+        document: standalone,
+      };
+      if (estimatePayloadBytes(payload) > PUBLISH_MAX_BYTES) {
+        setPublishError(
+          "This project is too heavy to publish (too many large photos). Remove a few images and try again.",
+        );
+        return;
+      }
+
+      const templateId = createTemplateId();
+      const url = buildPublicUrl(cleanUsername, cleanViewer, templateId, encodeSmartEditPayload(payload));
+      const record: PublishedRecord = {
+        username: cleanUsername,
+        viewerName: cleanViewer,
+        templateId,
+        url,
+        publishedAt: payload.publishedAt,
+      };
+      setPublished(record);
+      writeProjectRecord({ published: record });
+    } catch {
+      setPublishError("Something went wrong while publishing. Try again.");
+    } finally {
+      setPublishing(false);
+    }
+  }, [
+    buildStandaloneDocument,
+    publishing,
+    session?.user?.email,
+    status,
+    username,
+    viewerName,
+    writeProjectRecord,
+  ]);
+
+  const runExport = useCallback(async () => {
+    try {
+      setExporting(true);
+      await exportDocument(useEditorStore.getState().document, {
+        format: exportFormat,
+        scale: exportScale,
+      });
+      setExportOpen(false);
+    } catch {
+      setLibraryError("Could not export the image. Try again.");
+    } finally {
+      setExporting(false);
+    }
+  }, [exportFormat, exportScale]);
+
+  const copyLink = useCallback(async () => {
+    if (!published?.url) return;
+    try {
+      await navigator.clipboard.writeText(published.url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    } catch {
+      // clipboard permissions are browser-controlled
+    }
+  }, [published]);
+
+  /* ── Tool actions ─────────────────────────────────────────────────── */
+
+  const addText = useCallback(() => {
+    const state = useEditorStore.getState();
+    const layer = makeTextLayer(state.document);
+    state.addLayer(layer);
+    state.startEditing(layer.id);
+  }, []);
+
+  const addLibraryItem = useCallback((record: AssetRecord) => {
+    const state = useEditorStore.getState();
+    registerAsset(record);
+    state.addLayer(
+      makeImageLayer(state.document, record, record.type === "sticker" ? "sticker" : "image"),
+    );
+  }, []);
+
+  const onUploadImages = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setLibraryError("");
+    for (const file of Array.from(files).slice(0, 6)) {
+      try {
+        const { record } = await importImageFile(file);
+        const state = useEditorStore.getState();
+        state.addLayer(makeImageLayer(state.document, record, "image"));
+      } catch (err) {
+        setLibraryError(err instanceof Error ? err.message : "Could not add that image.");
+      }
+    }
+    setUploadsVersion((v) => v + 1);
+  }, []);
+
+  const onImportFont = useCallback(async (file: File | undefined) => {
+    if (!file) return;
+    setLibraryError("");
+    try {
+      const { id, family } = await importFontFile(file);
+      const state = useEditorStore.getState();
+      const fontRef = { id, family, source: "user" as const };
+      if (!state.document.fonts.some((f) => f.id === id)) {
+        useEditorStore.setState({
+          document: { ...state.document, fonts: [...state.document.fonts, fontRef] },
+          dirty: true,
+        });
+      }
+      const layer = state.selection
+        ? state.document.layers.find((l) => l.id === state.selection)
+        : null;
+      if (layer && layer.type === "text") {
+        useEditorStore.getState().updateText(layer.id, { fontId: id, fontFamily: family });
+      }
+    } catch (err) {
+      setLibraryError(err instanceof Error ? err.message : "Could not import that font.");
+    }
+  }, []);
+
+  const deleteSelected = useCallback(() => {
+    const state = useEditorStore.getState();
+    if (state.selection) state.deleteLayer(state.selection);
+  }, []);
+
+  const duplicateSelected = useCallback(() => {
+    const state = useEditorStore.getState();
+    if (state.selection) state.duplicateLayer(state.selection);
+  }, []);
+
+  const editSelectedText = useCallback(() => {
+    const state = useEditorStore.getState();
+    if (state.selection) state.startEditing(state.selection);
+    setInspectorOpen(true);
+  }, []);
+
+  /* ── Keyboard shortcuts ───────────────────────────────────────────── */
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (load.phase !== "ready") return;
+      const target = event.target as HTMLElement | null;
+      const typing =
+        !!target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable);
+      const state = useEditorStore.getState();
+      if (typing || state.editingId) return;
+
+      const meta = event.metaKey || event.ctrlKey;
+      if (meta && event.key.toLowerCase() === "z") {
+        event.preventDefault();
+        if (event.shiftKey) state.redo();
+        else state.undo();
+        return;
+      }
+      if (meta && event.key.toLowerCase() === "y") {
+        event.preventDefault();
+        state.redo();
+        return;
+      }
+      if ((event.key === "Delete" || event.key === "Backspace") && state.selection) {
+        event.preventDefault();
+        state.deleteLayer(state.selection);
+        return;
+      }
+      if (event.key === "Escape") {
+        state.select(null);
+        return;
+      }
+      if (event.key.startsWith("Arrow") && state.selection) {
+        event.preventDefault();
+        const step = event.shiftKey ? 10 : 1;
+        const layer = state.document.layers.find((l) => l.id === state.selection);
+        if (!layer) return;
+        const patch: { x?: number; y?: number } = {};
+        if (event.key === "ArrowUp") patch.y = layer.y - step;
+        if (event.key === "ArrowDown") patch.y = layer.y + step;
+        if (event.key === "ArrowLeft") patch.x = layer.x - step;
+        if (event.key === "ArrowRight") patch.x = layer.x + step;
+        state.updateLayer(layer.id, patch);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [load.phase]);
+
+  /* ── Render ───────────────────────────────────────────────────────── */
+
+  if (load.phase === "missing") {
+    return (
+      <main className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0a0a0a] text-white">
+        <p className="text-20 tracking-[-0.04em]">Project not found</p>
+        <p className="mt-8 text-12 text-white/40">This Smart Edit project is no longer available.</p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-20 rounded-full bg-white px-18 py-10 text-12 text-black"
+        >
+          Back to My Projects
+        </button>
+      </main>
+    );
+  }
+
+  return (
+    <main className="fixed inset-0 z-50 flex min-h-0 flex-col bg-[#0a0a0a] text-white">
+      {/* header */}
+      <header className="relative z-30 grid h-72 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-8 border-b border-white/8 px-15 s:h-82 s:px-25">
+        <button
+          type="button"
+          onClick={saveAndClose}
+          aria-label="Close Smart Edit"
+          className="flex size-40 items-center justify-center rounded-full bg-white/8 text-white/85 transition-colors duration-300 hover:bg-white/13"
+        >
+          <span className="text-22 leading-none">×</span>
+        </button>
+
+        <div className="min-w-0 text-center">
+          <p className="truncate text-15 tracking-[-0.04em]">Smart Edit</p>
+          <input
+            value={title}
+            onChange={(e) => useEditorStore.getState().setTitle(e.target.value.slice(0, 60))}
+            aria-label="Project title"
+            className="mx-auto mt-2 hidden w-full max-w-[220px] truncate rounded-8 border border-transparent bg-transparent text-center text-10 text-white/45 outline-none focus:border-white/20 s:block"
+          />
+        </div>
+
+        <div className="flex min-w-0 items-center justify-end gap-6">
+          <IconButton label="Undo" onClick={() => useEditorStore.getState().undo()} disabled={!canUndo}>
+            <IconUndo />
+          </IconButton>
+          <IconButton label="Redo" onClick={() => useEditorStore.getState().redo()} disabled={!canRedo}>
+            <IconRedo />
+          </IconButton>
+          <button
+            type="button"
+            onClick={save}
+            className="whitespace-nowrap rounded-full border border-white/12 bg-white/5 px-13 py-10 text-12 tracking-[-0.02em] text-white transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] s:px-16"
+          >
+            {savedFlash ? "Saved" : dirty ? "Save •" : "Save"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (status !== "authenticated") {
+                setAuthGate("publish");
+                return;
+              }
+              setPublishOpen(true);
+            }}
+            className="whitespace-nowrap rounded-full bg-white px-13 py-10 text-12 tracking-[-0.02em] text-black transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] s:px-16"
+          >
+            Publish
+          </button>
+        </div>
+      </header>
+
+      {/* body */}
+      <div className="relative flex min-h-0 flex-1">
+        {/* desktop tool rail */}
+        <nav
+          aria-label="Smart Edit tools"
+          className="hidden w-72 shrink-0 flex-col items-center gap-6 border-r border-white/8 py-15 s:flex"
+        >
+          <ToolButton label="Add text" onClick={addText}>
+            <IconText />
+            <span className="text-10 tracking-[-0.01em]">Text</span>
+          </ToolButton>
+          <ToolButton label="Library" active={libraryOpen} onClick={() => setLibraryOpen((v) => !v)}>
+            <IconLibrary />
+            <span className="text-10 tracking-[-0.01em]">Library</span>
+          </ToolButton>
+          <ToolButton label="Upload image" onClick={() => imageFileRef.current?.click()}>
+            <IconUpload />
+            <span className="text-10 tracking-[-0.01em]">Upload</span>
+          </ToolButton>
+          <ToolButton label="Layers" active={inspectorOpen} onClick={() => setInspectorOpen((v) => !v)}>
+            <IconLayers />
+            <span className="text-10 tracking-[-0.01em]">Layers</span>
+          </ToolButton>
+          <ToolButton label="Export image" onClick={() => setExportOpen(true)}>
+            <IconDownload />
+            <span className="text-10 tracking-[-0.01em]">Export</span>
+          </ToolButton>
+          <div className="mt-auto">
+            <ToolButton label="Delete selected" onClick={deleteSelected}>
+              <span className="text-white/60">
+                <IconDelete />
+              </span>
+              <span className="text-10 tracking-[-0.01em] text-white/60">Delete</span>
+            </ToolButton>
+          </div>
+        </nav>
+
+        {/* canvas */}
+        <div className="relative min-h-0 min-w-0 flex-1 bg-[#0d0d0d]">
+          <div
+            className="absolute inset-0 flex items-center justify-center px-12 py-12 s:px-20 s:py-20"
+            style={{ containerType: "size" }}
+          >
+            {load.phase === "ready" ? (
+              <SmartEditCanvas
+                interactive
+                document={doc}
+                style={{
+                  width: `min(100cqw, ${(doc.canvas.width / doc.canvas.height) * 100}cqh)`,
+                  maxWidth: "100%",
+                  borderRadius: "0.6rem",
+                  boxShadow: "0 24px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06)",
+                }}
+              />
+            ) : (
+              <div
+                className="size-44 rounded-full border-2 border-white/12"
+                style={{ borderTopColor: "rgba(255,255,255,0.55)", animation: "se-spin 0.9s linear infinite" }}
+                role="status"
+                aria-label="Loading project"
+              />
+            )}
+          </div>
+
+          {load.phase === "ready" && doc.layers.length === 0 && !editingId && (
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-6 text-center">
+              <p className="text-15 tracking-[-0.03em] text-white/30">Your canvas is empty</p>
+              <p className="text-11 text-white/20">Add text, stickers or photos from the tools</p>
+            </div>
+          )}
+
+          {/* floating selection actions */}
+          {load.phase === "ready" && selectedLayer && !editingId && (
+            <div className="pointer-events-auto absolute left-1/2 top-10 z-10 flex -translate-x-1/2 items-center gap-4 rounded-full border border-white/10 bg-[#151515]/95 p-4 shadow-xl backdrop-blur">
+              {selectedLayer.type === "text" && (
+                <IconButton label="Edit text" onClick={editSelectedText} className="size-34">
+                  <IconEdit />
+                </IconButton>
+              )}
+              <IconButton label="Duplicate" onClick={duplicateSelected} className="size-34">
+                <IconDuplicate />
+              </IconButton>
+              <IconButton
+                label="Delete"
+                onClick={deleteSelected}
+                className="size-34 hover:!bg-[#e5484d]/25 hover:!text-[#ff8f93]"
+              >
+                <IconDelete />
+              </IconButton>
+            </div>
+          )}
+        </div>
+
+        {/* desktop inspector */}
+        {load.phase === "ready" && (
+          <aside className="hidden w-300 shrink-0 flex-col overflow-y-auto border-l border-white/8 bg-[#0e0e0e] s:flex">
+            <InspectorContent onImportFont={() => fontFileRef.current?.click()} />
+          </aside>
+        )}
+      </div>
+
+      {/* mobile dock */}
+      <nav
+        aria-label="Smart Edit tools"
+        className="relative z-30 flex shrink-0 items-stretch justify-around gap-4 border-t border-white/8 bg-[#0c0c0c] px-8 pb-10 pt-6 s:hidden"
+        style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
+      >
+        <ToolButton label="Add text" onClick={addText}>
+          <IconText />
+          <span className="text-9 tracking-[-0.01em]">Text</span>
+        </ToolButton>
+        <ToolButton label="Library" onClick={() => setLibraryOpen(true)}>
+          <IconLibrary />
+          <span className="text-9 tracking-[-0.01em]">Library</span>
+        </ToolButton>
+        <ToolButton label="Upload image" onClick={() => imageFileRef.current?.click()}>
+          <IconUpload />
+          <span className="text-9 tracking-[-0.01em]">Upload</span>
+        </ToolButton>
+        <ToolButton label="Layers" onClick={() => setInspectorOpen(true)}>
+          <IconLayers />
+          <span className="text-9 tracking-[-0.01em]">Layers</span>
+        </ToolButton>
+        <ToolButton label="Export image" onClick={() => setExportOpen(true)}>
+          <IconDownload />
+          <span className="text-9 tracking-[-0.01em]">Export</span>
+        </ToolButton>
+        <ToolButton label="Delete selected" onClick={deleteSelected}>
+          <span className="text-white/55">
+            <IconDelete />
+          </span>
+          <span className="text-9 tracking-[-0.01em] text-white/55">Delete</span>
+        </ToolButton>
+      </nav>
+
+      {/* hidden inputs */}
+      <input
+        ref={imageFileRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          void onUploadImages(e.target.files);
+          e.currentTarget.value = "";
+        }}
+      />
+      <input
+        ref={fontFileRef}
+        type="file"
+        accept=".ttf,.otf,.woff,.woff2,font/*"
+        className="hidden"
+        onChange={(e) => {
+          void onImportFont(e.target.files?.[0]);
+          e.currentTarget.value = "";
+        }}
+      />
+
+      {/* library panel — desktop side panel / mobile sheet */}
+      {libraryOpen && load.phase === "ready" && (
+        <>
+          <div className="absolute left-72 top-0 z-20 hidden h-full w-280 border-r border-white/8 bg-[#101010] s:flex">
+            <div className="flex-1 overflow-y-auto p-12">
+              <LibraryContent
+                manifest={manifest}
+                tab={libraryTab}
+                setTab={setLibraryTab}
+                onAdd={addLibraryItem}
+                error={libraryError}
+                uploadsVersion={uploadsVersion}
+              />
+            </div>
+          </div>
+          <div className="s:hidden">
+            <SheetShell title="Library" onClose={() => setLibraryOpen(false)}>
+              <LibraryContent
+                manifest={manifest}
+                tab={libraryTab}
+                setTab={setLibraryTab}
+                onAdd={addLibraryItem}
+                error={libraryError}
+                uploadsVersion={uploadsVersion}
+              />
+            </SheetShell>
+          </div>
+        </>
+      )}
+
+      {/* inspector sheet — mobile */}
+      {inspectorOpen && load.phase === "ready" && (
+        <div className="s:hidden">
+          <SheetShell title="Layers" onClose={() => setInspectorOpen(false)}>
+            <InspectorContent onImportFont={() => fontFileRef.current?.click()} />
+          </SheetShell>
+        </div>
+      )}
+
+      {/* export modal */}
+      {exportOpen && (
+        <ModalShell
+          title="Export image"
+          subtitle="Downloads the artwork only — no editor controls."
+          onClose={() => setExportOpen(false)}
+        >
+          <div className="grid gap-14">
+            <div>
+              <p className="mb-7 text-10 text-white/45">Format</p>
+              <div className="grid grid-cols-2 gap-8">
+                {(["png", "jpg"] as const).map((format) => (
+                  <button
+                    key={format}
+                    type="button"
+                    onClick={() => setExportFormat(format)}
+                    className={`rounded-13 border py-11 text-12 transition-colors ${
+                      exportFormat === format
+                        ? "border-white/60 bg-white/10"
+                        : "border-white/10 bg-white/[0.03] text-white/60"
+                    }`}
+                  >
+                    {format.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="mb-7 text-10 text-white/45">Size</p>
+              <div className="grid grid-cols-2 gap-8">
+                {[1, 2].map((scale) => (
+                  <button
+                    key={scale}
+                    type="button"
+                    onClick={() => setExportScale(scale)}
+                    className={`rounded-13 border py-11 text-12 transition-colors ${
+                      exportScale === scale
+                        ? "border-white/60 bg-white/10"
+                        : "border-white/10 bg-white/[0.03] text-white/60"
+                    }`}
+                  >
+                    {scale}× · {Math.round(doc.canvas.width * scale)}×{Math.round(doc.canvas.height * scale)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button
+              type="button"
+              disabled={exporting}
+              onClick={runExport}
+              className="mt-4 w-full rounded-full bg-white py-12 text-12 text-black disabled:opacity-40"
+            >
+              {exporting ? "Exporting…" : "Download"}
+            </button>
+          </div>
+        </ModalShell>
+      )}
+
+      {/* publish modal */}
+      {publishOpen && (
+        <ModalShell
+          title={published ? "Your website is ready" : "Publish website"}
+          subtitle={
+            published
+              ? "This link opens the finished website directly."
+              : "Choose the names used in the personal website link."
+          }
+          onClose={() => setPublishOpen(false)}
+        >
+          {!published ? (
+            <div className="grid gap-13">
+              <label className="grid gap-7">
+                <span className="text-10 text-white/45">Your name</span>
+                <input
+                  autoFocus
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="alex"
+                  className="w-full rounded-[13px] border border-white/10 bg-white/5 px-12 py-11 text-13 text-white outline-none focus:border-white/25"
+                />
+              </label>
+              <label className="grid gap-7">
+                <span className="text-10 text-white/45">Person this is for</span>
+                <input
+                  value={viewerName}
+                  onChange={(e) => setViewerName(e.target.value)}
+                  placeholder="olivia"
+                  className="w-full rounded-[13px] border border-white/10 bg-white/5 px-12 py-11 text-13 text-white outline-none focus:border-white/25"
+                />
+              </label>
+              <div className="rounded-[15px] border border-white/8 bg-white/[0.025] p-12">
+                <p className="text-10 text-white/38">Your link will look like</p>
+                <p className="mt-5 break-all font-mono text-11 leading-16 text-white/75">
+                  {typeof window !== "undefined" ? window.location.origin : ""}/
+                  {slugPart(username, "your-name")}/{slugPart(viewerName, "their-name")}/1xx
+                </p>
+              </div>
+              {publishError && <p className="text-11 leading-15 text-[#ff8f93]">{publishError}</p>}
+              <button
+                type="button"
+                disabled={publishing || !slugPart(username, "") || !slugPart(viewerName, "")}
+                onClick={publish}
+                className="mt-2 w-full rounded-full bg-white py-12 text-12 text-black disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                {publishing ? "Publishing…" : "Publish website"}
+              </button>
+            </div>
+          ) : (
+            <div className="grid gap-13">
+              <div className="rounded-[15px] border border-white/8 bg-white/[0.025] p-12">
+                <p className="break-all font-mono text-11 leading-17 text-white/75">{published.url}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-9">
+                <button type="button" onClick={copyLink} className="rounded-full bg-white py-11 text-11 text-black">
+                  {copied ? "Copied" : "Copy link"}
+                </button>
+                <a
+                  href={published.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-center rounded-full border border-white/12 py-11 text-11 text-white"
+                >
+                  Open website
+                </a>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setPublished(null);
+                  setViewerName("");
+                }}
+                className="w-full py-8 text-10 text-white/35"
+              >
+                Publish another link
+              </button>
+            </div>
+          )}
+        </ModalShell>
+      )}
+
+      {/* auth gate */}
+      {authGate && (
+        <AuthGate action={authGate} onSignIn={() => signIn("google")} onClose={() => setAuthGate(null)} />
+      )}
+
+      <style>{`@keyframes se-spin { to { transform: rotate(360deg); } }`}</style>
+    </main>
+  );
+}
+
+const PLACEHOLDER_GIF =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+
+/* ── Library content ──────────────────────────────────────────────────── */
+
+function LibraryContent({
+  manifest,
+  tab,
+  setTab,
+  onAdd,
+  error,
+  uploadsVersion,
+}: {
+  manifest: LibraryManifest | null;
+  tab: "stickers" | "photos" | "uploads";
+  setTab: (tab: "stickers" | "photos" | "uploads") => void;
+  onAdd: (record: AssetRecord) => void;
+  error: string;
+  uploadsVersion: number;
+}) {
+  const items: AssetRecord[] =
+    tab === "stickers"
+      ? (manifest?.stickers ?? []).map(libraryItemToAsset)
+      : tab === "photos"
+        ? (manifest?.photos ?? []).map(libraryItemToAsset)
+        : (() => {
+            void uploadsVersion;
+            return listUploads();
+          })();
+
+  return (
+    <div>
+      <div className="mb-10 flex gap-6">
+        {(["stickers", "photos", "uploads"] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setTab(key)}
+            className={`rounded-full px-12 py-7 text-11 capitalize transition-colors ${
+              tab === key ? "bg-white text-black" : "bg-white/7 text-white/70 hover:bg-white/12"
+            }`}
+          >
+            {key}
+          </button>
+        ))}
+      </div>
+
+      {error && <p className="mb-8 text-11 leading-15 text-[#ff8f93]">{error}</p>}
+
+      {items.length === 0 ? (
+        <p className="py-20 text-center text-11 text-white/35">
+          {tab === "uploads" ? "Your uploaded photos appear here." : "Loading…"}
+        </p>
+      ) : (
+        <div className="grid grid-cols-3 gap-7 s:grid-cols-4">
+          {items.map((record) => (
+            <button
+              key={record.id}
+              type="button"
+              onClick={() => onAdd(record)}
+              aria-label={`Add ${record.name}`}
+              className="group relative aspect-square overflow-hidden rounded-12 border border-white/8 bg-[#171717] transition-all duration-200 hover:border-white/25 active:scale-[0.96]"
+            >
+              <img
+                src={
+                  record.provider === "bundled"
+                    ? resolvePublicPath(record.url ?? "")
+                    : record.url ?? assetUrl(record.id) ?? ""
+                }
+                alt={record.name}
+                loading="lazy"
+                draggable={false}
+                className="size-full object-contain p-6"
+              />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Inspector: properties + layers ───────────────────────────────────── */
+
+function InspectorContent({ onImportFont }: { onImportFont: () => void }) {
+  const doc = useEditorStore((s) => s.document);
+  const selection = useEditorStore((s) => s.selection);
+  const title = useEditorStore((s) => s.title);
+  const selected = doc.layers.find((l) => l.id === selection) ?? null;
+
+  const fontOptions = useMemo(() => {
+    const userFonts = doc.fonts
+      .filter((f) => f.source === "user")
+      .map((f) => ({
+        id: f.id,
+        family: f.family,
+        name: getAsset(f.id)?.name ?? "My font",
+        weights: [400],
+      }));
+    return [
+      ...BUILTIN_FONTS.map((f) => ({ id: f.id, family: f.family, name: f.name, weights: f.weights })),
+      ...userFonts,
+    ];
+  }, [doc.fonts]);
+
+  return (
+    <div className="flex flex-col gap-14 p-15">
+      <label className="grid gap-7">
+        <span className="text-10 text-white/45">Project title</span>
+        <input
+          value={title}
+          onChange={(e) => useEditorStore.getState().setTitle(e.target.value.slice(0, 60))}
+          className="w-full rounded-[13px] border border-white/10 bg-white/5 px-12 py-10 text-12 text-white outline-none focus:border-white/25"
+        />
+      </label>
+
+      {!selected && <BackgroundSection />}
+      {selected?.type === "text" && (
+        <TextProperties layer={selected} fontOptions={fontOptions} onImportFont={onImportFont} />
+      )}
+      {selected && selected.type !== "text" && <ImageProperties layer={selected} />}
+
+      <LayersSection />
+    </div>
+  );
+}
+
+function BackgroundSection() {
+  const background = useEditorStore((s) => s.document.background);
+  const setBackground = useEditorStore((s) => s.setBackground);
+
+  const swatches = [
+    "#f4efe6", "#ffffff", "#0d0d0d", "#f7e3d3", "#ffd7e0", "#cfe3ff",
+    "#d7ecc8", "#fff0c0", "#e5484d", "#14213d", "#f2b5c4", "#b5d8c8",
+  ];
+
+  return (
+    <section className="rounded-[15px] border border-white/8 bg-white/[0.02] p-12">
+      <p className="text-11 tracking-[-0.02em] text-white/70">Background</p>
+      <div className="mt-10 grid grid-cols-6 gap-7">
+        {swatches.map((color) => (
+          <button
+            key={color}
+            type="button"
+            aria-label={`Background ${color}`}
+            onClick={() => setBackground(color)}
+            className={`aspect-square rounded-10 border transition-transform hover:scale-105 ${
+              background.color === color ? "border-white" : "border-white/15"
+            }`}
+            style={{ background: color }}
+          />
+        ))}
+      </div>
+      <label className="mt-10 flex items-center justify-between gap-10">
+        <span className="text-10 text-white/45">Custom colour</span>
+        <input
+          type="color"
+          value={safeColor(background.color, "#f4efe6")}
+          onChange={(e) => setBackground(e.target.value)}
+          aria-label="Custom background colour"
+          className="h-30 w-50 cursor-pointer rounded-8 border border-white/15 bg-transparent"
+        />
+      </label>
+    </section>
+  );
+}
+
+function TextProperties({
+  layer,
+  fontOptions,
+  onImportFont,
+}: {
+  layer: TextLayer;
+  fontOptions: { id: string; family: string; name: string; weights: number[] }[];
+  onImportFont: () => void;
+}) {
+  const updateText = useEditorStore((s) => s.updateText);
+  const startEditing = useEditorStore((s) => s.startEditing);
+  const font = fontOptions.find((f) => f.id === layer.fontId);
+  const lines = layoutTextLayer(layer);
+
+  const swatches = ["#1c1b18", "#ffffff", "#e5484d", "#ff8fab", "#f5c518", "#4f9cf9", "#7fc97f", "#b78ef0"];
+
+  return (
+    <section className="rounded-[15px] border border-white/8 bg-white/[0.02] p-12">
+      <div className="flex items-center justify-between">
+        <p className="text-11 tracking-[-0.02em] text-white/70">Text</p>
+        <button
+          type="button"
+          onClick={() => startEditing(layer.id)}
+          className="rounded-full bg-white/10 px-10 py-6 text-10 text-white/80 hover:bg-white/16"
+        >
+          Edit words
+        </button>
+      </div>
+
+      <label className="mt-10 grid gap-6">
+        <span className="text-10 text-white/45">Font</span>
+        <select
+          value={layer.fontId}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (value === "__add__") {
+              onImportFont();
+              return;
+            }
+            const next = fontOptions.find((f) => f.id === value);
+            if (next) updateText(layer.id, { fontId: next.id, fontFamily: next.family });
+          }}
+          className="w-full appearance-none rounded-[13px] border border-white/10 bg-white/5 px-12 py-10 text-12 text-white outline-none focus:border-white/25"
+        >
+          {fontOptions.map((option) => (
+            <option key={option.id} value={option.id} style={{ fontFamily: option.family }} className="bg-[#161616]">
+              {option.name}
+            </option>
+          ))}
+          <option value="__add__" className="bg-[#161616]">
+            ＋ Import font…
+          </option>
+        </select>
+      </label>
+
+      {font && font.weights.length > 1 && (
+        <div className="mt-10">
+          <span className="text-10 text-white/45">Weight</span>
+          <div className="mt-6 flex flex-wrap gap-6">
+            {font.weights.map((weight) => (
+              <button
+                key={weight}
+                type="button"
+                onClick={() => updateText(layer.id, { fontWeight: weight })}
+                className={`min-w-40 rounded-full px-10 py-6 text-10 transition-colors ${
+                  layer.fontWeight === weight ? "bg-white text-black" : "bg-white/7 text-white/70 hover:bg-white/12"
+                }`}
+                style={{ fontWeight: weight }}
+              >
+                {weight}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-10">
+        <div className="flex items-center justify-between">
+          <span className="text-10 text-white/45">Size</span>
+          <span className="text-10 text-white/55">{Math.round(layer.fontSize)}</span>
+        </div>
+        <input
+          type="range"
+          min={12}
+          max={280}
+          step={1}
+          value={clamp(layer.fontSize, 12, 280)}
+          onChange={(e) => updateText(layer.id, { fontSize: Number(e.target.value) })}
+          aria-label="Font size"
+          className="mt-6 h-30 w-full accent-white"
+        />
+      </div>
+
+      <div className="mt-10">
+        <span className="text-10 text-white/45">Colour</span>
+        <div className="mt-6 flex flex-wrap items-center gap-7">
+          {swatches.map((color) => (
+            <button
+              key={color}
+              type="button"
+              aria-label={`Text colour ${color}`}
+              onClick={() => updateText(layer.id, { color })}
+              className={`size-28 rounded-full border transition-transform hover:scale-110 ${
+                layer.color === color ? "border-white" : "border-white/15"
+              }`}
+              style={{ background: color }}
+            />
+          ))}
+          <input
+            type="color"
+            value={safeColor(layer.color, "#1c1b18")}
+            onChange={(e) => updateText(layer.id, { color: e.target.value })}
+            aria-label="Custom text colour"
+            className="h-28 w-40 cursor-pointer rounded-full border border-white/15 bg-transparent"
+          />
+        </div>
+      </div>
+
+      <div className="mt-10">
+        <span className="text-10 text-white/45">Align</span>
+        <div className="mt-6 grid grid-cols-3 gap-6">
+          {(["left", "center", "right"] as const).map((align) => (
+            <button
+              key={align}
+              type="button"
+              onClick={() => updateText(layer.id, { align })}
+              aria-label={`Align ${align}`}
+              aria-pressed={layer.align === align}
+              className={`rounded-10 py-8 text-10 capitalize transition-colors ${
+                layer.align === align ? "bg-white text-black" : "bg-white/7 text-white/70 hover:bg-white/12"
+              }`}
+            >
+              {align}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <p className="mt-10 text-9 text-white/30">
+        {lines.length} {lines.length === 1 ? "line" : "lines"} · double-tap text on canvas to type
+      </p>
+    </section>
+  );
+}
+
+function ImageProperties({ layer }: { layer: Layer }) {
+  const updateLayer = useEditorStore((s) => s.updateLayer);
+  if (layer.type === "text") return null;
+  return (
+    <section className="rounded-[15px] border border-white/8 bg-white/[0.02] p-12">
+      <p className="text-11 tracking-[-0.02em] text-white/70">{layer.type === "sticker" ? "Sticker" : "Image"}</p>
+      <div className="mt-10">
+        <div className="flex items-center justify-between">
+          <span className="text-10 text-white/45">Opacity</span>
+          <span className="text-10 text-white/55">{Math.round(layer.opacity * 100)}%</span>
+        </div>
+        <input
+          type="range"
+          min={10}
+          max={100}
+          step={1}
+          value={Math.round(layer.opacity * 100)}
+          onChange={(e) => updateLayer(layer.id, { opacity: Number(e.target.value) / 100 })}
+          aria-label="Opacity"
+          className="mt-6 h-30 w-full accent-white"
+        />
+      </div>
+      <div className="mt-6">
+        <div className="flex items-center justify-between">
+          <span className="text-10 text-white/45">Rotation</span>
+          <span className="text-10 text-white/55">{Math.round(((layer.rotation % 360) + 360) % 360)}°</span>
+        </div>
+        <input
+          type="range"
+          min={-180}
+          max={180}
+          step={1}
+          value={clamp(layer.rotation, -180, 180)}
+          onChange={(e) => updateLayer(layer.id, { rotation: Number(e.target.value) })}
+          aria-label="Rotation"
+          className="mt-6 h-30 w-full accent-white"
+        />
+      </div>
+    </section>
+  );
+}
+
+function LayersSection() {
+  const layers = useEditorStore((s) => s.document.layers);
+  const selection = useEditorStore((s) => s.selection);
+  const select = useEditorStore((s) => s.select);
+
+  // Top of the list = topmost layer.
+  const ordered = [...layers].reverse();
+
+  return (
+    <section className="rounded-[15px] border border-white/8 bg-white/[0.02] p-12">
+      <p className="text-11 tracking-[-0.02em] text-white/70">Layers</p>
+      {ordered.length === 0 ? (
+        <p className="py-16 text-center text-11 text-white/35">Layers you add will appear here.</p>
+      ) : (
+        <ul className="mt-8 flex flex-col gap-4">
+          {ordered.map((layer) => (
+            <li key={layer.id}>
+              <div
+                className={`flex items-center gap-8 rounded-12 border p-6 transition-colors ${
+                  selection === layer.id ? "border-white/45 bg-white/10" : "border-transparent bg-white/[0.04]"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => select(layer.id)}
+                  className="flex min-w-0 flex-1 items-center gap-10 text-left"
+                  aria-label={`Select layer ${layerDisplayName(layer)}`}
+                >
+                  <span className="flex size-30 shrink-0 items-center justify-center overflow-hidden rounded-8 bg-white/8">
+                    {layer.type === "text" ? (
+                      <span className="text-13" style={{ fontFamily: layer.fontFamily }}>
+                        T
+                      </span>
+                    ) : (
+                      <img
+                        src={
+                          layer.url && /^(https?:|data:|blob:)/.test(layer.url)
+                            ? layer.url
+                            : assetUrl(layer.assetId) ?? ""
+                        }
+                        alt=""
+                        className="size-full object-contain p-2"
+                      />
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-11 text-white/80">{layerDisplayName(layer)}</span>
+                </button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <LayerIconBtn
+                    label={layer.visible ? "Hide layer" : "Show layer"}
+                    onClick={() => useEditorStore.getState().updateLayer(layer.id, { visible: !layer.visible })}
+                  >
+                    {layer.visible ? <IconEye /> : <IconEyeOff />}
+                  </LayerIconBtn>
+                  <LayerIconBtn
+                    label={layer.locked ? "Unlock layer" : "Lock layer"}
+                    onClick={() => useEditorStore.getState().updateLayer(layer.id, { locked: !layer.locked })}
+                  >
+                    {layer.locked ? <IconLock /> : <IconUnlock />}
+                  </LayerIconBtn>
+                  <LayerIconBtn
+                    label="Move layer up"
+                    disabled={layers[layers.length - 1]?.id === layer.id}
+                    onClick={() => useEditorStore.getState().reorderLayer(layer.id, 1)}
+                  >
+                    <IconUp />
+                  </LayerIconBtn>
+                  <LayerIconBtn
+                    label="Move layer down"
+                    disabled={layers[0]?.id === layer.id}
+                    onClick={() => useEditorStore.getState().reorderLayer(layer.id, -1)}
+                  >
+                    <IconDown />
+                  </LayerIconBtn>
+                  <LayerIconBtn
+                    label="Delete layer"
+                    danger
+                    onClick={() => useEditorStore.getState().deleteLayer(layer.id)}
+                  >
+                    <DelIcon />
+                  </LayerIconBtn>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function layerDisplayName(layer: Layer): string {
+  if (layer.type === "text") {
+    const snippet = layer.text.split("\n")[0].trim();
+    return snippet ? snippet.slice(0, 24) : "Text";
+  }
+  return getAsset(layer.assetId)?.name ?? (layer.type === "sticker" ? "Sticker" : "Image");
+}
+
+function LayerIconBtn({
+  label,
+  onClick,
+  disabled,
+  danger,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      disabled={disabled}
+      onClick={onClick}
+      className={`flex size-30 items-center justify-center rounded-9 text-white/60 transition-colors hover:bg-white/12 hover:text-white disabled:pointer-events-none disabled:opacity-25 ${
+        danger ? "hover:!bg-[#e5484d]/25 hover:!text-[#ff8f93]" : ""
+      }`}
+    >
+      {children}
+    </button>
+  );
+}

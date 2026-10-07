@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "stickers": [
+    { "id": "st-heart-red", "type": "sticker", "path": "/smart-edit/library/stickers/heart-red.svg", "name": "Heart", "width": 200, "height": 200, "tags": ["love"] },
+    { "id": "st-heart-pink", "type": "sticker", "path": "/smart-edit/library/stickers/heart-pink.svg", "name": "Pink heart", "width": 200, "height": 200, "tags": ["love"] },
+    { "id": "st-heart-outline", "type": "sticker", "path": "/smart-edit/library/stickers/heart-outline.svg", "name": "Heart sketch", "width": 200, "height": 200, "tags": ["love", "doodle"] },
+    { "id": "st-sparkles", "type": "sticker", "path": "/smart-edit/library/stickers/sparkles.svg", "name": "Sparkles", "width": 200, "height": 200, "tags": ["doodle"] },
+    { "id": "st-star-yellow", "type": "sticker", "path": "/smart-edit/library/stickers/star-yellow.svg", "name": "Star", "width": 200, "height": 200, "tags": ["doodle"] },
+    { "id": "st-star-outline", "type": "sticker", "path": "/smart-edit/library/stickers/star-outline.svg", "name": "Star sketch", "width": 200, "height": 200, "tags": ["doodle"] },
+    { "id": "st-smiley", "type": "sticker", "path": "/smart-edit/library/stickers/smiley.svg", "name": "Smiley", "width": 200, "height": 200, "tags": ["doodle"] },
+    { "id": "st-cat", "type": "sticker", "path": "/smart-edit/library/stickers/cat.svg", "name": "Cat", "width": 200, "height": 200, "tags": ["animals"] },
+    { "id": "st-crown", "type": "sticker", "path": "/smart-edit/library/stickers/crown.svg", "name": "Crown", "width": 200, "height": 200, "tags": ["party"] },
+    { "id": "st-gift", "type": "sticker", "path": "/smart-edit/library/stickers/gift.svg", "name": "Gift", "width": 200, "height": 200, "tags": ["party", "birthday"] },
+    { "id": "st-balloon", "type": "sticker", "path": "/smart-edit/library/stickers/balloon.svg", "name": "Balloon", "width": 200, "height": 200, "tags": ["party", "birthday"] },
+    { "id": "st-rainbow", "type": "sticker", "path": "/smart-edit/library/stickers/rainbow.svg", "name": "Rainbow", "width": 200, "height": 200, "tags": ["doodle"] },
+    { "id": "st-flower", "type": "sticker", "path": "/smart-edit/library/stickers/flower.svg", "name": "Flower", "width": 200, "height": 200, "tags": ["nature"] },
+    { "id": "st-butterfly", "type": "sticker", "path": "/smart-edit/library/stickers/butterfly.svg", "name": "Butterfly", "width": 200, "height": 200, "tags": ["nature"] },
+    { "id": "st-sun", "type": "sticker", "path": "/smart-edit/library/stickers/sun.svg", "name": "Sun", "width": 200, "height": 200, "tags": ["nature"] },
+    { "id": "st-cloud", "type": "sticker", "path": "/smart-edit/library/stickers/cloud.svg", "name": "Cloud", "width": 220, "height": 160, "tags": ["nature"] },
+    { "id": "st-arrow", "type": "sticker", "path": "/smart-edit/library/stickers/arrow-doodle.svg", "name": "Arrow", "width": 240, "height": 160, "tags": ["doodle"] },
+    { "id": "st-tape", "type": "sticker", "path": "/smart-edit/library/stickers/tape-pink.svg", "name": "Washi tape", "width": 300, "height": 100, "tags": ["paper"] },
+    { "id": "st-polaroid", "type": "sticker", "path": "/smart-edit/library/stickers/polaroid.svg", "name": "Polaroid frame", "width": 220, "height": 260, "tags": ["paper"] },
+    { "id": "st-coffee", "type": "sticker", "path": "/smart-edit/library/stickers/coffee.svg", "name": "Coffee", "width": 200, "height": 200, "tags": ["doodle"] },
+    { "id": "st-music", "type": "sticker", "path": "/smart-edit/library/stickers/music-note.svg", "name": "Music note", "width": 200, "height": 200, "tags": ["doodle"] },
+    { "id": "st-pin", "type": "sticker", "path": "/smart-edit/library/stickers/pin.svg", "name": "Pin", "width": 200, "height": 200, "tags": ["paper"] }
+  ],
+  "photos": [
+    { "id": "ph-cats", "type": "image", "path": "/templates/love-cats.webp", "name": "Two cats", "width": 736, "height": 693, "tags": ["animals"] },
+    { "id": "ph-love-art", "type": "image", "path": "/templates/love-of-my-life-art.webp", "name": "Love sticker", "width": 695, "height": 436, "tags": ["love"] },
+    { "id": "ph-favorite", "type": "image", "path": "/templates/love-favorite-person-art.webp", "name": "Favorite person", "width": 900, "height": 516, "tags": ["love"] },
+    { "id": "ph-paper", "type": "image", "path": "/templates/love-paper-texture.webp", "name": "Paper texture", "width": 736, "height": 1472, "tags": ["paper"] },
+    { "id": "ph-bow", "type": "image", "path": "/templates/love-bow.webp", "name": "Twine bow", "width": 664, "height": 330, "tags": ["paper"] },
+    { "id": "ph-polaroid-frame", "type": "image", "path": "/templates/love-polaroid-frame.webp", "name": "Red polaroid", "width": 1016, "height": 1215, "tags": ["paper"] },
+    { "id": "ph-nathan", "type": "image", "path": "/projects/1786207557-nathan-1.jpg", "name": "Dunes", "width": 1798, "height": 905, "tags": ["places"] },
+    { "id": "ph-dogelon", "type": "image", "path": "/projects/1786207957-dogelon-1.jpg", "name": "Red desert", "width": 3360, "height": 2200, "tags": ["places"] },
+    { "id": "ph-book", "type": "image", "path": "/projects/1786210260-book-1.jpg", "name": "Bright day", "width": 1571, "height": 906, "tags": ["places"] },
+    { "id": "ph-tlb", "type": "image", "path": "/projects/1785656633-tlb4.jpg", "name": "Still life", "width": 1500, "height": 1000, "tags": ["places"] }
+  ]
+}

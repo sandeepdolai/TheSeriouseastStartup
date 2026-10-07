@@ -4,9 +4,12 @@ import { useEffect, useState } from "react";
 import { BirthdayTemplate } from "@/components/templates/BirthdayTemplate";
 import { LoveLifeTemplate } from "@/components/templates/LoveLifeTemplate";
 import { decodePublishedPayload, type PublishedTemplatePayload } from "@/lib/publish";
+import { decodeSmartEditPayload, type SmartEditPublishedPayload } from "@/components/smartedit/publish";
+import { SmartEditViewer } from "@/components/smartedit/SmartEditViewer";
 
 export function PublishedTemplateViewer() {
   const [payload, setPayload] = useState<PublishedTemplatePayload | null>(null);
+  const [smartEdit, setSmartEdit] = useState<SmartEditPublishedPayload | null>(null);
 
   useEffect(() => {
     document.documentElement.classList.add("paper-stish-viewer");
@@ -14,7 +17,15 @@ export function PublishedTemplateViewer() {
     const read = () => {
       const hash = window.location.hash.replace(/^#/, "");
       const value = hash.startsWith("data=") ? hash.slice(5) : "";
-      setPayload(value ? decodePublishedPayload(value) : null);
+      if (!value) {
+        setPayload(null);
+        setSmartEdit(null);
+        return;
+      }
+      // Smart Edit payloads carry their own document — try that decoder first.
+      const smart = decodeSmartEditPayload(value);
+      setSmartEdit(smart);
+      setPayload(smart ? null : decodePublishedPayload(value));
     };
 
     read();
@@ -25,6 +36,10 @@ export function PublishedTemplateViewer() {
       document.documentElement.classList.remove("paper-stish-viewer");
     };
   }, []);
+
+  if (smartEdit) {
+    return <SmartEditViewer initialPayload={smartEdit} />;
+  }
 
   if (!payload) {
     return (
