@@ -11,7 +11,7 @@ import { SmartEditEditor } from "./smartedit/SmartEditEditor";
 import { type CanvasRatio, createDocument } from "./smartedit/types";
 import { ProjectSheet } from "./ProjectSheet";
 import { ProfileOverlay } from "./Overlays";
-import { getAccountKey, getAccountStorageKey } from "@/lib/accountStorage";
+import { getAccountKey } from "@/lib/accountStorage";
 import { listLocalProjects, putLocalProject } from "@/lib/localProjects";
 
 type View = "home" | "my" | "project" | "smart-edit";
@@ -54,7 +54,6 @@ export function App() {
 
     // Projects live in the device-first IndexedDB store — account folding
     // (including legacy localStorage records) happens there on first read.
-    migrate("paper-stish-templates");
     migrate("paper-stish-username");
   }, [accountEmail]);
   const [view, setView] = useState<View>("home");
@@ -503,12 +502,3 @@ function wait(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
 }
 
-function readLocalArray(key: string): Array<Record<string, unknown>> {
-  try {
-    const raw = localStorage.getItem(key);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
