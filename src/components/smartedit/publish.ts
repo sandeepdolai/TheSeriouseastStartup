@@ -103,7 +103,7 @@ function safeLayer(raw: unknown): Layer | null {
     return layer;
   }
 
-  const url = str(l.url, 200000);
+  const url = str(l.url, 8_000_000);
   if (!url || !URL_RE.test(url)) return null;
   const naturalW = num((l.natural as Record<string, unknown> | undefined)?.width, 0, 100000) ?? 100;
   const naturalH = num((l.natural as Record<string, unknown> | undefined)?.height, 0, 100000) ?? 100;
