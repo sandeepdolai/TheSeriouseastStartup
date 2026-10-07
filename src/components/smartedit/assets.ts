@@ -128,6 +128,8 @@ export const idb = {
 
 const objectUrls = new Map<string, string>();
 const registry = new Map<string, AssetRecord>();
+/** asset id → data url — cached so repeated server saves stay cheap */
+const dataUrls = new Map<string, string>();
 
 export function registerAsset(record: AssetRecord) {
   registry.set(record.id, record);
@@ -356,15 +358,20 @@ async function uploadToCloudinary(
   return { url, width: data.width ?? 0, height: data.height ?? 0 };
 }
 
-/** Read a local asset as a data url (for self-contained publish payloads). */
+/** Read a local asset as a data url (self-contained save/publish payloads).
+ *  Results are cached per asset so repeated saves don't re-read the blob. */
 export async function assetDataUrl(id: string): Promise<string | undefined> {
   const record = registry.get(id);
   if (!record) return undefined;
   if (record.provider !== "local") return record.url;
   const key = record.storeKey ?? record.id;
+  const cached = dataUrls.get(key);
+  if (cached) return cached;
   const stored = await idb.getBlob(key);
   if (!stored) return undefined;
-  return await blobToDataUrl(stored.blob);
+  const url = await blobToDataUrl(stored.blob);
+  dataUrls.set(key, url);
+  return url;
 }
 
 export function blobToDataUrl(blob: Blob): Promise<string> {
@@ -527,6 +534,7 @@ export async function pruneOrphanAssets(referencedIds: Set<string>) {
       const url = objectUrls.get(id);
       if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
       objectUrls.delete(id);
+      dataUrls.delete(id);
       registry.delete(id);
     }
   }
@@ -538,4 +546,5 @@ export function resetAssetRuntime() {
   });
   objectUrls.clear();
   registry.clear();
+  dataUrls.clear();
 }

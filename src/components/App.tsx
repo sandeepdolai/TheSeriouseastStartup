@@ -10,6 +10,7 @@ import { MyProjects } from "./MyProjects";
 import { SavedTemplates } from "./SavedTemplates";
 import { TemplateEditor } from "./TemplateEditor";
 import { SmartEditEditor } from "./smartedit/SmartEditEditor";
+import { listProjects } from "./smartedit/api";
 import { type CanvasRatio, createDocument } from "./smartedit/types";
 import { ProjectSheet } from "./ProjectSheet";
 import { ProfileOverlay } from "./Overlays";
@@ -347,18 +348,40 @@ export function App() {
   const smartEditQuickAction = useCallback(() => {
     if (overlay) closeOverlay();
     // Open the most recent Smart Edit project, or start a fresh one.
-    const projects = readLocalArray(
+    // Smart Edit projects are server-backed, so the signed-in user's server
+    // list is checked alongside the local mirror (newest wins).
+    const local = readLocalArray(
       getAccountStorageKey("paper-stish-projects", accountEmail),
     );
-    const smartProjects = projects
-      .filter((item) => item?.templateSlug === "smart-edit" && item?.id)
-      .sort((a, b) => String(b?.updatedAt ?? b?.createdAt ?? "").localeCompare(String(a?.updatedAt ?? a?.createdAt ?? "")));
-    if (smartProjects[0]?.id) {
-      void openSmartEdit(String(smartProjects[0].id));
-    } else {
-      createSmartEdit("4:5");
+    const pickMostRecent = (list: Array<Record<string, unknown>>) => {
+      const smartProjects = list
+        .filter((item) => item?.templateSlug === "smart-edit" && item?.id)
+        .sort((a, b) =>
+          String(b?.updatedAt ?? b?.createdAt ?? "").localeCompare(
+            String(a?.updatedAt ?? a?.createdAt ?? ""),
+          ),
+        );
+      const id = smartProjects[0]?.id;
+      return typeof id === "string" ? id : null;
+    };
+
+    const localId = pickMostRecent(local);
+    if (status !== "authenticated") {
+      if (localId) void openSmartEdit(localId);
+      else createSmartEdit("4:5");
+      return;
     }
-  }, [accountEmail, closeOverlay, createSmartEdit, openSmartEdit, overlay]);
+    void listProjects()
+      .then((server) => {
+        const serverId = pickMostRecent(server as unknown as Array<Record<string, unknown>>);
+        if (serverId || localId) void openSmartEdit(serverId ?? localId!);
+        else createSmartEdit("4:5");
+      })
+      .catch(() => {
+        if (localId) void openSmartEdit(localId);
+        else createSmartEdit("4:5");
+      });
+  }, [accountEmail, closeOverlay, createSmartEdit, openSmartEdit, overlay, status]);
 
   const performDuplicateTemplate = useCallback((template: (typeof FEATURED)[number]) => {
     const id = `project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

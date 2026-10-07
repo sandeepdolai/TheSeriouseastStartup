@@ -1,22 +1,16 @@
 import type { NextConfig } from "next";
 
-const isGitHubPages = process.env.GITHUB_ACTIONS === "true";
-const repoName = process.env.GITHUB_REPOSITORY?.split("/")[1] || "TheSeriouseastStartup";
-
+/**
+ * Paper Stish runs on a server (Vercel or any Node host): the app depends on
+ * NextAuth's auth routes and on the Smart Edit API + database, which static
+ * hosting cannot provide. `standalone` output keeps `npm run start` working
+ * for self-hosting while Vercel deploys normally.
+ */
 const nextConfig: NextConfig = {
   env: {
-    NEXT_PUBLIC_BASE_PATH: isGitHubPages ? `/${repoName}` : "",
+    NEXT_PUBLIC_BASE_PATH: "",
   },
-  ...(isGitHubPages
-    ? {
-        output: "export",
-        basePath: `/${repoName}`,
-        assetPrefix: `/${repoName}/`,
-        trailingSlash: true,
-      }
-    : {
-        output: "standalone",
-      }),
+  output: "standalone",
   images: {
     unoptimized: true,
   },

@@ -7,6 +7,7 @@ import { BirthdayTemplate, BIRTHDAY_DEFAULT_MESSAGE } from "./templates/Birthday
 import { LoveLifeTemplate, LOVE_DEFAULT_MESSAGE } from "./templates/LoveLifeTemplate";
 import { SmartEditPreview } from "./smartedit/SmartEditPreview";
 import { CANVAS_RATIOS, type AssetRecord, type CanvasRatio, type SmartEditDocument } from "./smartedit/types";
+import { listProjects, type ServerProject } from "./smartedit/api";
 
 interface Props {
   entered: boolean;
@@ -44,14 +45,58 @@ export function MyProjects({ entered, onOpenProject, onCreateSmartEdit }: Props)
 
   useEffect(() => {
     if (status === "loading") return;
-    try {
-      const saved = localStorage.getItem(getAccountStorageKey(STORAGE_KEY, session?.user?.email));
-      if (!saved) return;
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) setProjects(parsed);
-    } catch {
-      // Local project data is optional; keep the empty state usable.
+
+    const readLocal = (): LocalProject[] => {
+      try {
+        const saved = localStorage.getItem(getAccountStorageKey(STORAGE_KEY, session?.user?.email));
+        if (!saved) return [];
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        // Local project data is optional; keep the empty state usable.
+        return [];
+      }
+    };
+
+    // Smart Edit projects are server-backed: merge the signed-in user's
+    // server list over the local mirror (server wins per id, server-only
+    // projects are added) so projects survive browsers and devices.
+    const applyLocal = () => setProjects(readLocal());
+    if (status !== "authenticated") {
+      applyLocal();
+      return;
     }
+
+    let alive = true;
+    listProjects()
+      .then((server) => {
+        if (!alive || !Array.isArray(server)) return;
+        const serverMap = new Map<string, ServerProject>(server.map((p) => [p.id, p]));
+        const syncedIds = new Set<string>();
+        const merged = readLocal().map((project) => {
+          if (project.templateSlug !== "smart-edit") return project;
+          const remote = serverMap.get(project.id);
+          if (!remote) return project; // legacy/offline-only local project
+          syncedIds.add(project.id);
+          return {
+            ...project,
+            title: remote.title,
+            updatedAt: remote.updatedAt,
+            data: remote.data as LocalProject["data"],
+          };
+        });
+        const serverOnly = server.filter((p) => !syncedIds.has(p.id));
+        setProjects([...serverOnly, ...merged]);
+      })
+      .catch(() => {
+        if (alive) applyLocal();
+      });
+
+    // Show local data immediately while the server list loads.
+    applyLocal();
+    return () => {
+      alive = false;
+    };
   }, [session?.user?.email, status]);
 
   return (

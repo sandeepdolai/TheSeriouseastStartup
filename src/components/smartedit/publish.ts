@@ -1,17 +1,28 @@
 /* ───────────────────────────────────────────────────────────────────────────
    Paper Stish — Smart Edit
-   Publish payload. Follows the existing Paper Stish publishing architecture:
-   a clean public URL (/{username}/{viewer}/{templateId}) whose fragment
-   carries the encoded document — the same #data= convention the template
-   system already uses, so no server is required for the public viewer.
+   Publish model.
 
-   Smart Edit payloads are self-contained: every asset is resolved to an
-   absolute or data url and user fonts are embedded, so the viewer needs no
-   storage or account access.
+   Publishing is SERVER-BACKED: the editor saves the project, then asks the
+   server to create/update a publication record. The public link is small —
+
+     /{username}/{viewerName}/{templateId}
+
+   — and the viewer loads the published document from
+   /api/smart-edit/published/{templateId}. The document payload is never
+   placed in the URL.
+
+   The base64 #data= encoding is still understood by the viewer so links
+   produced by the earlier client-only version keep working.
+
+   This module has no "use client" directive and uses no browser-only APIs
+   at module scope, so the same validation runs on the server (API routes)
+   and in the browser.
 ─────────────────────────────────────────────────────────────────────────── */
 
 import type { Layer, SmartEditDocument, TextLayer } from "./types";
-import { createTemplateId, slugPart } from "@/lib/publish";
+import { slugPart } from "@/lib/slug";
+
+export { slugPart };
 
 export interface SmartEditPublishedPayload {
   version: 1;
@@ -29,9 +40,10 @@ export interface PublishedRecord {
   publishedAt: string;
 }
 
-export { createTemplateId, slugPart };
+/** Maximum serialized document size accepted for saving/publishing. */
+export const SMART_EDIT_MAX_DOCUMENT_BYTES = 4_000_000;
 
-/* ── Encoding ───────────────────────────────────────────────────────────── */
+/* ── Encoding (legacy client-side links) ────────────────────────────────── */
 
 export function encodeSmartEditPayload(payload: SmartEditPublishedPayload): string {
   const bytes = new TextEncoder().encode(JSON.stringify(payload));
@@ -42,7 +54,7 @@ export function encodeSmartEditPayload(payload: SmartEditPublishedPayload): stri
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
-/* ── Decoding + strict validation (viewer side — never trust the URL) ────── */
+/* ── Validation (shared by the viewer, the editor and the API routes) ───── */
 
 const URL_RE = /^(https?:\/\/[^\s"'<>]+|data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+|\/[^\s"'<>]*)$/;
 const FONT_DATA_RE = /^data:(?:font|application)\/[a-z0-9.+-]*;base64,[A-Za-z0-9+/=]+$/;
@@ -112,6 +124,76 @@ function safeLayer(raw: unknown): Layer | null {
   };
 }
 
+function safeDocument(raw: unknown): SmartEditDocument | null {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as Record<string, unknown>;
+  const canvasW = num(d.canvas && (d.canvas as Record<string, unknown>).width, 1, 5000);
+  const canvasH = num(d.canvas && (d.canvas as Record<string, unknown>).height, 1, 5000);
+  if (!canvasW || !canvasH) return null;
+
+  const bg = d.background as Record<string, unknown> | undefined;
+  const background = {
+    type: "color" as const,
+    color: bg && COLOR_RE.test(String(bg.color ?? "")) ? String(bg.color) : "#f4efe6",
+  };
+
+  if (!Array.isArray(d.layers) || d.layers.length > MAX_LAYERS) return null;
+  const layers = d.layers.map(safeLayer).filter((layer): layer is Layer => layer !== null);
+
+  const fonts: SmartEditDocument["fonts"] = [];
+  if (Array.isArray(d.fonts)) {
+    for (const rawFont of d.fonts.slice(0, 24)) {
+      const f = rawFont as Record<string, unknown>;
+      const id = str(f.id, 64);
+      const family = str(f.family, 80);
+      if (!id || !family || !FAMILY_RE.test(family)) continue;
+      if (f.source === "builtin") {
+        fonts.push({ id, family, source: "builtin" });
+      } else if (typeof f.dataUrl === "string" && FONT_DATA_RE.test(f.dataUrl) && f.dataUrl.length < 8_000_000) {
+        fonts.push({ id, family, source: "user", dataUrl: f.dataUrl });
+      }
+    }
+  }
+
+  return {
+    version: 1,
+    canvas: { width: canvasW, height: canvasH },
+    background,
+    layers,
+    fonts,
+  };
+}
+
+/** Validate an untrusted parsed document (same rules everywhere). */
+export function validateSmartEditDocument(raw: unknown): SmartEditDocument | null {
+  return safeDocument(raw);
+}
+
+/** Validate an untrusted parsed publish payload. */
+export function validateSmartEditPayload(raw: unknown): SmartEditPublishedPayload | null {
+  if (
+    !raw ||
+    typeof raw !== "object"
+  ) {
+    return null;
+  }
+  const parsed = raw as Record<string, unknown>;
+  if (parsed.version !== 1 || parsed.templateSlug !== "smart-edit") return null;
+
+  const document = safeDocument(parsed.document);
+  if (!document) return null;
+
+  return {
+    version: 1,
+    templateSlug: "smart-edit",
+    title: str(parsed.title, 120) ?? "Smart Edit",
+    publishedAt: str(parsed.publishedAt, 40) ?? new Date().toISOString(),
+    document,
+  };
+}
+
+/* ── Decoding (viewer side — never trust the URL) ────────────────────────── */
+
 export function decodeSmartEditPayload(value: string): SmartEditPublishedPayload | null {
   try {
     const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
@@ -119,73 +201,26 @@ export function decodeSmartEditPayload(value: string): SmartEditPublishedPayload
     const binary = atob(padded);
     const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
     const parsed = JSON.parse(new TextDecoder().decode(bytes));
-
-    if (
-      !parsed ||
-      parsed.version !== 1 ||
-      parsed.templateSlug !== "smart-edit" ||
-      !parsed.document ||
-      typeof parsed.document !== "object"
-    ) {
-      return null;
-    }
-
-    const d = parsed.document as Record<string, unknown>;
-    const canvasW = num(d.canvas && (d.canvas as Record<string, unknown>).width, 1, 5000);
-    const canvasH = num(d.canvas && (d.canvas as Record<string, unknown>).height, 1, 5000);
-    if (!canvasW || !canvasH) return null;
-
-    const bg = d.background as Record<string, unknown> | undefined;
-    const background = {
-      type: "color" as const,
-      color: bg && COLOR_RE.test(String(bg.color ?? "")) ? String(bg.color) : "#f4efe6",
-    };
-
-    if (!Array.isArray(d.layers) || d.layers.length > MAX_LAYERS) return null;
-    const layers = d.layers.map(safeLayer).filter((layer): layer is Layer => layer !== null);
-
-    const fonts: SmartEditDocument["fonts"] = [];
-    if (Array.isArray(d.fonts)) {
-      for (const raw of d.fonts.slice(0, 24)) {
-        const f = raw as Record<string, unknown>;
-        const id = str(f.id, 64);
-        const family = str(f.family, 80);
-        if (!id || !family || !FAMILY_RE.test(family)) continue;
-        if (f.source === "builtin") {
-          fonts.push({ id, family, source: "builtin" });
-        } else if (typeof f.dataUrl === "string" && FONT_DATA_RE.test(f.dataUrl) && f.dataUrl.length < 8_000_000) {
-          fonts.push({ id, family, source: "user", dataUrl: f.dataUrl });
-        }
-      }
-    }
-
-    return {
-      version: 1,
-      templateSlug: "smart-edit",
-      title: str(parsed.title, 120) ?? "Smart Edit",
-      publishedAt: str(parsed.publishedAt, 40) ?? new Date().toISOString(),
-      document: {
-        version: 1,
-        canvas: { width: canvasW, height: canvasH },
-        background,
-        layers,
-        fonts,
-      },
-    };
+    return validateSmartEditPayload(parsed);
   } catch {
     return null;
   }
 }
 
-/* ── URL construction (same convention as the template system) ──────────── */
+/* ── URL construction ────────────────────────────────────────────────────── */
 
-export function buildPublicUrl(username: string, viewerName: string, templateId: string, payload: string): string {
+/**
+ * Public website URL — /{username}/{viewerName}/{templateId}.
+ * The published document is fetched from the server by templateId; nothing
+ * is appended to the URL.
+ */
+export function buildPublicUrl(username: string, viewerName: string, templateId: string): string {
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
   const path = `${basePath}/${username}/${viewerName}/${templateId}`;
-  return window.location.origin + path + "#data=" + payload;
+  return window.location.origin + path;
 }
 
-/** Estimated encoded size — publish warns before producing huge links. */
-export function estimatePayloadBytes(payload: SmartEditPublishedPayload): number {
-  return new TextEncoder().encode(JSON.stringify(payload)).length;
+/** Estimated serialized size — used for friendly pre-flight size errors. */
+export function estimateDocumentBytes(document: SmartEditDocument): number {
+  return new TextEncoder().encode(JSON.stringify(document)).length;
 }

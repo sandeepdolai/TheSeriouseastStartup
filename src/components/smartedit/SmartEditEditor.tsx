@@ -43,6 +43,7 @@ import {
   libraryItemToAsset,
   loadLibraryManifest,
   registerAsset,
+  registerFontFromDataUrl,
   resolvePublicPath,
   restoreUserFont,
   pruneOrphanAssets,
@@ -54,12 +55,18 @@ import { SmartEditCanvas } from "./SmartEditCanvas";
 import { exportDocument } from "./exportRenderer";
 import {
   type PublishedRecord,
-  buildPublicUrl,
-  encodeSmartEditPayload,
-  estimatePayloadBytes,
+  SMART_EDIT_MAX_DOCUMENT_BYTES,
+  estimateDocumentBytes,
   slugPart,
-  createTemplateId,
 } from "./publish";
+import {
+  type ServerProject,
+  createProject,
+  getProject,
+  publishProject,
+  publishResultToRecord,
+  saveProject,
+} from "./api";
 import {
   AuthGate,
   IconDelete,
@@ -84,8 +91,6 @@ import {
   SheetShell,
   ToolButton,
 } from "./editor-ui";
-
-const PUBLISH_MAX_BYTES = 2_400_000;
 
 interface SmartEditEditorProps {
   projectId: string;
@@ -130,6 +135,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   const [manifest, setManifest] = useState<LibraryManifest | null>(null);
   const [libraryError, setLibraryError] = useState("");
   const [uploadsVersion, setUploadsVersion] = useState(0);
+  const [syncError, setSyncError] = useState("");
 
   const title = useEditorStore((s) => s.title);
   const doc = useEditorStore((s) => s.document);
@@ -148,6 +154,10 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   const projectTimer = useRef<number | null>(null);
   const fontFileRef = useRef<HTMLInputElement>(null);
   const imageFileRef = useRef<HTMLInputElement>(null);
+  /** project row exists on the server (POST create done at least once) */
+  const serverSyncedRef = useRef(false);
+  /** serializes server saves so create/update never race */
+  const saveQueueRef = useRef<Promise<boolean>>(Promise.resolve(true));
 
   /* ── Project load + draft recovery ─────────────────────────────────── */
 
@@ -159,6 +169,15 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
 
     const boot = async () => {
       const email = session?.user?.email ?? null;
+
+      // Server record — the source of truth for saved projects. A failure
+      // (offline / guest session) just falls back to local data below.
+      let serverRec: ServerProject | null = null;
+      if (email) {
+        serverRec = await getProject(projectId).catch(() => null);
+        if (serverRec?.data?.document) serverSyncedRef.current = true;
+      }
+
       let record: ProjectRecord | null = null;
       try {
         const raw = localStorage.getItem(getAccountStorageKey("paper-stish-projects", email));
@@ -175,41 +194,82 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
         title?: string;
         savedAt: number;
       }>(projectId);
-      const projectNewer =
-        record?.updatedAt && draft?.savedAt ? Date.parse(record.updatedAt) >= draft.savedAt : true;
 
-      let loaded: SmartEditDocument | null = null;
-      if (record?.data?.document && projectNewer) loaded = record.data.document;
-      else if (draft?.document) loaded = draft.document;
-      else if (record?.data?.document) loaded = record.data.document;
+      const ts = (value?: string | number) =>
+        value ? (typeof value === "number" ? value : Date.parse(value) || 0) : 0;
 
-      if (!loaded || !loaded.canvas || !Array.isArray(loaded.layers)) {
+      // Freshest document wins: local mirror, IndexedDB draft, server row
+      // (server last so it wins timestamp ties — cross-device truth).
+      const candidates: {
+        document: SmartEditDocument;
+        at: number;
+        title: string;
+        assets: AssetRecord[];
+        published: PublishedRecord | null;
+      }[] = [];
+      if (record?.data?.document) {
+        candidates.push({
+          document: record.data.document,
+          at: ts(record.updatedAt),
+          title: record.title,
+          assets: Object.values(record.data.assets ?? {}) as AssetRecord[],
+          published: record.data.published ?? null,
+        });
+      }
+      if (draft?.document) {
+        candidates.push({
+          document: draft.document,
+          at: ts(draft.savedAt),
+          title: draft.title || record?.title || "Smart Edit",
+          assets: Object.values(record?.data?.assets ?? {}) as AssetRecord[],
+          published: record?.data?.published ?? null,
+        });
+      }
+      if (serverRec?.data?.document) {
+        candidates.push({
+          document: serverRec.data.document,
+          at: ts(serverRec.updatedAt),
+          title: serverRec.title,
+          assets: Object.values(serverRec.data.assets ?? {}) as AssetRecord[],
+          published: serverRec.data.published
+            ? publishResultToRecord(serverRec.data.published)
+            : null,
+        });
+      }
+
+      let best: (typeof candidates)[number] | null = null;
+      for (const candidate of candidates) {
+        if (!best || candidate.at >= best.at) best = candidate;
+      }
+
+      if (!best || !best.document.canvas || !Array.isArray(best.document.layers)) {
         if (alive) setLoad({ phase: "missing" });
         return;
       }
+      const loaded = best.document;
 
-      const assets = Object.values(record?.data?.assets ?? {}) as AssetRecord[];
-      await hydrateAssets(assets);
+      await hydrateAssets(best.assets);
 
-      // Re-register user fonts (FontFace) referenced by the document.
+      // Re-register user fonts (FontFace) referenced by the document — from
+      // IndexedDB when the blob exists locally, otherwise from the data url
+      // embedded in server-loaded documents.
       await Promise.all(
         (loaded.fonts ?? [])
           .filter((f) => f.source === "user")
           .map(async (f) => {
-            const asset = assets.find((a) => a.id === f.id);
-            if (asset) await restoreUserFont(asset);
+            const asset = best.assets.find((a) => a.id === f.id);
+            const family = asset ? await restoreUserFont(asset) : null;
+            if (!family && f.dataUrl) await registerFontFromDataUrl(f.id, f.family, f.dataUrl);
           }),
       );
 
-      if (record?.data?.published) setPublished(record.data.published);
+      if (best.published) setPublished(best.published);
       const savedUsername = localStorage.getItem(
         getAccountStorageKey("paper-stish-username", session?.user?.email),
       );
       if (savedUsername) setUsername(savedUsername);
 
-      useEditorStore
-        .getState()
-        .reset(projectId, (!projectNewer && draft?.title) || record?.title || "Smart Edit", loaded);
+      useEditorStore.getState().reset(projectId, best.title || "Smart Edit", loaded);
       if (alive) setLoad({ phase: "ready" });
 
       // Housekeeping: drop stored blobs no project references anymore.
@@ -231,6 +291,9 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
         }
       } catch {
         // storage enumeration is best-effort
+      }
+      if (serverRec) {
+        for (const id of Object.keys(serverRec.data.assets ?? {})) referenced.add(id);
       }
       void pruneOrphanAssets(referenced);
     };
@@ -306,23 +369,22 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
         const projects = raw ? JSON.parse(raw) : [];
         if (!Array.isArray(projects)) return false;
         const updatedAt = new Date().toISOString();
-        const next = projects.map((item: ProjectRecord) =>
-          item?.id === projectId
-            ? {
-                ...item,
-                title: state.title,
-                updatedAt,
-                data: {
-                  ...(item.data ?? {}),
-                  kind: "smart-edit",
-                  document: state.document,
-                  assets: snapshotAssets(state.document),
-                  ...(extra?.published !== undefined ? { published: extra.published } : {}),
-                },
-              }
-            : item,
-        );
-        localStorage.setItem(projectsKey, JSON.stringify(next));
+        const record = {
+          id: projectId,
+          title: state.title,
+          templateSlug: "smart-edit",
+          updatedAt,
+          data: {
+            kind: "smart-edit",
+            document: state.document,
+            assets: snapshotAssets(state.document),
+            ...(extra?.published !== undefined ? { published: extra.published } : {}),
+          },
+        };
+        const index = projects.findIndex((item: ProjectRecord) => item?.id === projectId);
+        if (index >= 0) projects[index] = { ...projects[index], ...record };
+        else projects.unshift(record);
+        localStorage.setItem(projectsKey, JSON.stringify(projects));
         state.markSaved();
         return true;
       } catch {
@@ -342,6 +404,96 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
     });
   }, [projectId]);
 
+  /** Self-contained document: every asset resolves to an absolute/data url. */
+  const buildStandaloneDocument = useCallback(async (): Promise<SmartEditDocument> => {
+    const state = useEditorStore.getState();
+    const standalone: SmartEditDocument = JSON.parse(JSON.stringify(state.document));
+    const usedFontIds = new Set(
+      standalone.layers.filter((l) => l.type === "text").map((l) => (l as TextLayer).fontId),
+    );
+
+    for (const layer of standalone.layers) {
+      if (!isImageLike(layer)) continue;
+      if (layer.url && /^(https?:|data:|blob:)/.test(layer.url)) continue;
+      const record = getAsset(layer.assetId);
+      if (!record) {
+        layer.url = layer.url || PLACEHOLDER_GIF;
+        continue;
+      }
+      if (record.provider === "bundled") {
+        layer.url = window.location.origin + resolvePublicPath(record.url ?? "");
+      } else if (record.provider === "cloudinary" && record.url) {
+        layer.url = record.url;
+      } else {
+        const resolved = await assetDataUrl(layer.assetId);
+        layer.url = resolved || layer.url || PLACEHOLDER_GIF;
+      }
+    }
+
+    standalone.fonts = (standalone.fonts ?? []).filter(
+      (font) => font.source === "user" && usedFontIds.has(font.id),
+    );
+    for (const font of standalone.fonts) {
+      // Prefer the stored blob; keep an already-embedded data url when the
+      // blob only exists in another browser (server-loaded documents).
+      font.dataUrl = (await assetDataUrl(font.id)) ?? font.dataUrl;
+    }
+    return standalone;
+  }, []);
+
+  /**
+   * Persist the current state to the server (creates the project on the
+   * first save). Calls are serialized through a queue so a create can never
+   * race an update; if edits land while a save is in flight the newest
+   * state is saved again before markSaved() runs.
+   */
+  const runServerSave = useCallback((): Promise<boolean> => {
+    const run = async (): Promise<boolean> => {
+      if (status !== "authenticated") return false;
+      try {
+        for (;;) {
+          const state = useEditorStore.getState();
+          const standalone = await buildStandaloneDocument();
+          if (estimateDocumentBytes(standalone) > SMART_EDIT_MAX_DOCUMENT_BYTES) {
+            setSyncError(
+              "This project is too large to save (too many large photos). Remove a few images and try again.",
+            );
+            return false;
+          }
+          const body = {
+            title: state.title,
+            document: standalone,
+            assets: snapshotAssets(state.document),
+          };
+          if (!serverSyncedRef.current) {
+            await createProject({ id: projectId, ...body });
+            serverSyncedRef.current = true;
+          } else {
+            await saveProject(projectId, body);
+          }
+          const now = useEditorStore.getState();
+          if (now.document === state.document && now.title === state.title) {
+            useEditorStore.getState().markSaved();
+            setSyncError("");
+            return true;
+          }
+          // Edits landed while saving — loop once more with the newest state.
+        }
+      } catch (err) {
+        setSyncError(
+          err instanceof Error && err.message
+            ? err.message
+            : "Could not save to the server — changes are kept as a local draft.",
+        );
+        return false;
+      }
+    };
+    const previous = saveQueueRef.current;
+    const next = previous.then(run, run);
+    saveQueueRef.current = next.catch(() => false);
+    return next;
+  }, [buildStandaloneDocument, projectId, snapshotAssets, status]);
+
   useEffect(() => {
     if (load.phase !== "ready") return;
     let lastDoc = useEditorStore.getState().document;
@@ -357,7 +509,10 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
       if (state.dirty) {
         if (projectTimer.current !== null) window.clearTimeout(projectTimer.current);
         projectTimer.current = window.setTimeout(() => {
-          if (useEditorStore.getState().dirty) writeProjectRecord();
+          if (useEditorStore.getState().dirty) {
+            writeProjectRecord();
+            void runServerSave();
+          }
         }, 3000);
       }
     });
@@ -367,7 +522,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
       if (projectTimer.current !== null) window.clearTimeout(projectTimer.current);
       flushDraft();
     };
-  }, [load.phase, flushDraft, writeProjectRecord]);
+  }, [load.phase, flushDraft, runServerSave, writeProjectRecord]);
 
   /* ── Unload protection ────────────────────────────────────────────── */
 
@@ -384,60 +539,28 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
 
   /* ── Save / publish / export ──────────────────────────────────────── */
 
-  const save = useCallback(() => {
+  const save = useCallback(async () => {
     if (status !== "authenticated") {
       setAuthGate("save");
       return;
     }
     flushDraft();
-    const ok = writeProjectRecord();
+    writeProjectRecord();
+    const ok = await runServerSave();
     if (ok) {
       setSavedFlash(true);
       window.setTimeout(() => setSavedFlash(false), 1400);
     }
-  }, [flushDraft, status, writeProjectRecord]);
+  }, [flushDraft, runServerSave, status, writeProjectRecord]);
 
   const saveAndClose = useCallback(() => {
     flushDraft();
     if (useEditorStore.getState().dirty && status === "authenticated") {
       writeProjectRecord();
+      void runServerSave();
     }
     onClose();
-  }, [flushDraft, onClose, status, writeProjectRecord]);
-
-  /** Self-contained document: every asset resolves to an absolute/data url. */
-  const buildStandaloneDocument = useCallback(async (): Promise<SmartEditDocument> => {
-    const state = useEditorStore.getState();
-    const standalone: SmartEditDocument = JSON.parse(JSON.stringify(state.document));
-    const usedFontIds = new Set(
-      standalone.layers.filter((l) => l.type === "text").map((l) => (l as TextLayer).fontId),
-    );
-
-    for (const layer of standalone.layers) {
-      if (!isImageLike(layer)) continue;
-      if (layer.url && /^(https?:|data:|blob:)/.test(layer.url)) continue;
-      const record = getAsset(layer.assetId);
-      if (!record) {
-        layer.url = PLACEHOLDER_GIF;
-        continue;
-      }
-      if (record.provider === "bundled") {
-        layer.url = window.location.origin + resolvePublicPath(record.url ?? "");
-      } else if (record.provider === "cloudinary" && record.url) {
-        layer.url = record.url;
-      } else {
-        layer.url = (await assetDataUrl(layer.assetId)) ?? PLACEHOLDER_GIF;
-      }
-    }
-
-    standalone.fonts = (standalone.fonts ?? []).filter(
-      (font) => font.source === "user" && usedFontIds.has(font.id),
-    );
-    for (const font of standalone.fonts) {
-      font.dataUrl = await assetDataUrl(font.id);
-    }
-    return standalone;
-  }, []);
+  }, [flushDraft, onClose, runServerSave, status, writeProjectRecord]);
 
   const publish = useCallback(async () => {
     if (status !== "authenticated") {
@@ -457,39 +580,46 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
       );
 
       const standalone = await buildStandaloneDocument();
-      const payload = {
-        version: 1 as const,
-        templateSlug: "smart-edit" as const,
-        title: useEditorStore.getState().title,
-        publishedAt: new Date().toISOString(),
-        document: standalone,
-      };
-      if (estimatePayloadBytes(payload) > PUBLISH_MAX_BYTES) {
+      if (estimateDocumentBytes(standalone) > SMART_EDIT_MAX_DOCUMENT_BYTES) {
         setPublishError(
           "This project is too heavy to publish (too many large photos). Remove a few images and try again.",
         );
         return;
       }
 
-      const templateId = createTemplateId();
-      const url = buildPublicUrl(cleanUsername, cleanViewer, templateId, encodeSmartEditPayload(payload));
-      const record: PublishedRecord = {
+      // Make sure the project is stored on the server before publishing
+      // (creates the row on first publish).
+      const saved = await runServerSave();
+      if (!saved) {
+        setPublishError(
+          "Could not save the project before publishing. Check your connection and try again.",
+        );
+        return;
+      }
+
+      const result = await publishProject(projectId, {
+        title: useEditorStore.getState().title,
         username: cleanUsername,
         viewerName: cleanViewer,
-        templateId,
-        url,
-        publishedAt: payload.publishedAt,
-      };
+        document: standalone,
+      });
+      const record = publishResultToRecord(result);
       setPublished(record);
       writeProjectRecord({ published: record });
-    } catch {
-      setPublishError("Something went wrong while publishing. Try again.");
+    } catch (err) {
+      setPublishError(
+        err instanceof Error && err.message
+          ? err.message
+          : "Something went wrong while publishing. Try again.",
+      );
     } finally {
       setPublishing(false);
     }
   }, [
     buildStandaloneDocument,
+    projectId,
     publishing,
+    runServerSave,
     session?.user?.email,
     status,
     username,
@@ -721,6 +851,11 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
 
       {/* body */}
       <div className="relative flex min-h-0 flex-1">
+        {syncError && (
+          <div className="pointer-events-none absolute left-1/2 top-10 z-40 max-w-[min(90%,420px)] -translate-x-1/2 rounded-full border border-[#e5484d]/35 bg-[#241214]/95 px-14 py-8 text-center text-11 leading-14 text-[#ff8f93] shadow-lg">
+            {syncError}
+          </div>
+        )}
         {/* desktop tool rail */}
         <nav
           aria-label="Smart Edit tools"
@@ -1010,7 +1145,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
                 <p className="text-10 text-white/38">Your link will look like</p>
                 <p className="mt-5 break-all font-mono text-11 leading-16 text-white/75">
                   {typeof window !== "undefined" ? window.location.origin : ""}/
-                  {slugPart(username, "your-name")}/{slugPart(viewerName, "their-name")}/1xx
+                  {slugPart(username, "your-name")}/{slugPart(viewerName, "their-name")}/…
                 </p>
               </div>
               {publishError && <p className="text-11 leading-15 text-[#ff8f93]">{publishError}</p>}

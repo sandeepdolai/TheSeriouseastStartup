@@ -1,5 +1,7 @@
 "use client";
 
+import { slugPart } from "@/lib/slug";
+
 export interface PublishedTemplatePayload {
   version: 1;
   templateSlug: string;
@@ -67,16 +69,7 @@ export function decodePublishedPayload(value: string): PublishedTemplatePayload 
   }
 }
 
-export function slugPart(value: string, fallback: string) {
-  const normalized = value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 48);
-
-  return normalized || fallback;
-}
+export { slugPart };
 
 export function createTemplateId() {
   const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";

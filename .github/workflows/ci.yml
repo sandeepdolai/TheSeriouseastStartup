@@ -1,0 +1,38 @@
+name: CI
+
+# Paper Stish is a server application (NextAuth + Smart Edit API + database),
+# so it deploys to Vercel / a Node host rather than GitHub Pages. This
+# workflow verifies the production build on every push and pull request.
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: "file:./ci.db"
+
+      - name: Build
+        run: npm run build
+        env:
+          DATABASE_URL: "file:./ci.db"
+          NEXTAUTH_SECRET: "ci-placeholder-secret"

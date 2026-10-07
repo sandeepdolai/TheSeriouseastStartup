@@ -9,10 +9,6 @@ interface PageProps {
   }>;
 }
 
-export function generateStaticParams() {
-  return [];
-}
-
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
@@ -31,6 +27,18 @@ export async function generateMetadata({
   };
 }
 
-export default function PublishedPage() {
-  return <PublishedTemplateViewer />;
+/**
+ * Public published-website route: /{username}/{viewerName}/{templateId}.
+ * Rendered on demand by the server; the viewer resolves the templateId
+ * against the publication API (or a legacy #data= payload in the fragment).
+ */
+export default async function PublishedPage({ params }: PageProps) {
+  const { username, viewer, templateId } = await params;
+  return (
+    <PublishedTemplateViewer
+      username={decodeURIComponent(username)}
+      viewerName={decodeURIComponent(viewer)}
+      templateId={decodeURIComponent(templateId)}
+    />
+  );
 }

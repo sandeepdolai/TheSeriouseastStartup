@@ -14,11 +14,12 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
+  id        String             @id @default(cuid())
+  email     String             @unique
   name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  smartEditProjects SmartEditProject[]
 }
 
 model Post {
@@ -29,4 +30,43 @@ model Post {
   authorId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/* ── Smart Edit ────────────────────────────────────────────────────────────
+   Server-backed persistence for the Smart Edit editor.
+
+   SmartEditProject  — one row per saved project. `document` holds the JSON
+                       serialized SmartEditDocument (self-contained: image
+                       layers reference durable data/remote urls), `assets`
+                       holds the JSON asset-record map used to rehydrate the
+                       editor's asset registry.
+   SmartEditPublication — public snapshot created on publish. Looked up by
+                       the public viewer through the unique `templateId`
+                       (the last path segment of the public URL), so links
+                       never carry the document payload.
+─────────────────────────────────────────────────────────────────────────── */
+
+model SmartEditProject {
+  id          String              @id
+  ownerId     String
+  owner       User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title       String              @default("Smart Edit")
+  document    String
+  assets      String              @default("{}")
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  publication SmartEditPublication?
+}
+
+model SmartEditPublication {
+  id          String          @id @default(cuid())
+  projectId   String          @unique
+  project     SmartEditProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  templateId  String          @unique
+  username    String
+  viewerName  String
+  title       String          @default("Smart Edit")
+  document    String
+  publishedAt DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 }
