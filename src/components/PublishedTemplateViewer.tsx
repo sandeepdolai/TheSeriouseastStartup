@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BirthdayTemplate } from "@/components/templates/BirthdayTemplate";
-import { LoveLifeTemplate } from "@/components/templates/LoveLifeTemplate";
-import { decodePublishedPayload, type PublishedTemplatePayload } from "@/lib/publish";
+import { type PublishedTemplatePayload } from "@/lib/publish";
 import {
   decodeSmartEditPayload,
   type SmartEditPublishedPayload,
@@ -48,7 +46,6 @@ export function PublishedTemplateViewer({
   const [serverPublication, setServerPublication] = useState(() =>
     initialPublication ? validatePublishedPayload(initialPublication) : null,
   );
-  const [payload, setPayload] = useState<PublishedTemplatePayload | null>(null);
   const [smartEdit, setSmartEdit] = useState<SmartEditPublishedPayload | null>(null);
   const [phase, setPhase] = useState<Phase>(serverPublication ? "ready" : "loading");
 
@@ -62,7 +59,6 @@ export function PublishedTemplateViewer({
       // Legacy #data= link — the payload travels in the fragment.
       const smart = decodeSmartEditPayload(value);
       setSmartEdit(smart);
-      setPayload(smart ? null : decodePublishedPayload(value));
       setServerPublication(null);
       setPhase("ready");
       return true;
@@ -121,49 +117,6 @@ export function PublishedTemplateViewer({
       );
     }
 
-    if (serverPublication.templateSlug === "birthday-template") {
-      return (
-        <BirthdayTemplate
-          heading={serverPublication.values?.heading ?? "★ HAPPY BIRTHDAY !!"}
-          message={serverPublication.values?.message ?? ""}
-          photoUrl={serverPublication.values?.photoUrl ?? null}
-        />
-      );
-    }
-
-    if (serverPublication.templateSlug === "love-of-my-life") {
-      return (
-        <LoveLifeTemplate
-          years={serverPublication.values?.years ?? "2"}
-          yearsLabel={serverPublication.values?.yearsLabel ?? "yers with you"}
-          message={serverPublication.values?.message ?? ""}
-          photoUrl={serverPublication.values?.photoUrl ?? null}
-        />
-      );
-    }
-  }
-
-  if (payload) {
-    if (payload.templateSlug === "birthday-template") {
-      return (
-        <BirthdayTemplate
-          heading={payload.heading}
-          message={payload.message}
-          photoUrl={payload.photoUrl}
-        />
-      );
-    }
-
-    if (payload.templateSlug === "love-of-my-life") {
-      return (
-        <LoveLifeTemplate
-          years={payload.data?.years ?? "2"}
-          yearsLabel={payload.data?.yearsLabel ?? "yers with you"}
-          message={payload.data?.message ?? payload.message}
-          photoUrl={payload.data?.photoUrl ?? payload.photoUrl}
-        />
-      );
-    }
   }
 
   return (
