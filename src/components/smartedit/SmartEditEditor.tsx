@@ -5,7 +5,7 @@
 
    Layout (Paper Stish native — same surfaces, transitions and dark language
    as the template editor):
-   • header: close · title · undo/redo · save · publish
+   • header: close · title · undo/redo · save · export
    • desktop (s:): tool rail on the left, canvas centre, inspector right
    • mobile: bottom tool dock, panels as bottom sheets
    Persistence is DEVICE-FIRST: the editable project lives on this
@@ -22,7 +22,7 @@ import {
   useState,
 } from "react";
 import { signIn, useSession } from "next-auth/react";
-import { getAccountKey, getAccountStorageKey } from "@/lib/accountStorage";
+import { getAccountKey } from "@/lib/accountStorage";
 import {
   getLocalProject,
   listAllLocalProjects,
@@ -62,16 +62,6 @@ import { clearTextLayoutCache, layoutTextLayer, onFontsChanged } from "./textLay
 import { SmartEditCanvas } from "./SmartEditCanvas";
 import { SelectionOverlay } from "./selectionOverlay";
 import { exportDocument } from "./exportRenderer";
-import {
-  SMART_EDIT_MAX_DOCUMENT_BYTES,
-  estimateDocumentBytes,
-  slugPart,
-} from "./publish";
-import {
-  type PublishedRecord,
-  publishResultToRecord,
-  publishWebsite,
-} from "@/lib/publications";
 import {
   AuthGate,
   IconDelete,
@@ -113,14 +103,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   const [exportFormat, setExportFormat] = useState<"png" | "jpg">("png");
   const [exportScale, setExportScale] = useState(2);
   const [exporting, setExporting] = useState(false);
-  const [publishOpen, setPublishOpen] = useState(false);
-  const [username, setUsername] = useState("");
-  const [viewerName, setViewerName] = useState("");
-  const [publishing, setPublishing] = useState(false);
-  const [published, setPublished] = useState<PublishedRecord | null>(null);
-  const [publishError, setPublishError] = useState("");
-  const [copied, setCopied] = useState(false);
-  const [authGate, setAuthGate] = useState<"save" | "publish" | null>(null);
+  const [authGate, setAuthGate] = useState<"save" | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [libraryTab, setLibraryTab] = useState<"stickers" | "photos" | "uploads">("stickers");
   const [manifest, setManifest] = useState<LibraryManifest | null>(null);
@@ -168,7 +151,6 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
         kind?: string;
         document?: SmartEditDocument;
         assets?: Record<string, AssetRecord>;
-        published?: PublishedRecord | null;
       } | null;
 
       const draft = await idb.getDraft<{
@@ -187,7 +169,6 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
         at: number;
         title: string;
         assets: AssetRecord[];
-        published: PublishedRecord | null;
       }[] = [];
       if (projectData?.document) {
         candidates.push({
@@ -195,7 +176,6 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
           at: ts(record?.updatedAt),
           title: record?.title ?? "Smart Edit",
           assets: Object.values(projectData.assets ?? {}) as AssetRecord[],
-          published: projectData.published ?? null,
         });
       }
       if (draft?.document) {
@@ -204,7 +184,6 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
           at: ts(draft.savedAt),
           title: draft.title || record?.title || "Smart Edit",
           assets: Object.values(projectData?.assets ?? {}) as AssetRecord[],
-          published: projectData?.published ?? null,
         });
       }
 
@@ -233,12 +212,6 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
             if (!family && f.dataUrl) await registerFontFromDataUrl(f.id, f.family, f.dataUrl);
           }),
       );
-
-      if (best.published) setPublished(best.published);
-      const savedUsername = localStorage.getItem(
-        getAccountStorageKey("paper-stish-username", session?.user?.email),
-      );
-      if (savedUsername) setUsername(savedUsername);
 
       useEditorStore.getState().reset(projectId, best.title || "Smart Edit", loaded);
       if (alive) setLoad({ phase: "ready" });
@@ -312,7 +285,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   }, []);
 
   const writeProjectRecord = useCallback(
-    async (extra?: { published?: PublishedRecord | null }) => {
+    async () => {
       if (status !== "authenticated") return false;
       const state = useEditorStore.getState();
       const ok = await putLocalProject({
@@ -325,7 +298,6 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
           kind: "smart-edit",
           document: state.document,
           assets: snapshotAssets(state.document),
-          ...(extra?.published !== undefined ? { published: extra.published } : {}),
         },
       });
       if (ok) state.markSaved();
@@ -343,43 +315,6 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
       savedAt: Date.now(),
     });
   }, [projectId]);
-
-  /** Self-contained document: every asset resolves to an absolute/data url. */
-  const buildStandaloneDocument = useCallback(async (): Promise<SmartEditDocument> => {
-    const state = useEditorStore.getState();
-    const standalone: SmartEditDocument = JSON.parse(JSON.stringify(state.document));
-    const usedFontIds = new Set(
-      standalone.layers.filter((l) => l.type === "text").map((l) => (l as TextLayer).fontId),
-    );
-
-    for (const layer of standalone.layers) {
-      if (!isImageLike(layer)) continue;
-      if (layer.url && /^(https?:|data:|blob:)/.test(layer.url)) continue;
-      const record = getAsset(layer.assetId);
-      if (!record) {
-        layer.url = layer.url || PLACEHOLDER_GIF;
-        continue;
-      }
-      if (record.provider === "bundled") {
-        layer.url = window.location.origin + resolvePublicPath(record.url ?? "");
-      } else if (record.provider === "cloudinary" && record.url) {
-        layer.url = record.url;
-      } else {
-        const resolved = await assetDataUrl(layer.assetId);
-        layer.url = resolved || layer.url || PLACEHOLDER_GIF;
-      }
-    }
-
-    standalone.fonts = (standalone.fonts ?? []).filter(
-      (font) => font.source === "user" && usedFontIds.has(font.id),
-    );
-    for (const font of standalone.fonts) {
-      // Prefer the stored blob; keep an already-embedded data url when the
-      // blob only exists in another browser (server-loaded documents).
-      font.dataUrl = (await assetDataUrl(font.id)) ?? font.dataUrl;
-    }
-    return standalone;
-  }, []);
 
   useEffect(() => {
     if (load.phase !== "ready") return;
@@ -487,7 +422,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   // already committed to the store) — no caret stays active behind an open
   // sheet. Closing a sheet never touches the editing state.
   const sheetsOpen =
-    libraryOpen || inspectorOpen || exportOpen || publishOpen || !!authGate || textEditorOpen;
+    libraryOpen || inspectorOpen || exportOpen || !!authGate || textEditorOpen;
   const prevSheetsOpenRef = useRef(false);
   useEffect(() => {
     if (sheetsOpen && !prevSheetsOpenRef.current) {
@@ -529,64 +464,6 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
     onClose();
   }, [flushDraft, onClose, status, writeProjectRecord]);
 
-  const publish = useCallback(async () => {
-    if (status !== "authenticated") {
-      setAuthGate("publish");
-      return;
-    }
-    const cleanUsername = slugPart(username, "");
-    const cleanViewer = slugPart(viewerName, "");
-    if (!cleanUsername || !cleanViewer || publishing) return;
-
-    try {
-      setPublishing(true);
-      setPublishError("");
-      localStorage.setItem(
-        getAccountStorageKey("paper-stish-username", session?.user?.email),
-        username.trim(),
-      );
-
-      const standalone = await buildStandaloneDocument();
-      if (estimateDocumentBytes(standalone) > SMART_EDIT_MAX_DOCUMENT_BYTES) {
-        setPublishError(
-          "This project is too heavy to publish (too many large photos). Remove a few images and try again.",
-        );
-        return;
-      }
-
-      // The publish endpoint stores the snapshot server-side; sending the
-      // previous templateId keeps the existing public link working.
-      const result = await publishWebsite({
-        templateSlug: "smart-edit",
-        title: useEditorStore.getState().title,
-        username: cleanUsername,
-        viewerName: cleanViewer,
-        previousTemplateId: published?.templateId,
-        data: { document: standalone },
-      });
-      const record = publishResultToRecord(result);
-      setPublished(record);
-      await writeProjectRecord({ published: record });
-    } catch (err) {
-      setPublishError(
-        err instanceof Error && err.message
-          ? err.message
-          : "Something went wrong while publishing. Try again.",
-      );
-    } finally {
-      setPublishing(false);
-    }
-  }, [
-    buildStandaloneDocument,
-    published,
-    publishing,
-    session?.user?.email,
-    status,
-    username,
-    viewerName,
-    writeProjectRecord,
-  ]);
-
   const runExport = useCallback(async () => {
     try {
       setExporting(true);
@@ -601,17 +478,6 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
       setExporting(false);
     }
   }, [exportFormat, exportScale]);
-
-  const copyLink = useCallback(async () => {
-    if (!published?.url) return;
-    try {
-      await navigator.clipboard.writeText(published.url);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1400);
-    } catch {
-      // clipboard permissions are browser-controlled
-    }
-  }, [published]);
 
   /* ── Tool actions ─────────────────────────────────────────────────── */
 
@@ -826,19 +692,6 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
             className="whitespace-nowrap rounded-full border border-white/12 bg-white/5 px-13 py-10 text-12 tracking-[-0.02em] text-white transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] s:px-16"
           >
             {savedFlash ? "Saved" : dirty ? "Save •" : "Save"}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (status !== "authenticated") {
-                setAuthGate("publish");
-                return;
-              }
-              setPublishOpen(true);
-            }}
-            className="whitespace-nowrap rounded-full bg-white px-13 py-10 text-12 tracking-[-0.02em] text-black transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] s:px-16"
-          >
-            Publish
           </button>
         </div>
       </header>
@@ -1144,96 +997,6 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
               {exporting ? "Exporting…" : "Download"}
             </button>
           </div>
-        </ModalShell>
-      )}
-
-      {/* publish modal */}
-      {publishOpen && (
-        <ModalShell
-          title={published ? "Your website is ready" : "Publish website"}
-          subtitle={
-            published
-              ? "This link opens the finished website directly."
-              : "Choose the names used in the personal website link."
-          }
-          onClose={() => setPublishOpen(false)}
-        >
-          {!published ? (
-            <div className="grid gap-13">
-              <label className="grid gap-7">
-                <span className="text-10 text-white/45">Your name</span>
-                <input
-                  autoFocus
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="alex"
-                  className="w-full rounded-[13px] border border-white/10 bg-white/5 px-12 py-11 text-13 text-white outline-none focus:border-white/25"
-                />
-              </label>
-              <label className="grid gap-7">
-                <span className="text-10 text-white/45">Person this is for</span>
-                <input
-                  value={viewerName}
-                  onChange={(e) => setViewerName(e.target.value)}
-                  placeholder="olivia"
-                  className="w-full rounded-[13px] border border-white/10 bg-white/5 px-12 py-11 text-13 text-white outline-none focus:border-white/25"
-                />
-              </label>
-              <div className="rounded-[15px] border border-white/8 bg-white/[0.025] p-12">
-                <p className="text-10 text-white/38">Your link will look like</p>
-                <p className="mt-5 break-all font-mono text-11 leading-16 text-white/75">
-                  {typeof window !== "undefined" ? window.location.origin : ""}/
-                  {slugPart(username, "your-name")}/{slugPart(viewerName, "their-name")}/…
-                </p>
-              </div>
-              {publishError && <p className="text-11 leading-15 text-[#ff8f93]">{publishError}</p>}
-              <button
-                type="button"
-                disabled={publishing || !slugPart(username, "") || !slugPart(viewerName, "")}
-                onClick={publish}
-                className="mt-2 w-full rounded-full bg-white py-12 text-12 text-black disabled:cursor-not-allowed disabled:opacity-35"
-              >
-                {publishing ? "Publishing…" : "Publish website"}
-              </button>
-            </div>
-          ) : (
-            <div className="grid gap-13">
-              <div className="rounded-[15px] border border-white/8 bg-white/[0.025] p-12">
-                <p className="break-all font-mono text-11 leading-17 text-white/75">{published.url}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-9">
-                <button type="button" onClick={copyLink} className="rounded-full bg-white py-11 text-11 text-black">
-                  {copied ? "Copied" : "Copy link"}
-                </button>
-                <a
-                  href={published.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-center rounded-full border border-white/12 py-11 text-11 text-white"
-                >
-                  Open website
-                </a>
-              </div>
-              <button
-                type="button"
-                disabled={publishing}
-                onClick={() => void publish()}
-                className="w-full py-8 text-10 text-white/35 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {publishing ? "Publishing…" : "Publish changes to this link"}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setPublished(null);
-                  setViewerName("");
-                }}
-                className="w-full py-6 text-10 text-white/28"
-              >
-                Publish under a new link
-              </button>
-            </div>
-          )}
         </ModalShell>
       )}
 
