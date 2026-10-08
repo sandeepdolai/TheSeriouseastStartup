@@ -24,6 +24,8 @@ interface Props {
   onSelect: (slug: string) => void;
   hidden: boolean;
   apiRef?: React.MutableRefObject<{ center: (slug: string) => void }>;
+  /** Uses the same immersive carousel for dynamically loaded template cards. */
+  projects?: Project[];
 }
 
 const OVERSCAN = 0.5;
@@ -37,7 +39,7 @@ function wrap(min: number, max: number, value: number) {
   return ((((value - min) % range) + range) % range) + min;
 }
 
-export function HomeCarousel({ folio, enabled, returning, onSelect, hidden, apiRef }: Props) {
+export function HomeCarousel({ folio, enabled, returning, onSelect, hidden, apiRef, projects = FEATURED }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const itemsRef = useRef<Item[]>([]);
@@ -58,7 +60,7 @@ export function HomeCarousel({ folio, enabled, returning, onSelect, hidden, apiR
       if (!track) return;
 
       // load textures + register GL cards
-      for (const p of FEATURED) {
+      for (const p of projects) {
         if (disposed) return;
         const el = track.querySelector<HTMLElement>(`[data-id="${p.slug}"]`);
         if (!el) continue;
@@ -79,7 +81,7 @@ export function HomeCarousel({ folio, enabled, returning, onSelect, hidden, apiR
 
       // rise-in choreography
       const W = folio.frustum.W;
-      const retIdx = returning ? FEATURED.findIndex((p) => p.slug === returning) : -1;
+      const retIdx = returning ? projects.findIndex((p) => p.slug === returning) : -1;
       const retEl = retIdx >= 0 ? itemsRef.current[retIdx]?.el : null;
       const retLeft = retEl ? retEl.getBoundingClientRect().left : null;
 
@@ -113,13 +115,13 @@ export function HomeCarousel({ folio, enabled, returning, onSelect, hidden, apiR
 
     return () => {
       disposed = true;
-      for (const p of FEATURED) folio.removeCard(p.slug);
+      for (const p of projects) folio.removeCard(p.slug);
       folio.showGround(false);
       folio.showVeil(false);
       folio.setVelocity(0);
     };
      
-  }, [folio]);
+  }, [folio, projects]);
 
   function measure() {
     const track = trackRef.current;
@@ -445,7 +447,7 @@ export function HomeCarousel({ folio, enabled, returning, onSelect, hidden, apiR
         <p>{SITE_AWARDS}</p>
         <h2>Featured work</h2>
         <ul>
-          {FEATURED.map((p: Project) => (
+          {projects.map((p: Project) => (
             <li key={p.slug}>
               <a href={`#project-${p.slug}`}>{p.title}</a> — {p.description}
             </li>
@@ -480,7 +482,7 @@ export function HomeCarousel({ folio, enabled, returning, onSelect, hidden, apiR
         ref={trackRef}
         className="absolute w-full left-0 top-0 s:top-1/2 flex flex-col s:flex-row s:-translate-y-1/2 gap-y-20 s:gap-x-10 px-20 s:px-0"
       >
-        {FEATURED.map((p) => (
+        {projects.map((p) => (
           <article
             key={p.slug}
             data-id={p.slug}
