@@ -118,7 +118,7 @@ export function TemplateBrowser({ onOpenEditor }: Props) {
   }, [requireAccount, selected, session?.user?.email]);
 
   return (
-    <main className="fixed inset-0 overflow-y-auto bg-[#f5f3ed] text-black">
+    <main className="fixed inset-0 z-20 overflow-y-auto bg-[#f5f3ed] text-black">
       <div className="min-h-full px-20 pb-100 pt-100 s:px-50 s:pb-80 s:pt-120">
         <div className="mx-auto max-w-[1100px]">
           <div className="mb-30 flex items-end justify-between gap-20">
