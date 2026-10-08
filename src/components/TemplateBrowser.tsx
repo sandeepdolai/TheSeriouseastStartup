@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { getAccountKey } from "@/lib/accountStorage";
 import { putLocalProject } from "@/lib/localProjects";
-import { ProjectSheet } from "./ProjectSheet";
+import { SmartEditPreview } from "./smartedit/SmartEditPreview";
 import type { AssetRecord, SmartEditDocument } from "./smartedit/types";
 
 interface PublishedTemplate {
@@ -175,60 +175,74 @@ export function TemplateBrowser({ onOpenEditor }: Props) {
         </div>
       </div>
 
-      {selected && selected.previewUrl && (
-        <ProjectSheet
-          project={{
-            title: selected.title,
-            slug: `template-${selected.id}`,
-            description:
-              selected.description?.trim() ||
-              "Duplicate this design to make your own version in Smart Edit. Your changes are completely separate from the original template.",
-            link: null,
-            tags: [],
-            awards: 0,
-            aspect:
-              selected.document?.canvas?.width && selected.document?.canvas?.height
-                ? selected.document.canvas.width / selected.document.canvas.height
-                : 1,
-            media: [selected.previewUrl],
+      {selected && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-15 py-20 backdrop-blur-[8px]"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSelected(null);
           }}
-          mediaAspects={[
-            selected.document?.canvas?.width && selected.document?.canvas?.height
-              ? selected.document.canvas.width / selected.document.canvas.height
-              : 1,
-          ]}
-          entered
-          onClose={() => setSelected(null)}
-          onPrev={() => {}}
-          onNext={() => {}}
-          actionContent={
-            <div className="flex items-center gap-12">
-              <button
-                type="button"
-                disabled={!!working}
-                onClick={() => void duplicate()}
-                className="flex size-48 shrink-0 items-center justify-center rounded-full bg-black text-white transition-transform duration-300 hover:scale-105 disabled:opacity-45"
-                aria-label="Duplicate template"
-                title="Duplicate template"
-              >
-                <svg viewBox="0 0 24 24" className="size-17" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="8" y="8" width="11" height="11" rx="2" />
-                  <path d="M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                </svg>
-              </button>
-              <button
-                type="button"
-                disabled={!!working}
-                onClick={saveTemplate}
-                className="h-48 rounded-full bg-black/[0.06] px-20 text-12 uppercase tracking-[0.04em] text-black transition-transform duration-300 hover:scale-[1.02] disabled:opacity-45"
-              >
-                {working === "save" ? "Saved" : "Save"}
-              </button>
+        >
+          <section className="flex max-h-[92vh] w-full max-w-[1050px] flex-col overflow-hidden rounded-20 bg-white shadow-2xl s:flex-row">
+            <div className="min-h-0 flex-1 bg-[#111] p-15 s:p-25">
+              <div className="flex h-full min-h-[55vh] items-center justify-center overflow-hidden rounded-12 bg-[#0d0d0d]">
+                {selected.previewUrl ? (
+                  <img
+                    src={selected.previewUrl}
+                    alt={selected.title}
+                    draggable={false}
+                    className="max-h-full max-w-full object-contain"
+                  />
+                ) : (
+                  <SmartEditPreview document={selected.document} assets={Object.values(selected.assets)} />
+                )}
+              </div>
             </div>
-          }
-        />
-      )}
 
+            <div className="w-full shrink-0 p-20 s:w-[330px] s:p-25">
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                className="float-right flex size-34 items-center justify-center rounded-full bg-black/6 text-18"
+                aria-label="Close template"
+              >
+                ×
+              </button>
+
+              <div className="clear-both pt-25 s:pt-50">
+                <p className="label opacity-40">TEMPLATE</p>
+                <h2 className="mt-8 text-28 leading-none tracking-[-0.05em]">{selected.title}</h2>
+                <p className="mt-12 whitespace-pre-line text-12 leading-18 text-black/48">
+                  {selected.description?.trim() ||
+                    "Duplicate this design to make your own version in Smart Edit. Your changes are completely separate from the original template."}
+                </p>
+
+                <div className="mt-25 flex flex-col gap-8">
+                  <button
+                    type="button"
+                    disabled={!!working}
+                    onClick={() => void duplicate()}
+                    className="h-48 rounded-full bg-black text-13 text-white disabled:opacity-45"
+                  >
+                    {working === "duplicate" ? "Opening…" : "Duplicate"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!!working}
+                    onClick={saveTemplate}
+                    className="h-48 rounded-full border border-black/12 bg-black/[0.03] text-13 text-black disabled:opacity-45"
+                  >
+                    {working === "save" ? "Saved" : "Save"}
+                  </button>
+                </div>
+
+                <p className="mt-15 text-10 leading-14 text-black/35">
+                  Sign in is required only when you duplicate or save.
+                </p>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   );
 }
