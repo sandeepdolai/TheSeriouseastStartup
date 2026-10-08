@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable react-hooks/immutability */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { FEATURED, type Project } from "@/lib/projects";
 import { ease, tween } from "@/gl/react";
 
@@ -16,6 +16,12 @@ interface Props {
   swipeDirection?: -1 | 1 | null;
   swipeX?: number;
   interactive?: boolean;
+  /** Add template-specific actions without replacing this existing layout. */
+  actionContent?: ReactNode;
+  /** Optional per-media ratios for dynamic template previews. */
+  mediaAspects?: number[];
+  onDuplicate?: () => void;
+  onSaveTemplate?: () => void;
   onSwipeStart?: (direction: -1 | 1) => void;
   onSwipeMove?: (x: number) => void;
   onSwipeCancel?: () => void;
@@ -79,10 +85,12 @@ export function ProjectSheet({
   onSwipeMove,
   onSwipeCancel,
   onSwipeCommit,
+  actionContent,
+  mediaAspects,
 }: Props) {
   const idx = FEATURED.findIndex((p) => p.slug === project.slug);
-  const prev = FEATURED[(idx - 1 + FEATURED.length) % FEATURED.length];
-  const next = FEATURED[(idx + 1) % FEATURED.length];
+  const prev = idx >= 0 ? FEATURED[(idx - 1 + FEATURED.length) % FEATURED.length] : null;
+  const next = idx >= 0 ? FEATURED[(idx + 1) % FEATURED.length] : null;
 
   const sheetRef = useRef<HTMLDivElement>(null);
   const mediaRef = useRef<HTMLDivElement>(null);
@@ -335,7 +343,9 @@ export function ProjectSheet({
     };
   }, []);
 
-  const aspects = MEDIA_ASPECTS[project.slug] || project.media.map(() => 16 / 9);
+  const aspects = mediaAspects?.length
+    ? mediaAspects
+    : MEDIA_ASPECTS[project.slug] || project.media.map(() => 16 / 9);
 
   const reveal = (d: number) => ({
     style: {
@@ -410,7 +420,9 @@ export function ProjectSheet({
           <div className="mt-15 s:mt-20 max-w-[40rem] text-14 s:text-16 tracking-[-0.035em] text-black" {...reveal(0.22)}>
             {project.description}
           </div>
-          <div className="mt-30 s:mt-45" {...reveal(0.34)} />
+          <div className="mt-30 s:mt-45" {...reveal(0.34)}>
+            {actionContent}
+          </div>
         </div>
         <div className="relative w-full flex-1 min-h-0 overflow-hidden s:w-auto s:flex-none s:h-full">
           <div ref={mediaRef} className="flex w-full flex-col items-center gap-y-30 s:gap-y-60 s:w-700 s:shrink-0 pb-80 has-hover:pb-0 will-change-transform">
