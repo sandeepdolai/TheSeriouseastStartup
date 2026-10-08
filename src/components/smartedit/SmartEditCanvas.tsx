@@ -39,6 +39,7 @@ import {
 } from "./types";
 import { layoutTextLayer, onFontsChanged } from "./textLayout";
 import { assetUrl, onAssetsChanged } from "./assets";
+import { cropImageStyle } from "./crop";
 import { useEditorStore } from "./store";
 import {
   type DragMode,
@@ -142,15 +143,57 @@ const LayerView = memo(function LayerView({
     );
   }
 
+  // Cropped photos: the <img> is the ORIGINAL (never re-encoded) asset,
+  // positioned/scaled so the crop rect maps exactly onto the layer frame
+  // and rotated by the crop rotation — pure percentages of the frame, so
+  // the identical markup renders in the editor, My Projects previews, the
+  // export and the public viewer. cropImageStyle({0,0,1,1,0}) reduces to
+  // the plain 100%×100% fill, so uncropped layers keep the exact previous
+  // rendering path.
+  const crop = layer.type === "image" ? layer.crop : undefined;
+
   return (
-    <div style={style} onPointerDown={onPointerDown} onDoubleClick={onDoubleClick}>
+    <div
+      style={{ ...style, ...(crop ? { overflow: "clip" } : null) }}
+      onPointerDown={onPointerDown}
+      onDoubleClick={onDoubleClick}
+    >
       {resolvedUrl ? (
-        <img
-          src={resolvedUrl}
-          alt={layer.type === "sticker" ? "Sticker" : "Image"}
-          draggable={false}
-          style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
-        />
+        crop ? (
+          (() => {
+            const geo = cropImageStyle(crop, layer.natural);
+            return (
+              <img
+                src={resolvedUrl}
+                alt={layer.type === "sticker" ? "Sticker" : "Image"}
+                draggable={false}
+                style={{
+                  position: "absolute",
+                  left: `${geo.left}%`,
+                  top: `${geo.top}%`,
+                  width: `${geo.width}%`,
+                  height: `${geo.height}%`,
+                  // Tailwind's preflight clamps imgs to max-width:100% —
+                  // a zoomed crop draws the photo LARGER than the frame.
+                  maxWidth: "none",
+                  maxHeight: "none",
+                  transform: `rotate(${geo.rotate}deg)`,
+                  objectFit: "fill",
+                  display: "block",
+                  userSelect: "none",
+                  WebkitUserSelect: "none",
+                }}
+              />
+            );
+          })()
+        ) : (
+          <img
+            src={resolvedUrl}
+            alt={layer.type === "sticker" ? "Sticker" : "Image"}
+            draggable={false}
+            style={{ width: "100%", height: "100%", objectFit: "fill", display: "block" }}
+          />
+        )
       ) : (
         <div
           style={{

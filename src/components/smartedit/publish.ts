@@ -19,7 +19,7 @@
    and in the browser.
 ─────────────────────────────────────────────────────────────────────────── */
 
-import type { Layer, SmartEditDocument, TextLayer } from "./types";
+import type { CropState, Layer, SmartEditDocument, TextLayer } from "./types";
 import { slugPart } from "@/lib/slug";
 
 export { slugPart };
@@ -65,6 +65,34 @@ function num(value: unknown, min: number, max: number): number | null {
     : null;
 }
 
+/**
+ * Validate an untrusted crop on an image layer. Invalid crops are dropped
+ * (the layer renders uncropped) — never fatal, never crashes the viewer.
+ * Rotation is normalised to [0, 360); the render math is general but the
+ * editor UI only produces multiples of 90.
+ */
+function safeCrop(raw: unknown): CropState | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  if (typeof raw !== "object") return undefined;
+  const c = raw as Record<string, unknown>;
+  const x = num(c.x, 0, 1);
+  const y = num(c.y, 0, 1);
+  const width = num(c.width, 0.001, 1);
+  const height = num(c.height, 0.001, 1);
+  const rotation = num(c.rotation, -3600, 3600);
+  if (x === null || y === null || width === null || height === null || rotation === null) {
+    return undefined;
+  }
+  if (x + width > 1.0001 || y + height > 1.0001) return undefined;
+  return {
+    x,
+    y,
+    width,
+    height,
+    rotation: ((rotation % 360) + 360) % 360,
+  };
+}
+
 function safeLayer(raw: unknown): Layer | null {
   if (!raw || typeof raw !== "object") return null;
   const l = raw as Record<string, unknown>;
@@ -107,13 +135,18 @@ function safeLayer(raw: unknown): Layer | null {
   if (!url || !URL_RE.test(url)) return null;
   const naturalW = num((l.natural as Record<string, unknown> | undefined)?.width, 0, 100000) ?? 100;
   const naturalH = num((l.natural as Record<string, unknown> | undefined)?.height, 0, 100000) ?? 100;
-  return {
+  const imageLike = {
     ...base,
-    type: type as "image" | "sticker",
     assetId: str(l.assetId, 64) ?? "",
     url,
     natural: { width: naturalW, height: naturalH },
   };
+  // Crop is an image-layer-only, optional, non-destructive field.
+  if (type === "image") {
+    const crop = safeCrop(l.crop);
+    return crop ? { ...imageLike, type: "image" as const, crop } : { ...imageLike, type: "image" as const };
+  }
+  return { ...imageLike, type: "sticker" as const };
 }
 
 function safeDocument(raw: unknown): SmartEditDocument | null {

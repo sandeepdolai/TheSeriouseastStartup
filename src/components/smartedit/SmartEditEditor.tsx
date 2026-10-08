@@ -32,6 +32,7 @@ import {
 } from "@/lib/localProjects";
 import {
   type AssetRecord,
+  type ImageLayer,
   type Layer,
   type LibraryManifest,
   type SmartEditDocument,
@@ -62,9 +63,11 @@ import { makeImageLayer, makeTextLayer, useEditorStore } from "./store";
 import { clearTextLayoutCache, layoutTextLayer, onFontsChanged } from "./textLayout";
 import { SmartEditCanvas } from "./SmartEditCanvas";
 import { SelectionOverlay } from "./selectionOverlay";
+import { CropEditor } from "./cropEditor";
 import { exportDocument } from "./exportRenderer";
 import {
   AuthGate,
+  IconCrop,
   IconDelete,
   IconDelete as DelIcon,
   IconDown,
@@ -115,6 +118,8 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   const [adminTemplateDraft, setAdminTemplateDraft] = useState(false);
   const [publishingTemplate, setPublishingTemplate] = useState(false);
   const [templatePublishError, setTemplatePublishError] = useState("");
+  /** id of the image layer currently open in Crop Mode (covers the editor) */
+  const [cropTarget, setCropTarget] = useState<string | null>(null);
 
   const title = useEditorStore((s) => s.title);
   const doc = useEditorStore((s) => s.document);
@@ -662,11 +667,48 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
     setTextEditorOpen(true);
   }, []);
 
+  /* ── Crop Mode ─────────────────────────────────────────────────────── */
+
+  /**
+   * Open the dedicated crop editor for the selected IMAGE layer. Entering
+   * Crop Mode commits any text editing, closes every sheet/modal (nothing
+   * behind the full-screen crop editor stays interactive) and preserves
+   * the selection — the layer stays selected when the crop editor closes.
+   */
+  const openCropSelected = useCallback(() => {
+    const state = useEditorStore.getState();
+    const layer = state.selection
+      ? state.document.layers.find((l) => l.id === state.selection)
+      : null;
+    if (!layer || layer.type !== "image") return;
+    if (state.editingId) state.startEditing(null);
+    setLibraryOpen(false);
+    setInspectorOpen(false);
+    setExportOpen(false);
+    setTextEditorOpen(false);
+    setAuthGate(null);
+    setCropTarget(layer.id);
+  }, []);
+
+  /** Commit the crop: ONE store update → ONE history entry (main-editor
+   * Undo reverts the whole crop operation, Redo restores it). */
+  const commitCrop = useCallback(
+    (patch: Partial<ImageLayer> | null) => {
+      const target = cropTarget;
+      setCropTarget(null);
+      if (target && patch) useEditorStore.getState().updateLayer(target, patch);
+    },
+    [cropTarget],
+  );
+
   /* ── Keyboard shortcuts ───────────────────────────────────────────── */
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (load.phase !== "ready") return;
+      // Crop Mode owns the keyboard while it is open (its own Escape /
+      // Enter / undo handling); layer shortcuts must never fire behind it.
+      if (cropTarget) return;
       const target = event.target as HTMLElement | null;
       const typing =
         !!target &&
@@ -713,7 +755,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [load.phase]);
+  }, [load.phase, cropTarget]);
 
   /* ── Render ───────────────────────────────────────────────────────── */
 
@@ -902,6 +944,11 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
                   <IconEdit />
                 </IconButton>
               )}
+              {selectedLayer.type === "image" && (
+                <IconButton label="Crop image" onClick={openCropSelected} className="size-34">
+                  <IconCrop />
+                </IconButton>
+              )}
               <IconButton label="Duplicate" onClick={duplicateSelected} className="size-34">
                 <IconDuplicate />
               </IconButton>
@@ -922,6 +969,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
             <InspectorContent
               onImportFont={() => fontFileRef.current?.click()}
               onEditWords={() => setInspectorOpen(false)}
+              onCropImage={openCropSelected}
             />
           </aside>
         )}
@@ -1048,6 +1096,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
             <InspectorContent
               onImportFont={() => fontFileRef.current?.click()}
               onEditWords={() => setInspectorOpen(false)}
+              onCropImage={openCropSelected}
             />
           </SheetShell>
         </div>
@@ -1110,6 +1159,42 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
           </div>
         </ModalShell>
       )}
+
+      {/* Crop Mode — the dedicated full-screen crop editor. While open it
+          covers the whole editor (its own toolbar / gestures / undo), and
+          only Done touches the document (a single history entry). */}
+      {cropTarget && load.phase === "ready" && (() => {
+        const layer = doc.layers.find(
+          (l): l is ImageLayer => l.id === cropTarget && l.type === "image",
+        );
+        if (!layer) return null;
+        const resolvedUrl =
+          layer.url && /^(https?:|data:|blob:)/.test(layer.url)
+            ? layer.url
+            : assetUrl(layer.assetId);
+        if (!resolvedUrl) {
+          // Local asset not yet hydrated — retry when assets resolve.
+          return (
+            <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[#0a0a0a] text-white">
+              <div
+                className="size-44 rounded-full border-2 border-white/12"
+                style={{ borderTopColor: "rgba(255,255,255,0.55)", animation: "se-spin 0.9s linear infinite" }}
+                role="status"
+                aria-label="Loading image"
+              />
+            </div>
+          );
+        }
+        return (
+          <CropEditor
+            key={layer.id}
+            layer={layer}
+            resolvedUrl={resolvedUrl}
+            onDone={commitCrop}
+            onCancel={() => setCropTarget(null)}
+          />
+        );
+      })()}
 
       {/* auth gate */}
       {authGate && (
@@ -1392,9 +1477,11 @@ function LibraryContent({
 function InspectorContent({
   onImportFont,
   onEditWords,
+  onCropImage,
 }: {
   onImportFont: () => void;
   onEditWords: () => void;
+  onCropImage: () => void;
 }) {
   const doc = useEditorStore((s) => s.document);
   const selection = useEditorStore((s) => s.selection);
@@ -1436,7 +1523,9 @@ function InspectorContent({
           onEditWords={onEditWords}
         />
       )}
-      {selected && selected.type !== "text" && <ImageProperties layer={selected} />}
+      {selected && selected.type !== "text" && (
+        <ImageProperties layer={selected} onCropImage={onCropImage} />
+      )}
 
       <LayersSection />
     </div>
@@ -1635,7 +1724,7 @@ function TextProperties({
   );
 }
 
-function ImageProperties({ layer }: { layer: Layer }) {
+function ImageProperties({ layer, onCropImage }: { layer: Layer; onCropImage: () => void }) {
   const updateLayer = useEditorStore((s) => s.updateLayer);
   if (layer.type === "text") return null;
   // Normalize rotation into [-180, 180) for the slider: handle rotations can
@@ -1645,6 +1734,16 @@ function ImageProperties({ layer }: { layer: Layer }) {
   return (
     <section className="rounded-[15px] border border-white/8 bg-white/[0.02] p-12">
       <p className="text-11 tracking-[-0.02em] text-white/70">{layer.type === "sticker" ? "Sticker" : "Image"}</p>
+      {layer.type === "image" && (
+        <button
+          type="button"
+          onClick={onCropImage}
+          className="mt-10 flex w-full items-center justify-center gap-8 rounded-full border border-white/12 bg-white/5 py-11 text-12 text-white transition-colors hover:bg-white/12"
+        >
+          <IconCrop />
+          {layer.crop ? "Edit crop" : "Crop image"}
+        </button>
+      )}
       <div className="mt-10">
         <div className="flex items-center justify-between">
           <span className="text-10 text-white/45">Opacity</span>

@@ -8,6 +8,7 @@
 import type { ImageLikeLayer, SmartEditDocument, TextLayer } from "./types";
 import { ensureFontsReady, layoutTextLayer } from "./textLayout";
 import { assetUrl } from "./assets";
+import { cropCanvasTransform } from "./crop";
 
 export interface ExportOptions {
   format: "png" | "jpg";
@@ -93,7 +94,30 @@ export async function renderDocumentToCanvas(
     } else {
       const img = images.get(layer.id);
       if (img) {
-        ctx.drawImage(img, -layer.width / 2, -layer.height / 2, layer.width, layer.height);
+        if (layer.type === "image" && layer.crop) {
+          // Cropped photo: draw the ORIGINAL image through the same crop
+          // transform the on-screen renderer uses (crop.ts) — the export
+          // matches the editor pixel-for-pixel, no intermediate canvas and
+          // no re-encoded asset.
+          const t = cropCanvasTransform(layer.crop, layer.natural, layer.width, layer.height);
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(-layer.width / 2, -layer.height / 2, layer.width, layer.height);
+          ctx.clip();
+          ctx.translate(t.tx, t.ty);
+          ctx.scale(t.sx, t.sy);
+          ctx.rotate(t.rotationRad);
+          ctx.drawImage(
+            img,
+            -layer.natural.width / 2,
+            -layer.natural.height / 2,
+            layer.natural.width,
+            layer.natural.height,
+          );
+          ctx.restore();
+        } else {
+          ctx.drawImage(img, -layer.width / 2, -layer.height / 2, layer.width, layer.height);
+        }
       } else {
         ctx.fillStyle = "rgba(0,0,0,0.08)";
         ctx.fillRect(-layer.width / 2, -layer.height / 2, layer.width, layer.height);

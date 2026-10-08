@@ -97,6 +97,27 @@ export const IconDuplicate = () =>
 export const IconEdit = () =>
   strokeIcon(<path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17zM13.5 6.5l3 3" />);
 export const IconPublish = () => strokeIcon(<path d="M5 13.5 12 6l7 7.5M12 6v14" />);
+export const IconCrop = () =>
+  strokeIcon(
+    <>
+      <path d="M7 2v13a2 2 0 0 0 2 2h13" />
+      <path d="M2 7h13a2 2 0 0 1 2 2v13" />
+    </>,
+  );
+export const IconRotateLeft = () =>
+  strokeIcon(
+    <>
+      <path d="M2.5 4v6h6" />
+      <path d="M4.6 15a9 9 0 1 0 1.2-9.3L2.5 10" />
+    </>,
+  );
+export const IconRotateRight = () =>
+  strokeIcon(
+    <>
+      <path d="M21.5 4v6h-6" />
+      <path d="M19.4 15a9 9 0 1 1-1.2-9.3L21.5 10" />
+    </>,
+  );
 
 /* ── Buttons ────────────────────────────────────────────────────────────── */
 

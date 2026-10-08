@@ -39,12 +39,43 @@ export interface TextLayer extends BaseLayer {
   lineHeight: number;
 }
 
+/**
+ * Non-destructive image crop. The rect is NORMALISED (0..1) over the
+ * ROTATED image space — the coordinate frame of the original image after
+ * `rotation` degrees clockwise (for 90° steps this is just the swapped
+ * axes; normalised units keep the crop independent of the asset's pixel
+ * resolution, device pixel ratio and any future re-compression).
+ *
+ *   original image (W×H)
+ *     ⇅ rotate by `rotation` around its centre
+ *   rotated space (W'×H' bounding box)
+ *     ⇎ crop rect {x, y, width, height} — normalised over W'×H'
+ *
+ * `undefined` means "no crop" — the whole (unrotated) image is visible.
+ * The original asset is never modified; Reset simply removes the crop.
+ */
+export interface CropState {
+  /** left edge of the visible rect, normalised over the rotated width */
+  x: number;
+  /** top edge of the visible rect, normalised over the rotated height */
+  y: number;
+  /** visible width, normalised over the rotated width (0 < width ≤ 1) */
+  width: number;
+  /** visible height, normalised over the rotated height (0 < height ≤ 1) */
+  height: number;
+  /** image-content rotation inside the crop, degrees clockwise.
+   *  The UI produces multiples of 90; the render math is general. */
+  rotation: number;
+}
+
 export interface ImageLayer extends BaseLayer {
   type: "image";
   assetId: string;
   /** resolved url at save/publish time; editors resolve via asset registry */
   url: string;
   natural: { width: number; height: number };
+  /** non-destructive crop — absent means the uncropped image */
+  crop?: CropState;
 }
 
 export interface StickerLayer extends BaseLayer {
