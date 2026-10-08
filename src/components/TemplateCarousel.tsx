@@ -324,7 +324,7 @@ export function TemplateCarousel({ templates, onSelect }: Props) {
   if (!folio || templates.length === 0) return null;
 
   return (
-    <div ref={rootRef} className="fixed inset-0 z-10 overflow-hidden">
+    <div ref={rootRef} className="pointer-events-auto fixed inset-0 z-10 overflow-hidden">
       <div
         ref={trackRef}
         className="absolute left-0 top-0 flex w-full flex-col gap-y-20 px-20 s:top-1/2 s:flex-row s:-translate-y-1/2 s:gap-x-10 s:px-0"
