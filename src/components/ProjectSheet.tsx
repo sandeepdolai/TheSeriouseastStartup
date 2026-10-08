@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable react-hooks/immutability */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { FEATURED, type Project } from "@/lib/projects";
 import { ease, tween } from "@/gl/react";
 
@@ -16,6 +16,10 @@ interface Props {
   swipeDirection?: -1 | 1 | null;
   swipeX?: number;
   interactive?: boolean;
+  /** Optional content rendered in the existing title/action area. */
+  actionContent?: ReactNode;
+  /** Optional media aspect ratios; falls back to the existing project map. */
+  mediaAspects?: number[];
   onSwipeStart?: (direction: -1 | 1) => void;
   onSwipeMove?: (x: number) => void;
   onSwipeCancel?: () => void;
@@ -79,10 +83,13 @@ export function ProjectSheet({
   onSwipeMove,
   onSwipeCancel,
   onSwipeCommit,
+  actionContent,
+  mediaAspects,
 }: Props) {
   const idx = FEATURED.findIndex((p) => p.slug === project.slug);
-  const prev = FEATURED[(idx - 1 + FEATURED.length) % FEATURED.length];
-  const next = FEATURED[(idx + 1) % FEATURED.length];
+  const isFeaturedProject = idx >= 0;
+  const prev = isFeaturedProject ? FEATURED[(idx - 1 + FEATURED.length) % FEATURED.length] : null;
+  const next = isFeaturedProject ? FEATURED[(idx + 1) % FEATURED.length] : null;
 
   const sheetRef = useRef<HTMLDivElement>(null);
   const mediaRef = useRef<HTMLDivElement>(null);
@@ -335,7 +342,7 @@ export function ProjectSheet({
     };
   }, []);
 
-  const aspects = MEDIA_ASPECTS[project.slug] || project.media.map(() => 16 / 9);
+  const aspects = mediaAspects?.length ? mediaAspects : (MEDIA_ASPECTS[project.slug] || project.media.map(() => 16 / 9));
 
   const reveal = (d: number) => ({
     style: {
@@ -410,7 +417,9 @@ export function ProjectSheet({
           <div className="mt-15 s:mt-20 max-w-[40rem] text-14 s:text-16 tracking-[-0.035em] text-black" {...reveal(0.22)}>
             {project.description}
           </div>
-          <div className="mt-30 s:mt-45" {...reveal(0.34)} />
+          <div className="mt-30 s:mt-45" {...reveal(0.34)}>
+            {actionContent}
+          </div>
         </div>
         <div className="relative w-full flex-1 min-h-0 overflow-hidden s:w-auto s:flex-none s:h-full">
           <div ref={mediaRef} className="flex w-full flex-col items-center gap-y-30 s:gap-y-60 s:w-700 s:shrink-0 pb-80 has-hover:pb-0 will-change-transform">
@@ -457,12 +466,16 @@ export function ProjectSheet({
         </button>
       </div>
 
-      <div className="invisible fixed inset-100 z-20 translate-x-[calc((100%+9rem)*-1)] s:translate-x-[calc((100%+7.5rem)*-1)] rounded-15 s:rounded-20 bg-white opacity-30" data-id={prev.slug} data-gl="related" style={{ visibility: entered ? "visible" : "hidden" }}>
-        <button type="button" onClick={() => onPrev(prev.slug)} className="pointer-events-auto absolute inset-0 -right-25 cursor-pointer" aria-label={`Previous project: ${prev.title}`} />
-      </div>
-      <div className="invisible fixed inset-100 z-20 translate-x-[calc(100%+9rem)] s:translate-x-[calc(100%+7.5rem)] rounded-15 s:rounded-20 bg-white opacity-30" data-id={next.slug} data-gl="related" style={{ visibility: entered ? "visible" : "hidden" }}>
-        <button type="button" onClick={() => onNext(next.slug)} className="pointer-events-auto absolute inset-0 -left-25 cursor-pointer" aria-label={`Next project: ${next.title}`} />
-      </div>
+      {prev && (
+        <div className="invisible fixed inset-100 z-20 translate-x-[calc((100%+9rem)*-1)] s:translate-x-[calc((100%+7.5rem)*-1)] rounded-15 s:rounded-20 bg-white opacity-30" data-id={prev.slug} data-gl="related" style={{ visibility: entered ? "visible" : "hidden" }}>
+          <button type="button" onClick={() => onPrev(prev.slug)} className="pointer-events-auto absolute inset-0 -right-25 cursor-pointer" aria-label={`Previous project: ${prev.title}`} />
+        </div>
+      )}
+      {next && (
+        <div className="invisible fixed inset-100 z-20 translate-x-[calc(100%+9rem)] s:translate-x-[calc(100%+7.5rem)] rounded-15 s:rounded-20 bg-white opacity-30" data-id={next.slug} data-gl="related" style={{ visibility: entered ? "visible" : "hidden" }}>
+          <button type="button" onClick={() => onNext(next.slug)} className="pointer-events-auto absolute inset-0 -left-25 cursor-pointer" aria-label={`Next project: ${next.title}`} />
+        </div>
+      )}
     </>
   );
 }
