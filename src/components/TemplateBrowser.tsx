@@ -1,10 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { getAccountKey } from "@/lib/accountStorage";
 import { putLocalProject } from "@/lib/localProjects";
-import { SmartEditPreview } from "./smartedit/SmartEditPreview";
+import { HomeCarousel } from "./HomeCarousel";
+import { ProjectSheet } from "./ProjectSheet";
+import { useFolio } from "@/gl/react";
+import type { Project } from "@/lib/projects";
 import type { AssetRecord, SmartEditDocument } from "./smartedit/types";
 
 interface PublishedTemplate {
@@ -26,6 +29,7 @@ interface Props {
 }
 
 export function TemplateBrowser({ onOpenEditor }: Props) {
+  const folio = useFolio();
   const { data: session, status } = useSession();
   const [templates, setTemplates] = useState<PublishedTemplate[]>([]);
   const [selected, setSelected] = useState<PublishedTemplate | null>(null);
@@ -117,132 +121,168 @@ export function TemplateBrowser({ onOpenEditor }: Props) {
     }
   }, [requireAccount, selected, session?.user?.email]);
 
+  const carouselProjects = useMemo<Project[]>(
+    () =>
+      templates.flatMap((template) => {
+        const previewUrl =
+          template.previewUrl ??
+          Object.values(template.assets).find((asset) => typeof asset.url === "string" && asset.url)?.url;
+        if (!previewUrl) return [];
+
+        const width = template.document?.canvas?.width ?? 1;
+        const height = template.document?.canvas?.height ?? 1;
+        return [{
+          title: template.title,
+          slug: `template-${template.id}`,
+          description:
+            template.description?.trim() ||
+            "Duplicate this design to make your own version in Smart Edit.",
+          link: null,
+          tags: [],
+          awards: 0,
+          aspect: width / height,
+          media: [previewUrl],
+        }];
+      }),
+    [templates],
+  );
+
+  const selectedProjectIndex = selected
+    ? carouselProjects.findIndex((project) => project.slug === `template-${selected.id}`)
+    : -1;
+  const selectedProject =
+    selectedProjectIndex >= 0 ? carouselProjects[selectedProjectIndex] : null;
+  const relatedPrev =
+    selectedProjectIndex >= 0 && carouselProjects.length > 1
+      ? carouselProjects[(selectedProjectIndex - 1 + carouselProjects.length) % carouselProjects.length]
+      : null;
+  const relatedNext =
+    selectedProjectIndex >= 0 && carouselProjects.length > 1
+      ? carouselProjects[(selectedProjectIndex + 1) % carouselProjects.length]
+      : null;
+
+  const [swipe, setSwipe] = useState<{
+    phase: "idle" | "drag" | "commit" | "cancel";
+    direction: -1 | 1 | null;
+    x: number;
+  }>({ phase: "idle", direction: null, x: 0 });
+
+  const selectProjectSlug = useCallback((slug: string) => {
+    const template = templates.find((item) => `template-${item.id}` === slug);
+    if (template) {
+      setSelected(template);
+      setSwipe({ phase: "idle", direction: null, x: 0 });
+    }
+  }, [templates]);
+
+  const beginSwipe = useCallback((direction: -1 | 1) => {
+    setSwipe({ phase: "drag", direction, x: 0 });
+  }, []);
+
+  const moveSwipe = useCallback((x: number) => {
+    setSwipe((current) => current.phase === "drag" ? { ...current, x } : current);
+  }, []);
+
+  const cancelSwipe = useCallback(() => {
+    setSwipe((current) => ({ ...current, phase: "cancel" }));
+    window.setTimeout(() => setSwipe({ phase: "idle", direction: null, x: 0 }), 360);
+  }, []);
+
+  const commitSwipe = useCallback((direction: -1 | 1) => {
+    if (selectedProjectIndex < 0 || carouselProjects.length < 2) {
+      cancelSwipe();
+      return;
+    }
+    setSwipe({ phase: "commit", direction, x: swipe.x });
+    window.setTimeout(() => {
+      const targetIndex =
+        (selectedProjectIndex + (direction < 0 ? 1 : -1) + carouselProjects.length) %
+        carouselProjects.length;
+      selectProjectSlug(carouselProjects[targetIndex].slug);
+      setSwipe({ phase: "idle", direction: null, x: 0 });
+    }, 360);
+  }, [cancelSwipe, carouselProjects, selectProjectSlug, selectedProjectIndex, swipe.x]);
+
   return (
-    <main className="fixed inset-0 z-20 overflow-y-auto bg-[#f5f3ed] text-black">
-      <div className="min-h-full px-20 pb-100 pt-100 s:px-50 s:pb-80 s:pt-120">
-        <div className="mx-auto max-w-[1100px]">
-          <div className="mb-30 flex items-end justify-between gap-20">
-            <div>
-              <p className="label opacity-45">PAPER STISH</p>
-              <h1 className="mt-8 text-35 leading-none tracking-[-0.055em] s:text-55">Templates</h1>
-              <p className="mt-10 max-w-[620px] text-14 leading-20 text-black/50">
-                Ready-made designs you can duplicate and completely customize in Smart Edit.
-              </p>
-            </div>
-            {loading && <span className="text-11 text-black/40">Loading…</span>}
-          </div>
+    <>
+      {folio && !loading && carouselProjects.length > 0 && (
+        <HomeCarousel
+          folio={folio}
+          enabled={!selected}
+          returning={null}
+          onSelect={selectProjectSlug}
+          hidden={false}
+          projects={carouselProjects}
+        />
+      )}
 
-          {error && (
-            <div className="mb-20 rounded-12 border border-red-900/10 bg-red-900/5 px-15 py-12 text-12 text-red-800">
-              {error}
-            </div>
-          )}
-
-          {!loading && templates.length === 0 ? (
-            <div className="rounded-20 border border-black/8 bg-white px-20 py-40 text-center text-13 text-black/45">
-              No templates have been published yet.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-15 s:grid-cols-2 s:gap-20 lg:grid-cols-3">
-              {templates.map((template) => (
-                <button
-                  key={template.id}
-                  type="button"
-                  onClick={() => setSelected(template)}
-                  className="group overflow-hidden rounded-18 border border-black/8 bg-white text-left shadow-[0_10px_40px_rgba(0,0,0,0.05)] transition-transform duration-300 hover:-translate-y-1"
-                >
-                  <div className="relative aspect-[4/5] overflow-hidden bg-[#111]">
-                    {template.previewUrl ? (
-                      <img
-                        src={template.previewUrl}
-                        alt={template.title}
-                        loading="lazy"
-                        draggable={false}
-                        className="absolute inset-0 size-full object-contain"
-                      />
-                    ) : (
-                      <SmartEditPreview document={template.document} assets={Object.values(template.assets)} />
-                    )}
-                  </div>
-                  <div className="px-15 py-14">
-                    <p className="text-15 tracking-[-0.025em]">{template.title}</p>
-                    <p className="mt-4 text-10 text-black/35">Open template</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {selected && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-15 py-20 backdrop-blur-[8px]"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setSelected(null);
-          }}
-        >
-          <section className="flex max-h-[92vh] w-full max-w-[1050px] flex-col overflow-hidden rounded-20 bg-white shadow-2xl s:flex-row">
-            <div className="min-h-0 flex-1 bg-[#111] p-15 s:p-25">
-              <div className="flex h-full min-h-[55vh] items-center justify-center overflow-hidden rounded-12 bg-[#0d0d0d]">
-                {selected.previewUrl ? (
-                  <img
-                    src={selected.previewUrl}
-                    alt={selected.title}
-                    draggable={false}
-                    className="max-h-full max-w-full object-contain"
-                  />
-                ) : (
-                  <SmartEditPreview document={selected.document} assets={Object.values(selected.assets)} />
-                )}
-              </div>
-            </div>
-
-            <div className="w-full shrink-0 p-20 s:w-[330px] s:p-25">
-              <button
-                type="button"
-                onClick={() => setSelected(null)}
-                className="float-right flex size-34 items-center justify-center rounded-full bg-black/6 text-18"
-                aria-label="Close template"
-              >
-                ×
-              </button>
-
-              <div className="clear-both pt-25 s:pt-50">
-                <p className="label opacity-40">TEMPLATE</p>
-                <h2 className="mt-8 text-28 leading-none tracking-[-0.05em]">{selected.title}</h2>
-                <p className="mt-12 whitespace-pre-line text-12 leading-18 text-black/48">
-                  {selected.description?.trim() ||
-                    "Duplicate this design to make your own version in Smart Edit. Your changes are completely separate from the original template."}
-                </p>
-
-                <div className="mt-25 flex flex-col gap-8">
-                  <button
-                    type="button"
-                    disabled={!!working}
-                    onClick={() => void duplicate()}
-                    className="h-48 rounded-full bg-black text-13 text-white disabled:opacity-45"
-                  >
-                    {working === "duplicate" ? "Opening…" : "Duplicate"}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!!working}
-                    onClick={saveTemplate}
-                    className="h-48 rounded-full border border-black/12 bg-black/[0.03] text-13 text-black disabled:opacity-45"
-                  >
-                    {working === "save" ? "Saved" : "Save"}
-                  </button>
-                </div>
-
-                <p className="mt-15 text-10 leading-14 text-black/35">
-                  Sign in is required only when you duplicate or save.
-                </p>
-              </div>
-            </div>
-          </section>
+      {loading && (
+        <div className="pointer-events-none fixed inset-0 z-20 flex items-center justify-center text-10 uppercase tracking-[0.08em] text-white/45">
+          Loading templates
         </div>
       )}
-    </main>
+
+      {error && (
+        <div className="pointer-events-auto fixed left-1/2 top-1/2 z-[60] w-[min(34rem,calc(100%-3rem))] -translate-x-1/2 -translate-y-1/2 rounded-16 border border-white/10 bg-black/85 px-18 py-15 text-center text-12 text-white backdrop-blur-xl">
+          {error}
+        </div>
+      )}
+
+      {!loading && !error && carouselProjects.length === 0 && (
+        <div className="pointer-events-none fixed inset-0 z-20 flex items-center justify-center px-25 text-center text-12 text-white/45">
+          No published template previews are available yet.
+        </div>
+      )}
+
+      {selected && selectedProject && (
+        <ProjectSheet
+          key={selected.id}
+          project={selectedProject}
+          mediaAspects={[selectedProject.aspect]}
+          relatedPrev={relatedPrev}
+          relatedNext={relatedNext}
+          entered
+          interactive={carouselProjects.length > 1}
+          swipePhase={swipe.phase}
+          swipeDirection={swipe.direction}
+          swipeX={swipe.x}
+          onSwipeStart={beginSwipe}
+          onSwipeMove={moveSwipe}
+          onSwipeCancel={cancelSwipe}
+          onSwipeCommit={commitSwipe}
+          onClose={() => {
+            setSelected(null);
+            setSwipe({ phase: "idle", direction: null, x: 0 });
+          }}
+          onPrev={selectProjectSlug}
+          onNext={selectProjectSlug}
+          actionContent={
+            <div className="flex items-center gap-12">
+              <button
+                type="button"
+                disabled={!!working}
+                onClick={() => void duplicate()}
+                className="flex size-48 shrink-0 items-center justify-center rounded-full bg-black text-white transition-transform duration-300 hover:scale-105 disabled:opacity-45"
+                aria-label="Duplicate template"
+                title="Duplicate template"
+              >
+                <svg viewBox="0 0 24 24" className="size-17" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="8" y="8" width="11" height="11" rx="2" />
+                  <path d="M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                disabled={!!working}
+                onClick={saveTemplate}
+                className="h-48 rounded-full bg-black/[0.06] px-20 text-12 uppercase tracking-[0.04em] text-black transition-transform duration-300 hover:scale-[1.02] disabled:opacity-45"
+              >
+                {working === "save" ? "Saved" : "Save"}
+              </button>
+            </div>
+          }
+        />
+      )}
+    </>
   );
 }
