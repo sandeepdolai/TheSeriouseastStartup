@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { getAccountKey } from "@/lib/accountStorage";
 import { putLocalProject } from "@/lib/localProjects";
@@ -9,6 +9,7 @@ import { ProjectSheet } from "./ProjectSheet";
 import { useFolio } from "@/gl/react";
 import type { Project } from "@/lib/projects";
 import type { AssetRecord, SmartEditDocument } from "./smartedit/types";
+import { renderDocumentToCanvas } from "./smartedit/exportRenderer";
 
 interface PublishedTemplate {
   id: string;
@@ -24,6 +25,24 @@ interface PublishedTemplate {
   publishedAt: string;
 }
 
+function fallbackTemplatePreview(template: PublishedTemplate): string {
+  const width = template.document?.canvas?.width ?? 1080;
+  const height = template.document?.canvas?.height ?? 1350;
+  const rawBackground = template.document?.background?.color;
+  const background = typeof rawBackground === "string" && /^#[0-9a-fA-F]{6}$/.test(rawBackground)
+    ? rawBackground
+    : "#f4efe6";
+  const title = template.title
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+  const fontSize = Math.max(20, Math.round(Math.min(width, height) * 0.06));
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="${background}"/><text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="${fontSize}" fill="#111111">${title}</text></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
 interface Props {
   onOpenEditor: (projectId: string) => void;
 }
@@ -36,6 +55,12 @@ export function TemplateBrowser({ onOpenEditor }: Props) {
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState<"duplicate" | "save" | null>(null);
   const [error, setError] = useState("");
+  const previewObjectUrls = useRef(new Set<string>());
+
+  useEffect(() => () => {
+    previewObjectUrls.current.forEach((url) => URL.revokeObjectURL(url));
+    previewObjectUrls.current.clear();
+  }, []);
 
   const loadTemplates = useCallback(async () => {
     try {
@@ -43,7 +68,33 @@ export function TemplateBrowser({ onOpenEditor }: Props) {
       const res = await fetch("/api/templates", { cache: "no-store" });
       if (!res.ok) throw new Error("Could not load templates.");
       const data = (await res.json()) as { templates?: PublishedTemplate[] };
-      setTemplates(Array.isArray(data.templates) ? data.templates : []);
+      const published = Array.isArray(data.templates) ? data.templates : [];
+      const withPreviews = await Promise.all(published.map(async (template) => {
+        if (typeof template.previewUrl === "string" && template.previewUrl.trim()) {
+          return template;
+        }
+
+        try {
+          const width = template.document?.canvas?.width ?? 1080;
+          const height = template.document?.canvas?.height ?? 1350;
+          const scale = Math.min(1, 1000 / Math.max(width, height));
+          const canvas = await renderDocumentToCanvas(template.document, { format: "jpg", scale });
+          const blob = await new Promise<Blob | null>((resolve) =>
+            canvas.toBlob((value) => resolve(value), "image/jpeg", 0.88),
+          );
+          if (blob) {
+            const url = URL.createObjectURL(blob);
+            previewObjectUrls.current.add(url);
+            return { ...template, previewUrl: url };
+          }
+        } catch {
+          // Keep the published template available even if a legacy document
+          // cannot be rendered by the preview pipeline.
+        }
+
+        return { ...template, previewUrl: fallbackTemplatePreview(template) };
+      }));
+      setTemplates(withPreviews);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load templates.");
     } finally {
@@ -124,9 +175,7 @@ export function TemplateBrowser({ onOpenEditor }: Props) {
   const carouselProjects = useMemo<Project[]>(
     () =>
       templates.flatMap((template) => {
-        const previewUrl =
-          template.previewUrl ??
-          Object.values(template.assets).find((asset) => typeof asset.url === "string" && asset.url)?.url;
+        const previewUrl = template.previewUrl;
         if (!previewUrl) return [];
 
         const width = template.document?.canvas?.width ?? 1;
