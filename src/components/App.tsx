@@ -7,6 +7,7 @@ import { FEATURED } from "@/lib/projects";
 import { TemplateBrowser } from "./TemplateBrowser";
 import { Hud } from "./Hud";
 import { MyProjects } from "./MyProjects";
+import { SavedTemplates } from "./SavedTemplates";
 import { SmartEditEditor } from "./smartedit/SmartEditEditor";
 import { type CanvasRatio, createDocument } from "./smartedit/types";
 import { ProjectSheet } from "./ProjectSheet";
@@ -15,7 +16,7 @@ import { getAccountKey } from "@/lib/accountStorage";
 import { isAdminEmail } from "@/lib/admin";
 import { listLocalProjects, putLocalProject } from "@/lib/localProjects";
 
-type View = "home" | "my" | "project" | "smart-edit";
+type View = "home" | "my" | "saved" | "project" | "smart-edit";
 type Overlay = "profile" | null;
 
 export function App() {
@@ -62,6 +63,7 @@ export function App() {
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [sheetEntered, setSheetEntered] = useState(false);
   const [myEntered, setMyEntered] = useState(false);
+  const [savedEntered, setSavedEntered] = useState(false);
   const [smartEditProjectId, setSmartEditProjectId] = useState<string | null>(null);
   const [carouselHidden, setCarouselHidden] = useState(false);
   const [returning, setReturning] = useState<string | null>(null);
@@ -138,17 +140,19 @@ export function App() {
     });
   }, [folio]);
 
-  const wipeTo = useCallback(async (next: "my" | "home") => {
+  const wipeTo = useCallback(async (next: "my" | "home" | "saved") => {
     if (busy.current) return;
     busy.current = true;
     folio.openHole(window.innerWidth / 2, window.innerHeight / 2);
     await wait(500);
     setView(next);
     setMyEntered(false);
+    setSavedEntered(false);
     await wait(120);
     folio.closeHole();
     await wait(220);
     if (next === "my") setMyEntered(true);
+    if (next === "saved") setSavedEntered(true);
     busy.current = false;
   }, [folio]);
 
@@ -379,14 +383,19 @@ export function App() {
     if (overlay) closeOverlay();
     else if (view === "project") closeProject();
     else if (view === "smart-edit") closeSmartEdit();
-    else if (view === "my") wipeTo("home");
+    else if (view === "my" || view === "saved") wipeTo("home");
   }, [view, overlay, closeOverlay, closeProject, closeSmartEdit, wipeTo]);
 
   const goMy = useCallback(() => {
-    if (busy.current || (view !== "home" && view !== "my")) return;
+    if (busy.current || (view !== "home" && view !== "my" && view !== "saved")) return;
     if (overlay) closeOverlay();
     wipeTo("my");
   }, [view, overlay, closeOverlay, wipeTo]);
+
+  const goSaved = useCallback(() => {
+    if (busy.current || overlay || (view !== "home" && view !== "my")) return;
+    wipeTo("saved");
+  }, [view, overlay, wipeTo]);
 
   return (
     <>
@@ -401,6 +410,8 @@ export function App() {
           onCreateSmartEdit={createSmartEdit}
         />
       )}
+
+      {view === "saved" && <SavedTemplates entered={savedEntered} />}
 
       {view === "smart-edit" && smartEditProjectId && (
         <SmartEditEditor projectId={smartEditProjectId} onClose={closeSmartEdit} />
@@ -497,6 +508,7 @@ export function App() {
         view={view}
         overlay={overlay}
         onProfile={() => toggleOverlay("profile")}
+        onSaved={goSaved}
         onHome={goHome}
         onMy={goMy}
       />
