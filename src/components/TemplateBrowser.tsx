@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { getAccountKey } from "@/lib/accountStorage";
 import { putLocalProject } from "@/lib/localProjects";
-import { SmartEditPreview } from "./smartedit/SmartEditPreview";
+import { TemplateCarousel } from "./TemplateCarousel";
 import type { AssetRecord, SmartEditDocument } from "./smartedit/types";
 
 interface PublishedTemplate {
@@ -118,75 +118,49 @@ export function TemplateBrowser({ onOpenEditor }: Props) {
   }, [requireAccount, selected, session?.user?.email]);
 
   return (
-    <main className="fixed inset-0 z-20 overflow-y-auto bg-[#f5f3ed] text-black">
-      <div className="min-h-full px-20 pb-100 pt-100 s:px-50 s:pb-80 s:pt-120">
-        <div className="mx-auto max-w-[1100px]">
-          <div className="mb-30 flex items-end justify-between gap-20">
-            <div>
-              <h1 className="text-35 leading-none tracking-[-0.055em] s:text-55">Templates</h1>
-              <p className="mt-10 max-w-[620px] text-14 leading-20 text-black/50">
-                Ready-made designs you can duplicate and completely customize in Smart Edit.
-              </p>
-            </div>
-            {loading && <span className="text-11 text-black/40">Loading…</span>}
-          </div>
+    <main className="fixed inset-0 z-20 pointer-events-none bg-transparent text-white">
+      <TemplateCarousel
+        templates={templates.map((template) => ({
+          id: template.id,
+          title: template.title,
+          previewUrl: template.previewUrl ?? null,
+          aspect:
+            template.document?.canvas?.width && template.document?.canvas?.height
+              ? template.document.canvas.width / template.document.canvas.height
+              : 1,
+        }))}
+        onSelect={(id) => {
+          const template = templates.find((item) => item.id === id);
+          if (template) setSelected(template);
+        }}
+      />
 
-          {error && (
-            <div className="mb-20 rounded-12 border border-red-900/10 bg-red-900/5 px-15 py-12 text-12 text-red-800">
-              {error}
-            </div>
-          )}
-
-          {!loading && templates.length === 0 ? (
-            <div className="rounded-20 border border-black/8 bg-white px-20 py-40 text-center text-13 text-black/45">
-              No templates have been published yet.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-15 s:grid-cols-2 s:gap-20 lg:grid-cols-3">
-              {templates.map((template) => (
-                <button
-                  key={template.id}
-                  type="button"
-                  onClick={() => setSelected(template)}
-                  className="group overflow-hidden rounded-18 border border-black/8 bg-white text-left shadow-[0_10px_40px_rgba(0,0,0,0.05)] transition-transform duration-300 hover:-translate-y-1"
-                >
-                  <div
-                    className="relative overflow-hidden bg-[#111]"
-                    style={{
-                      aspectRatio: template.document.canvas.width / template.document.canvas.height,
-                    }}
-                  >
-                    {template.previewUrl ? (
-                      <img
-                        src={template.previewUrl}
-                        alt={template.title}
-                        loading="lazy"
-                        draggable={false}
-                        className="absolute inset-0 size-full object-contain"
-                      />
-                    ) : (
-                      <SmartEditPreview document={template.document} assets={Object.values(template.assets)} />
-                    )}
-                  </div>
-                  <div className="px-15 py-14">
-                    <p className="text-15 tracking-[-0.025em]">{template.title}</p>
-                    <p className="mt-4 text-10 text-black/35">Open template</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+      {loading && (
+        <div className="pointer-events-none fixed inset-0 z-30 flex items-center justify-center text-10 uppercase tracking-[0.08em] text-white/45">
+          Loading templates
         </div>
-      </div>
+      )}
+
+      {error && (
+        <div className="pointer-events-auto fixed left-1/2 top-1/2 z-30 w-[min(34rem,calc(100%-3rem))] -translate-x-1/2 -translate-y-1/2 rounded-16 border border-white/10 bg-black/80 px-18 py-15 text-center text-12 text-white backdrop-blur-xl">
+          {error}
+        </div>
+      )}
+
+      {!loading && !error && templates.length === 0 && (
+        <div className="pointer-events-none fixed inset-0 z-30 flex items-center justify-center text-12 text-white/45">
+          No templates have been published yet.
+        </div>
+      )}
 
       {selected && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 px-15 py-20 backdrop-blur-[8px]"
+          className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-15 py-20 backdrop-blur-[8px]"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) setSelected(null);
           }}
         >
-          <section className="flex max-h-[92vh] w-full max-w-[1050px] flex-col overflow-hidden rounded-20 bg-white shadow-2xl s:flex-row">
+          <section className="flex max-h-[92vh] w-full max-w-[1050px] flex-col overflow-hidden rounded-20 bg-white text-black shadow-2xl s:flex-row">
             <div className="min-h-0 flex-1 bg-[#111] p-15 s:p-25">
               <div className="flex h-full min-h-[55vh] items-center justify-center overflow-hidden rounded-12 bg-[#0d0d0d]">
                 {selected.previewUrl ? (
@@ -196,13 +170,11 @@ export function TemplateBrowser({ onOpenEditor }: Props) {
                     draggable={false}
                     className="max-h-full max-w-full object-contain"
                   />
-                ) : (
-                  <SmartEditPreview document={selected.document} assets={Object.values(selected.assets)} />
-                )}
+                ) : null}
               </div>
             </div>
 
-            <div className="w-full shrink-0 p-20 s:w-[330px] s:p-25">
+            <div className="w-full shrink-0 overflow-y-auto p-20 s:w-[330px] s:p-25">
               <button
                 type="button"
                 onClick={() => setSelected(null)}
