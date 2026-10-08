@@ -8,10 +8,14 @@
    later (e.g. a paid Cloudinary plan or another CDN) without touching the
    editor.
 
-   Cloudinary (free plan, no card required):
+   Normal user media is DEVICE-FIRST: selecting an image never uploads it to
+   Cloudinary or the Paper Stish server. Image bytes remain in IndexedDB (or
+   in-memory object URLs when IndexedDB is unavailable) until a publish flow
+   explicitly uploads the assets required by the published website.
+
+   Cloudinary is still available as a publish-time/template asset provider:
      NEXT_PUBLIC_SMART_EDIT_CLOUDINARY_CLOUD_NAME
      NEXT_PUBLIC_SMART_EDIT_CLOUDINARY_UPLOAD_PRESET   (unsigned preset)
-   When unset, uploads persist to IndexedDB — fully functional offline.
 ─────────────────────────────────────────────────────────────────────────── */
 
 import {
@@ -216,6 +220,8 @@ export async function importImageFile(file: File): Promise<UploadedImage> {
     throw new Error("That image is too large (15 MB max).");
   }
 
+  // IMPORTANT: normal user uploads stay on the device. This function is
+  // called during editing, so it must never perform a remote upload.
   const bitmap = await loadBitmap(file);
   const { blob, width, height } = await compressBitmap(bitmap.bitmap);
   bitmap.close();
@@ -232,33 +238,17 @@ export async function importImageFile(file: File): Promise<UploadedImage> {
     format: blob.type,
   };
 
-  // Cloudinary upload when configured (durable remote storage + CDN).
-  const cloud = cloudinaryConfig();
-  if (cloud) {
-    try {
-      const remote = await uploadToCloudinary(blob, cloud);
-      record.provider = "cloudinary";
-      record.url = remote.url;
-      record.width = remote.width;
-      record.height = remote.height;
-      registry.set(id, record);
-      return { record };
-    } catch {
-      // Fall through to local storage — the editor stays usable offline.
-    }
-  }
-
   const ok = await idb.putBlob({ id, blob, type: blob.type, createdAt: Date.now() });
   if (!ok && typeof URL !== "undefined") {
     // IndexedDB unavailable (private mode) — keep an in-memory object URL.
     record.url = URL.createObjectURL(blob);
     record.provider = "local";
   }
+
   registry.set(id, record);
   objectUrls.set(id, record.url ?? URL.createObjectURL(blob));
   return { record };
 }
-
 async function loadBitmap(
   file: File,
 ): Promise<{ bitmap: ImageBitmap; close: () => void }> {
