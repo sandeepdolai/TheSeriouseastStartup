@@ -3,14 +3,17 @@
 import { SITE } from "@/lib/projects";
 
 interface HudProps {
-  view: "home" | "my" | "project" | "smart-edit";
+  view: "home" | "my" | "saved" | "project" | "smart-edit";
   overlay: "profile" | null;
   onProfile: () => void;
+  onSaved: () => void;
   onHome: () => void;
   onMy: () => void;
 }
 
 export function Hud({ view, overlay, onProfile, onSaved, onHome, onMy }: HudProps) {
+  const savedOpen = view === "saved";
+
   return (
     <div className="pointer-events-none fixed inset-0 z-40 flex flex-col justify-between px-40 py-25 s:px-80 s:py-40 text-white">
       <div className="flex items-start justify-between">
@@ -43,7 +46,7 @@ export function Hud({ view, overlay, onProfile, onSaved, onHome, onMy }: HudProp
               onHome();
             }}
             className={`relative transition-opacity duration-500 ease-out ${
-              view === "my" ? "opacity-50 hover:opacity-100" : ""
+              view === "my" || view === "saved" ? "opacity-50 hover:opacity-100" : ""
             }`}
           >
             Template
@@ -63,6 +66,14 @@ export function Hud({ view, overlay, onProfile, onSaved, onHome, onMy }: HudProp
             My
           </a>
         </nav>
+        <button
+          type="button"
+          aria-expanded={savedOpen}
+          onClick={savedOpen ? onHome : onSaved}
+          className="label pointer-events-auto absolute bottom-0 right-0 transition-opacity duration-300 ease-out hover:opacity-60"
+        >
+          {savedOpen ? "Close" : "Saved Templates"}
+        </button>
       </div>
     </div>
   );
