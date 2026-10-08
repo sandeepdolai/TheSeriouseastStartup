@@ -123,8 +123,7 @@ export function TemplateBrowser({ onOpenEditor }: Props) {
         <div className="mx-auto max-w-[1100px]">
           <div className="mb-30 flex items-end justify-between gap-20">
             <div>
-              <p className="label opacity-45">PAPER STISH</p>
-              <h1 className="mt-8 text-35 leading-none tracking-[-0.055em] s:text-55">Templates</h1>
+              <h1 className="text-35 leading-none tracking-[-0.055em] s:text-55">Templates</h1>
               <p className="mt-10 max-w-[620px] text-14 leading-20 text-black/50">
                 Ready-made designs you can duplicate and completely customize in Smart Edit.
               </p>
@@ -151,7 +150,12 @@ export function TemplateBrowser({ onOpenEditor }: Props) {
                   onClick={() => setSelected(template)}
                   className="group overflow-hidden rounded-18 border border-black/8 bg-white text-left shadow-[0_10px_40px_rgba(0,0,0,0.05)] transition-transform duration-300 hover:-translate-y-1"
                 >
-                  <div className="relative aspect-[4/5] overflow-hidden bg-[#111]">
+                  <div
+                    className="relative overflow-hidden bg-[#111]"
+                    style={{
+                      aspectRatio: template.document.canvas.width / template.document.canvas.height,
+                    }}
+                  >
                     {template.previewUrl ? (
                       <img
                         src={template.previewUrl}
