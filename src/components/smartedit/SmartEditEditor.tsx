@@ -39,11 +39,9 @@ import {
   type TextLayer,
   BUILTIN_FONTS,
   clamp,
-  isImageLike,
   safeColor,
 } from "./types";
 import {
-  assetDataUrl,
   assetUrl,
   getAsset,
   hydrateAssets,
@@ -52,11 +50,12 @@ import {
   importImageFile,
   libraryItemToAsset,
   loadLibraryManifest,
+  pruneOrphanAssets,
   registerAsset,
   registerFontFromDataUrl,
   resolvePublicPath,
   restoreUserFont,
-  pruneOrphanAssets,
+  snapshotDocumentAssets,
   listUploads,
 } from "./assets";
 import { makeImageLayer, makeTextLayer, useEditorStore } from "./store";
@@ -64,6 +63,7 @@ import { clearTextLayoutCache, layoutTextLayer, onFontsChanged } from "./textLay
 import { SmartEditCanvas } from "./SmartEditCanvas";
 import { SelectionOverlay } from "./selectionOverlay";
 import { CropEditor } from "./cropEditor";
+import { PublishTemplateDialog } from "./publishDialog";
 import { exportDocument } from "./exportRenderer";
 import {
   AuthGate,
@@ -116,8 +116,8 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   const [saveError, setSaveError] = useState("");
   const [textEditorOpen, setTextEditorOpen] = useState(false);
   const [adminTemplateDraft, setAdminTemplateDraft] = useState(false);
-  const [publishingTemplate, setPublishingTemplate] = useState(false);
-  const [templatePublishError, setTemplatePublishError] = useState("");
+  /** admin “Publish to All Users” → Publish Template dialog (no immediate POST) */
+  const [publishOpen, setPublishOpen] = useState(false);
   /** id of the image layer currently open in Crop Mode (covers the editor) */
   const [cropTarget, setCropTarget] = useState<string | null>(null);
 
@@ -281,22 +281,6 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
 
   const account = getAccountKey(session?.user?.email);
 
-  const snapshotAssets = useCallback((document: SmartEditDocument): Record<string, AssetRecord> => {
-    const out: Record<string, AssetRecord> = {};
-    for (const layer of document.layers) {
-      if (isImageLike(layer)) {
-        const record = getAsset(layer.assetId);
-        if (record) out[record.id] = record;
-      }
-    }
-    for (const font of document.fonts ?? []) {
-      if (font.source !== "user") continue;
-      const record = getAsset(font.id);
-      if (record) out[record.id] = record;
-    }
-    return out;
-  }, []);
-
   const writeProjectRecord = useCallback(
     async () => {
       if (status !== "authenticated") return false;
@@ -310,13 +294,13 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
         data: {
           kind: "smart-edit",
           document: state.document,
-          assets: snapshotAssets(state.document),
+          assets: snapshotDocumentAssets(state.document),
         },
       });
       if (ok) state.markSaved();
       return ok;
     },
-    [projectId, account, snapshotAssets, status],
+    [projectId, account, status],
   );
 
   const flushDraft = useCallback(() => {
@@ -435,7 +419,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   // already committed to the store) — no caret stays active behind an open
   // sheet. Closing a sheet never touches the editing state.
   const sheetsOpen =
-    libraryOpen || inspectorOpen || exportOpen || !!authGate || textEditorOpen;
+    libraryOpen || inspectorOpen || exportOpen || !!authGate || textEditorOpen || publishOpen;
   const prevSheetsOpenRef = useRef(false);
   useEffect(() => {
     if (sheetsOpen && !prevSheetsOpenRef.current) {
@@ -453,98 +437,20 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
 
   /* ── Save / publish / export ──────────────────────────────────────── */
 
-  const publishTemplate = useCallback(async () => {
-    if (!adminTemplateDraft || !isAdminEmail(session?.user?.email) || publishingTemplate) return;
-
+  /** "Publish to All Users" opens the Publish Template dialog — the admin
+   *  reviews the exact preview + fills in metadata before anything is
+   *  uploaded or created server-side. Entering it behaves like every other
+   *  modal: text editing commits, sheets close, selection is preserved. */
+  const openPublishDialog = useCallback(() => {
     const state = useEditorStore.getState();
-    const templateTitle = state.title.trim();
-    if (!templateTitle) {
-      setTemplatePublishError("Give the template a name first.");
-      return;
-    }
-
-    setPublishingTemplate(true);
-    setTemplatePublishError("");
-
-    try {
-      const document = structuredClone(state.document);
-      const assets = snapshotAssets(document);
-
-      for (const layer of document.layers) {
-        if (!isImageLike(layer)) continue;
-        const record = assets[layer.assetId];
-        if (!record) continue;
-
-        let url = record.url ?? "";
-        if (record.provider === "local") {
-          url = (await assetDataUrl(record.id)) ?? "";
-        }
-        if (!url) throw new Error(`The asset "${record.name}" is not available for publishing.`);
-
-        layer.url = url;
-        assets[record.id] = {
-          ...record,
-          provider: "bundled",
-          url,
-          storeKey: undefined,
-        };
-      }
-
-      for (const font of document.fonts ?? []) {
-        if (font.source !== "user") continue;
-        const record = assets[font.id];
-        if (!record) continue;
-
-        const dataUrl = font.dataUrl || (
-          record.provider === "local" ? await assetDataUrl(record.id) : record.url
-        );
-        if (!dataUrl) throw new Error(`The font "${record.name}" is not available for publishing.`);
-
-        font.dataUrl = dataUrl;
-        assets[record.id] = {
-          ...record,
-          provider: "bundled",
-          url: dataUrl,
-          storeKey: undefined,
-        };
-      }
-
-      const res = await fetch("/api/templates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: templateTitle,
-          document,
-          assets,
-        }),
-      });
-
-      if (!res.ok) {
-        let message = "Could not publish the template.";
-        try {
-          const body = (await res.json()) as { error?: string };
-          if (body.error) message = body.error;
-        } catch {
-          // keep default message
-        }
-        throw new Error(message);
-      }
-
-      setSavedFlash(true);
-      window.setTimeout(() => setSavedFlash(false), 1800);
-    } catch (err) {
-      setTemplatePublishError(
-        err instanceof Error ? err.message : "Could not publish the template.",
-      );
-    } finally {
-      setPublishingTemplate(false);
-    }
-  }, [
-    adminTemplateDraft,
-    publishingTemplate,
-    session?.user?.email,
-    snapshotAssets,
-  ]);
+    if (state.editingId) state.startEditing(null);
+    setLibraryOpen(false);
+    setInspectorOpen(false);
+    setExportOpen(false);
+    setTextEditorOpen(false);
+    setAuthGate(null);
+    setPublishOpen(true);
+  }, []);
 
   const save = useCallback(async () => {
     if (status !== "authenticated") {
@@ -829,11 +735,10 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
           {adminTemplateDraft && (
             <button
               type="button"
-              onClick={() => void publishTemplate()}
-              disabled={publishingTemplate}
-              className="whitespace-nowrap rounded-full bg-white px-12 py-9 text-11 tracking-[-0.02em] text-black transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-45 s:px-14"
+              onClick={openPublishDialog}
+              className="whitespace-nowrap rounded-full bg-white px-12 py-9 text-11 tracking-[-0.02em] text-black transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98] s:px-14"
             >
-              {publishingTemplate ? "Publishing…" : "Publish to All Users"}
+              Publish to All Users
             </button>
           )}
           <IconButton label="Download" onClick={() => setExportOpen(true)}>
@@ -851,9 +756,9 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
 
       {/* body */}
       <div className="relative flex min-h-0 flex-1">
-        {(saveError || templatePublishError) && (
+        {saveError && (
           <div className="pointer-events-none absolute left-1/2 top-10 z-40 max-w-[min(90%,520px)] -translate-x-1/2 rounded-full border border-[#e5484d]/35 bg-[#241214]/95 px-14 py-8 text-center text-11 leading-14 text-[#ff8f93] shadow-lg">
-            {templatePublishError || saveError}
+            {saveError}
           </div>
         )}
         {/* desktop tool rail */}
@@ -1195,6 +1100,21 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
           />
         );
       })()}
+
+      {/* Publish Template dialog (admin) — replaces immediate publishing.
+          The admin reviews the exact preview + metadata; only the dialog's
+          final Publish action uploads assets and creates the template. */}
+      {publishOpen && load.phase === "ready" && (
+        <PublishTemplateDialog
+          projectId={projectId}
+          onClose={() => setPublishOpen(false)}
+          onPublished={() => {
+            setPublishOpen(false);
+            setSavedFlash(true);
+            window.setTimeout(() => setSavedFlash(false), 1800);
+          }}
+        />
+      )}
 
       {/* auth gate */}
       {authGate && (

@@ -216,6 +216,8 @@ export interface AssetRecord {
   provider: AssetProvider;
   /** remote url (bundled/cloudinary) — local assets resolve from IndexedDB */
   url?: string;
+  /** Cloudinary public id — durable reference when provider === "cloudinary" */
+  publicId?: string;
   /** IndexedDB key for local blobs */
   storeKey?: string;
   name: string;

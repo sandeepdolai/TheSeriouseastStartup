@@ -64,16 +64,26 @@ model Publication {
 }
 
 
+/* ── Community templates (admin-published Smart Edit starting points) ──────
+   Published from Smart Edit through the "Publish Template" dialog: the
+   admin fills in metadata and picks a preview (exact render or custom
+   upload) before the template goes live. `document`/`assets` remain the
+   editable source of truth; `previewUrl` is only the presentation image
+   shown in TemplateBrowser (NULL for legacy templates → the UI renders
+   the document live, as before). */
 model CommunityTemplate {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  title       String
-  document    String
-  assets      String
-  published   Boolean  @default(true)
-  publishedBy String
-  publishedAt DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  title           String
+  description     String?
+  document        String
+  assets          String
+  previewUrl      String?
+  previewPublicId String?
+  published       Boolean  @default(true)
+  publishedBy     String
+  publishedAt     DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([published, publishedAt])
 }

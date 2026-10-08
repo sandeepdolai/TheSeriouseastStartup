@@ -11,6 +11,11 @@ interface PublishedTemplate {
   id: string;
   slug: string;
   title: string;
+  /** admin-written template description ("" for legacy templates) */
+  description?: string | null;
+  /** stored preview image (exact render or admin upload); null → the UI
+   *  renders the document live, as it did before previews were stored */
+  previewUrl?: string | null;
   document: SmartEditDocument;
   assets: Record<string, AssetRecord>;
   publishedAt: string;
@@ -147,7 +152,17 @@ export function TemplateBrowser({ onOpenEditor }: Props) {
                   className="group overflow-hidden rounded-18 border border-black/8 bg-white text-left shadow-[0_10px_40px_rgba(0,0,0,0.05)] transition-transform duration-300 hover:-translate-y-1"
                 >
                   <div className="relative aspect-[4/5] overflow-hidden bg-[#111]">
-                    <SmartEditPreview document={template.document} assets={Object.values(template.assets)} />
+                    {template.previewUrl ? (
+                      <img
+                        src={template.previewUrl}
+                        alt={template.title}
+                        loading="lazy"
+                        draggable={false}
+                        className="absolute inset-0 size-full object-contain"
+                      />
+                    ) : (
+                      <SmartEditPreview document={template.document} assets={Object.values(template.assets)} />
+                    )}
                   </div>
                   <div className="px-15 py-14">
                     <p className="text-15 tracking-[-0.025em]">{template.title}</p>
@@ -170,7 +185,16 @@ export function TemplateBrowser({ onOpenEditor }: Props) {
           <section className="flex max-h-[92vh] w-full max-w-[1050px] flex-col overflow-hidden rounded-20 bg-white shadow-2xl s:flex-row">
             <div className="min-h-0 flex-1 bg-[#111] p-15 s:p-25">
               <div className="flex h-full min-h-[55vh] items-center justify-center overflow-hidden rounded-12 bg-[#0d0d0d]">
-                <SmartEditPreview document={selected.document} assets={Object.values(selected.assets)} />
+                {selected.previewUrl ? (
+                  <img
+                    src={selected.previewUrl}
+                    alt={selected.title}
+                    draggable={false}
+                    className="max-h-full max-w-full object-contain"
+                  />
+                ) : (
+                  <SmartEditPreview document={selected.document} assets={Object.values(selected.assets)} />
+                )}
               </div>
             </div>
 
@@ -187,8 +211,9 @@ export function TemplateBrowser({ onOpenEditor }: Props) {
               <div className="clear-both pt-25 s:pt-50">
                 <p className="label opacity-40">TEMPLATE</p>
                 <h2 className="mt-8 text-28 leading-none tracking-[-0.05em]">{selected.title}</h2>
-                <p className="mt-12 text-12 leading-18 text-black/48">
-                  Duplicate this design to make your own version in Smart Edit. Your changes are completely separate from the original template.
+                <p className="mt-12 whitespace-pre-line text-12 leading-18 text-black/48">
+                  {selected.description?.trim() ||
+                    "Duplicate this design to make your own version in Smart Edit. Your changes are completely separate from the original template."}
                 </p>
 
                 <div className="mt-25 flex flex-col gap-8">

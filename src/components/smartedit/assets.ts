@@ -18,6 +18,8 @@ import {
   type AssetRecord,
   type AssetType,
   type LibraryManifest,
+  type SmartEditDocument,
+  isImageLike,
   newAssetId,
 } from "./types";
 
@@ -347,16 +349,88 @@ function sanitizeName(name: string): string {
   return name.replace(/[^\w\s.\-()]/g, "").slice(0, 60) || "image";
 }
 
+/* ── Publish-time helpers (template workflow) ──────────────────────────── */
+
+/** Read a LOCAL asset's stored blob (for one-time Cloudinary uploads).
+ *  Covers both the IndexedDB path and the private-mode in-memory object URL. */
+export async function assetBlob(id: string): Promise<Blob | undefined> {
+  const record = registry.get(id);
+  if (!record || record.provider !== "local") return undefined;
+  const stored = await idb.getBlob(record.storeKey ?? record.id);
+  if (stored) return stored.blob;
+  const url = objectUrls.get(id);
+  if (url?.startsWith("blob:")) {
+    try {
+      const res = await fetch(url);
+      return await res.blob();
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
+/** Collect the asset records a document currently references (images,
+ *  stickers and user fonts) — the snapshot saved with projects/templates. */
+export function snapshotDocumentAssets(
+  document: SmartEditDocument,
+): Record<string, AssetRecord> {
+  const out: Record<string, AssetRecord> = {};
+  for (const layer of document.layers) {
+    if (isImageLike(layer)) {
+      const record = getAsset(layer.assetId);
+      if (record) out[record.id] = record;
+    }
+  }
+  for (const font of document.fonts ?? []) {
+    if (font.source !== "user") continue;
+    const record = getAsset(font.id);
+    if (record) out[record.id] = record;
+  }
+  return out;
+}
+
+/** Validate + normalize an admin-chosen custom preview image: raster image
+ *  files only, ≤15 MB, downscaled to ≤1600px like every other image in the
+ *  app — the result is a bounded blob safe to display and upload. */
+export async function preparePreviewImage(
+  file: File,
+): Promise<{ blob: Blob; width: number; height: number }> {
+  if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
+    throw new Error("Preview images must be image files.");
+  }
+  if (file.size > IMAGE_MAX_INPUT_BYTES) {
+    throw new Error("That image is too large (15 MB max).");
+  }
+  const bitmap = await loadBitmap(file);
+  try {
+    return await compressBitmap(bitmap.bitmap);
+  } finally {
+    bitmap.close();
+  }
+}
+
 /* ── Cloudinary adapter (unsigned upload — free plan) ───────────────────── */
 
-async function uploadToCloudinary(
+export interface CloudinaryUpload {
+  url: string;
+  width: number;
+  height: number;
+  publicId: string | null;
+}
+
+/** Upload an image blob to Cloudinary under `folder` (unsigned preset).
+ *  User uploads default to the shared user-assets folder; template assets
+ *  pass their own template namespace so the two stay logically separated. */
+export async function uploadToCloudinary(
   blob: Blob,
   config: { cloudName: string; uploadPreset: string },
-): Promise<{ url: string; width: number; height: number }> {
+  folder = "paper-stish/user-assets",
+): Promise<CloudinaryUpload> {
   const form = new FormData();
   form.append("file", blob);
   form.append("upload_preset", config.uploadPreset);
-  form.append("folder", "paper-stish/user-assets");
+  form.append("folder", folder);
 
   const res = await fetch(
     `https://api.cloudinary.com/v1_1/${encodeURIComponent(config.cloudName)}/image/upload`,
@@ -368,10 +442,16 @@ async function uploadToCloudinary(
     url?: string;
     width?: number;
     height?: number;
+    public_id?: string;
   };
   const url = data.secure_url ?? data.url;
   if (!url) throw new Error("Cloudinary upload failed");
-  return { url, width: data.width ?? 0, height: data.height ?? 0 };
+  return {
+    url,
+    width: data.width ?? 0,
+    height: data.height ?? 0,
+    publicId: data.public_id ?? null,
+  };
 }
 
 /** Read a local asset as a data url (self-contained save/publish payloads).
