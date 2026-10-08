@@ -473,12 +473,16 @@ export function ProjectSheet({
         </button>
       </div>
 
-      <div className="invisible fixed inset-100 z-20 translate-x-[calc((100%+9rem)*-1)] s:translate-x-[calc((100%+7.5rem)*-1)] rounded-15 s:rounded-20 bg-white opacity-30" data-id={prev.slug} data-gl="related" style={{ visibility: entered ? "visible" : "hidden" }}>
-        <button type="button" onClick={() => onPrev(prev.slug)} className="pointer-events-auto absolute inset-0 -right-25 cursor-pointer" aria-label={`Previous project: ${prev.title}`} />
-      </div>
-      <div className="invisible fixed inset-100 z-20 translate-x-[calc(100%+9rem)] s:translate-x-[calc(100%+7.5rem)] rounded-15 s:rounded-20 bg-white opacity-30" data-id={next.slug} data-gl="related" style={{ visibility: entered ? "visible" : "hidden" }}>
-        <button type="button" onClick={() => onNext(next.slug)} className="pointer-events-auto absolute inset-0 -left-25 cursor-pointer" aria-label={`Next project: ${next.title}`} />
-      </div>
+      {prev && (
+        <div className="invisible fixed inset-100 z-20 translate-x-[calc((100%+9rem)*-1)] s:translate-x-[calc((100%+7.5rem)*-1)] rounded-15 s:rounded-20 bg-white opacity-30" data-id={prev.slug} data-gl="related" style={{ visibility: entered ? "visible" : "hidden" }}>
+          <button type="button" onClick={() => onPrev(prev.slug)} className="pointer-events-auto absolute inset-0 -right-25 cursor-pointer" aria-label={`Previous project: ${prev.title}`} />
+        </div>
+      )}
+      {next && (
+        <div className="invisible fixed inset-100 z-20 translate-x-[calc(100%+9rem)] s:translate-x-[calc(100%+7.5rem)] rounded-15 s:rounded-20 bg-white opacity-30" data-id={next.slug} data-gl="related" style={{ visibility: entered ? "visible" : "hidden" }}>
+          <button type="button" onClick={() => onNext(next.slug)} className="pointer-events-auto absolute inset-0 -left-25 cursor-pointer" aria-label={`Next project: ${next.title}`} />
+        </div>
+      )}
     </>
   );
 }
