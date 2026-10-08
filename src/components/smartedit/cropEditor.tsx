@@ -9,14 +9,24 @@
    whole editor — the main canvas chrome cannot receive any interaction —
    and runs its own gesture engine:
 
-     • one finger / mouse drag   → reposition the photo inside the crop
-     • pinch (two pointers)      → zoom the photo inside the crop
-     • wheel (desktop)           → zoom around the cursor
+     • drag inside the frame     → move the crop frame (crop geometry)
      • corner + edge handles     → resize the crop viewport (ratio-locked
                                    when a preset is active, free otherwise)
      • Rotate mode               → reorient the composition in 90° steps
      • ratio strip               → Original / Free / 1:1 / 4:5 / 3:4 / 3:2 /
                                    16:9 / 9:16
+
+   THE PHOTO IS FROZEN. The image's on-screen position and size (the
+   session zoom/offset) are derived when Crop Mode opens and are never
+   changed by pointer interaction: dragging, touching, pinching or
+   scrolling on the photo cannot move or scale it. Ordinary gestures edit
+   the CROP GEOMETRY only — the frame is moved/resized OVER the fixed
+   photo via editCropViewport (crop.ts), which compensates the session
+   offset so the photo's screen rect stays bit-for-bit identical. The
+   Smart Edit layer transform (x/y/width/height/rotation) is untouched
+   until Done. Only the dedicated controls that legitimately re-present
+   the photo may do so: the 90° Rotate buttons, Reset and workspace
+   resizes.
 
    The session state (rotation, zoom, offset, viewport rect) lives in THIS
    component — the editor store is only touched once, on Done, producing a
@@ -58,6 +68,7 @@ import {
   clampCropSession,
   cropFromSession,
   cropLayerPatch,
+  editCropViewport,
   fitRectAspect,
   rotatedImageDims,
   sameCrop,
@@ -104,15 +115,14 @@ interface HistoryEntry {
 }
 
 /**
- * A live gesture. `originSession` is the state when the gesture's history
- * entry was pushed (the FIRST pointer down of the whole touch sequence) —
- * a pinch that follows a pan shares the pan's origin, so lifting one
- * finger and continuing with the other still rolls up into one entry.
+ * A live gesture — single-pointer by design. Crop Mode edits CROP GEOMETRY
+ * over a photo whose on-screen position/size is frozen (editCropViewport),
+ * so there is no multi-pointer photo manipulation: a second finger (or a
+ * wheel/pinch) never starts anything and never moves or scales the photo.
  */
 type Gesture =
-  | { kind: "pan"; origin: CropSession; start: CropSession; startPointer: { x: number; y: number } }
-  | { kind: "pinch"; origin: CropSession; start: CropSession; startMid: { x: number; y: number }; startDist: number }
-  | { kind: "handle"; handle: HandleId; start: CropSession };
+  | { kind: "move"; pointerId: number; start: CropSession; startPointer: { x: number; y: number } }
+  | { kind: "handle"; pointerId: number; handle: HandleId; start: CropSession };
 
 interface WorkspaceDims {
   width: number;
@@ -137,8 +147,6 @@ export function CropEditor({ layer, resolvedUrl, onDone, onCancel }: CropEditorP
   const [wsState, setWsState] = useState<WorkspaceDims | null>(null);
   const sessionRef = useRef<CropSession | null>(null);
   const presetRef = useRef<CropPresetId>("original");
-  /** Active pointers in CLIENT coordinates (converted once per frame). */
-  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
   const gestureRef = useRef<Gesture | null>(null);
   const pendingRef = useRef<{ x: number; y: number } | null>(null);
   const frameRef = useRef<number | null>(null);
@@ -293,15 +301,6 @@ export function CropEditor({ layer, resolvedUrl, onDone, onCancel }: CropEditorP
 
   /* ── Gesture engine (rAF-batched, clamped through crop.ts) ────────────── */
 
-  const clampNow = useCallback(
-    (candidate: CropSession): CropSession | null => {
-      const ws = wsDimsRef.current;
-      if (!ws) return null;
-      return clampCropSession(candidate, rotatedImageDims(natural, candidate.rotation), ws);
-    },
-    [natural],
-  );
-
   const runGesture = useCallback(() => {
     const gesture = gestureRef.current;
     const pendingClient = pendingRef.current;
@@ -310,56 +309,37 @@ export function CropEditor({ layer, resolvedUrl, onDone, onCancel }: CropEditorP
     // ONE rect read per frame; client → workspace-local for every consumer.
     const rect = wsEl.getBoundingClientRect();
     const pending = { x: pendingClient.x - rect.left, y: pendingClient.y - rect.top };
-
-    if (gesture.kind === "pan") {
-      const next = clampNow({
-        ...gesture.start,
-        offset: {
-          x: gesture.start.offset.x + (pending.x - gesture.startPointer.x),
-          y: gesture.start.offset.y + (pending.y - gesture.startPointer.y),
-        },
-      });
-      if (next) applySession(next);
-      return;
-    }
-
-    if (gesture.kind === "pinch") {
-      const pointers = Array.from(pointersRef.current.values());
-      if (pointers.length < 2) return;
-      const p0 = { x: pointers[0].x - rect.left, y: pointers[0].y - rect.top };
-      const p1 = { x: pointers[1].x - rect.left, y: pointers[1].y - rect.top };
-      const mid = { x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2 };
-      const dist = Math.hypot(p0.x - p1.x, p0.y - p1.y);
-      const start = gesture.start;
-      const zoom = gesture.startDist > 8 ? (start.zoom * dist) / gesture.startDist : start.zoom;
-      const vpCentre = { x: start.vp.x + start.vp.w / 2, y: start.vp.y + start.vp.h / 2 };
-      // Anchor: keep the image point under the current midpoint fixed.
-      const anchored = {
-        x: (gesture.startMid.x - vpCentre.x - start.offset.x) / start.zoom,
-        y: (gesture.startMid.y - vpCentre.y - start.offset.y) / start.zoom,
-      };
-      const next = clampNow({
-        ...start,
-        zoom: Math.max(0.01, zoom),
-        offset: {
-          x: mid.x - vpCentre.x - anchored.x * Math.max(0.01, zoom),
-          y: mid.y - vpCentre.y - anchored.y * Math.max(0.01, zoom),
-        },
-      });
-      if (next) applySession(next);
-      return;
-    }
-
-    // handle resize
-    const start = gesture.start;
-    const ratio = activeRatio(presetRef.current, rotatedImageDims(natural, start.rotation));
     const ws = { width: rect.width, height: rect.height };
-    const next = clampNow({
-      ...start,
-      vp: resizeViewport(gesture.handle, pending, start, ratio, ws),
-    });
-    if (next) applySession(next);
-  }, [applySession, clampNow, natural]);
+
+    // Both gestures edit the CROP VIEWPORT through editCropViewport, which
+    // holds the photo's on-screen rect exactly fixed (offset compensation):
+    // a drag can move/resize the frame, never the photo itself.
+    const start = gesture.start;
+    const rotated = rotatedImageDims(natural, start.rotation);
+
+    if (gesture.kind === "move") {
+      applySession(
+        editCropViewport(start, rotated, ws, {
+          x: start.vp.x + (pending.x - gesture.startPointer.x),
+          y: start.vp.y + (pending.y - gesture.startPointer.y),
+          w: start.vp.w,
+          h: start.vp.h,
+        }),
+      );
+      return;
+    }
+
+    const ratio = activeRatio(presetRef.current, rotated);
+    applySession(
+      editCropViewport(
+        start,
+        rotated,
+        ws,
+        resizeViewport(gesture.handle, pending, start, ratio, ws),
+        ratio,
+      ),
+    );
+  }, [applySession, natural]);
 
   const scheduleGesture = useCallback(
     (clientX: number, clientY: number) => {
@@ -378,52 +358,39 @@ export function CropEditor({ layer, resolvedUrl, onDone, onCancel }: CropEditorP
     (event: ReactPointerEvent<HTMLDivElement>) => {
       const current = sessionRef.current;
       if (!current) return;
+      if (gestureRef.current) return; // a gesture already owns the interaction
+      const rect = wsRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const local = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+      const { vp } = current;
+      // Only the crop frame is a pointer target: a drag that starts INSIDE
+      // the frame moves the frame (crop geometry). A drag on the photo
+      // outside the frame — or anywhere else in the workspace — starts
+      // nothing: the photo's presentation is frozen for the whole session.
+      const inside =
+        local.x >= vp.x && local.x <= vp.x + vp.w && local.y >= vp.y && local.y <= vp.y + vp.h;
+      if (!inside) return;
       try {
         event.currentTarget.setPointerCapture?.(event.pointerId);
       } catch {
         // best-effort capture (stale pointer ids throw)
       }
-      const wasEmpty = pointersRef.current.size === 0;
-      pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
-      const pointers = Array.from(pointersRef.current.values());
-      if (pointers.length >= 2) {
-        // Second finger: a pinch continues whatever pan came before — the
-        // SAME history entry (origin) covers the whole touch sequence.
-        const rect = wsRef.current?.getBoundingClientRect();
-        if (!rect) return;
-        const p0 = { x: pointers[0].x - rect.left, y: pointers[0].y - rect.top };
-        const p1 = { x: pointers[1].x - rect.left, y: pointers[1].y - rect.top };
-        const origin = gestureRef.current?.kind === "pan" ? gestureRef.current.origin : current;
-        gestureRef.current = {
-          kind: "pinch",
-          origin,
-          start: current,
-          startMid: { x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2 },
-          startDist: Math.hypot(p0.x - p1.x, p0.y - p1.y),
-        };
-      } else if (wasEmpty) {
-        pushHistory();
-        const rect = wsRef.current?.getBoundingClientRect();
-        if (!rect) return;
-        gestureRef.current = {
-          kind: "pan",
-          origin: current,
-          start: current,
-          startPointer: { x: event.clientX - rect.left, y: event.clientY - rect.top },
-        };
-      }
-      // A third+ pointer changes nothing (pinch already active).
+      pushHistory();
+      gestureRef.current = {
+        kind: "move",
+        pointerId: event.pointerId,
+        start: current,
+        startPointer: local,
+      };
     },
     [pushHistory],
   );
 
   const onWorkspacePointerMove = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
-      if (!gestureRef.current) return;
+      const gesture = gestureRef.current;
+      if (!gesture || gesture.pointerId !== event.pointerId) return;
       event.preventDefault();
-      if (pointersRef.current.has(event.pointerId)) {
-        pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
-      }
       scheduleGesture(event.clientX, event.clientY);
     },
     [scheduleGesture],
@@ -434,7 +401,7 @@ export function CropEditor({ layer, resolvedUrl, onDone, onCancel }: CropEditorP
       // An ultra-fast gesture (down + move + up inside one frame) would
       // otherwise lose its final position to the cancelled rAF — apply the
       // last pending update synchronously before finalizing.
-      if (pendingRef.current && gestureRef.current && gestureRef.current.kind !== "pinch") {
+      if (pendingRef.current && gestureRef.current) {
         runGesture();
       }
       // Drop the history entry when the whole touch sequence changed nothing.
@@ -454,37 +421,18 @@ export function CropEditor({ layer, resolvedUrl, onDone, onCancel }: CropEditorP
   const endPointer = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       const gesture = gestureRef.current;
-      // A sub-frame gesture ending (down + move + up within one animation
-      // frame) must still apply its final position: for a pinch this has
-      // to happen while BOTH pointers are still tracked.
-      if (gesture && pendingRef.current && gesture.kind === "pinch" && pointersRef.current.size >= 2) {
-        runGesture();
-      }
-      pointersRef.current.delete(event.pointerId);
+      // Only the pointer that owns the active gesture finalizes it; any
+      // other pointer (e.g. a second finger) is ignored — Crop Mode has no
+      // multi-pointer photo manipulation.
+      if (!gesture || gesture.pointerId !== event.pointerId) return;
       try {
         event.currentTarget.releasePointerCapture?.(event.pointerId);
       } catch {
         // pointer already released
       }
-      if (!gesture) return;
-      const pointers = Array.from(pointersRef.current.values());
-      if (pointers.length === 1 && gesture.kind === "pinch") {
-        // Pinch → single finger: continue as a fresh pan from here (same
-        // history origin, so the whole sequence stays ONE undo step).
-        const rect = wsRef.current?.getBoundingClientRect();
-        if (!rect) return;
-        gestureRef.current = {
-          kind: "pan",
-          origin: gesture.origin,
-          start: sessionRef.current ?? gesture.start,
-          startPointer: { x: pointers[0].x - rect.left, y: pointers[0].y - rect.top },
-        };
-        return;
-      }
-      if (pointers.length >= 2) return; // still pinching
-      finishGesture(gesture.kind === "handle" ? gesture.start : gesture.origin);
+      finishGesture(gesture.start);
     },
-    [finishGesture, runGesture],
+    [finishGesture],
   );
 
   const onHandlePointerDown = useCallback(
@@ -498,14 +446,15 @@ export function CropEditor({ layer, resolvedUrl, onDone, onCancel }: CropEditorP
         // best-effort capture
       }
       pushHistory();
-      gestureRef.current = { kind: "handle", handle, start: current };
+      gestureRef.current = { kind: "handle", pointerId: event.pointerId, handle, start: current };
     },
     [pushHistory],
   );
 
   const onHandlePointerMove = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
-      if (gestureRef.current?.kind !== "handle") return;
+      const gesture = gestureRef.current;
+      if (!gesture || gesture.kind !== "handle" || gesture.pointerId !== event.pointerId) return;
       event.preventDefault();
       event.stopPropagation();
       scheduleGesture(event.clientX, event.clientY);
@@ -516,7 +465,7 @@ export function CropEditor({ layer, resolvedUrl, onDone, onCancel }: CropEditorP
   const onHandlePointerUp = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       const gesture = gestureRef.current;
-      if (gesture?.kind !== "handle") return;
+      if (!gesture || gesture.kind !== "handle" || gesture.pointerId !== event.pointerId) return;
       try {
         event.currentTarget.releasePointerCapture?.(event.pointerId);
       } catch {
@@ -526,39 +475,6 @@ export function CropEditor({ layer, resolvedUrl, onDone, onCancel }: CropEditorP
     },
     [finishGesture],
   );
-
-  /* ── Wheel zoom (desktop) — native listener so preventDefault works ──── */
-
-  useEffect(() => {
-    const el = wsRef.current;
-    if (!el) return;
-    const onWheel = (event: WheelEvent) => {
-      const current = sessionRef.current;
-      if (!current) return;
-      event.preventDefault();
-      const rect = el.getBoundingClientRect();
-      const cursor = { x: event.clientX - rect.left, y: event.clientY - rect.top };
-      const factor = Math.exp(-event.deltaY * 0.0018);
-      const zoom = Math.max(0.01, current.zoom * factor);
-      const vpCentre = { x: current.vp.x + current.vp.w / 2, y: current.vp.y + current.vp.h / 2 };
-      // Anchor: keep the image point under the cursor fixed.
-      const anchored = {
-        x: (cursor.x - vpCentre.x - current.offset.x) / current.zoom,
-        y: (cursor.y - vpCentre.y - current.offset.y) / current.zoom,
-      };
-      const next = clampNow({
-        ...current,
-        zoom,
-        offset: {
-          x: cursor.x - vpCentre.x - anchored.x * zoom,
-          y: cursor.y - vpCentre.y - anchored.y * zoom,
-        },
-      });
-      if (next) applySession(next);
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, [applySession, clampNow]);
 
   /* ── Actions: ratio, rotate, reset ────────────────────────────────────── */
 
@@ -570,17 +486,27 @@ export function CropEditor({ layer, resolvedUrl, onDone, onCancel }: CropEditorP
       if (id === presetRef.current && id !== "free") return; // already active
       applyPreset(id);
       if (id === "free") return; // unlock only
-      const ratio = activeRatio(id, rotatedImageDims(natural, current.rotation));
+      const rotated = rotatedImageDims(natural, current.rotation);
+      const ratio = activeRatio(id, rotated);
       if (ratio === null) return;
       pushHistory();
       const fit = fitRectAspect({ width: current.vp.w, height: current.vp.h }, ratio);
-      const vp = {
-        x: current.vp.x + (current.vp.w - fit.width) / 2,
-        y: current.vp.y + (current.vp.h - fit.height) / 2,
-        w: fit.width,
-        h: fit.height,
-      };
-      applySession(clampCropSession({ ...current, vp }, rotatedImageDims(natural, current.rotation), ws));
+      // A ratio change is a crop-geometry edit: the re-fitted frame is
+      // clamped over the FROZEN photo (never a photo re-presentation).
+      applySession(
+        editCropViewport(
+          current,
+          rotated,
+          ws,
+          {
+            x: current.vp.x + (current.vp.w - fit.width) / 2,
+            y: current.vp.y + (current.vp.h - fit.height) / 2,
+            w: fit.width,
+            h: fit.height,
+          },
+          ratio,
+        ),
+      );
     },
     [applyPreset, applySession, natural, pushHistory],
   );
@@ -657,11 +583,13 @@ export function CropEditor({ layer, resolvedUrl, onDone, onCancel }: CropEditorP
     lastNudgeRef.current = now;
   }, [pushHistory]);
 
-  /** Pan the image with arrow keys while the workspace owns the focus. */
+  /** Move the crop frame with arrow keys while the workspace owns the focus
+   *  (the photo stays fixed — the same freeze as pointer drags). */
   const onWorkspaceKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLDivElement>) => {
       const current = sessionRef.current;
-      if (!current) return;
+      const ws = wsDimsRef.current;
+      if (!current || !ws) return;
       const step = event.shiftKey ? NUDGE_PX * 4 : NUDGE_PX;
       let dx = 0;
       let dy = 0;
@@ -672,13 +600,16 @@ export function CropEditor({ layer, resolvedUrl, onDone, onCancel }: CropEditorP
       else return;
       event.preventDefault();
       nudgeHistory();
-      const next = clampNow({
-        ...current,
-        offset: { x: current.offset.x + dx, y: current.offset.y + dy },
-      });
-      if (next) applySession(next);
+      applySession(
+        editCropViewport(
+          current,
+          rotatedImageDims(natural, current.rotation),
+          ws,
+          { x: current.vp.x + dx, y: current.vp.y + dy, w: current.vp.w, h: current.vp.h },
+        ),
+      );
     },
-    [applySession, clampNow, nudgeHistory],
+    [applySession, natural, nudgeHistory],
   );
 
   /** Resize the viewport with arrow keys while a handle owns the focus. */
@@ -698,14 +629,19 @@ export function CropEditor({ layer, resolvedUrl, onDone, onCancel }: CropEditorP
       event.preventDefault();
       nudgeHistory();
       const point = handlePoint(handle, current.vp);
-      const ratio = activeRatio(presetRef.current, rotatedImageDims(natural, current.rotation));
-      const next = clampNow({
-        ...current,
-        vp: resizeViewport(handle, { x: point.x + dx, y: point.y + dy }, current, ratio, ws),
-      });
-      if (next) applySession(next);
+      const rotated = rotatedImageDims(natural, current.rotation);
+      const ratio = activeRatio(presetRef.current, rotated);
+      applySession(
+        editCropViewport(
+          current,
+          rotated,
+          ws,
+          resizeViewport(handle, { x: point.x + dx, y: point.y + dy }, current, ratio, ws),
+          ratio,
+        ),
+      );
     },
-    [applySession, clampNow, natural, nudgeHistory],
+    [applySession, natural, nudgeHistory],
   );
 
   /* ── Unmount hygiene ──────────────────────────────────────────────────── */
@@ -714,7 +650,6 @@ export function CropEditor({ layer, resolvedUrl, onDone, onCancel }: CropEditorP
     return () => {
       if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
       gestureRef.current = null;
-      pointersRef.current.clear();
     };
   }, []);
 
@@ -756,7 +691,7 @@ export function CropEditor({ layer, resolvedUrl, onDone, onCancel }: CropEditorP
         <div className="min-w-0 text-center" aria-live="polite">
           <p className="truncate text-13 tracking-[-0.02em] text-white/85">{indicator || "Crop image"}</p>
           <p className="mt-2 truncate text-10 text-white/40">
-            {mode === "rotate" ? "Rotate the photo inside the crop" : "Drag the photo · pinch or scroll to zoom"}
+            {mode === "rotate" ? "Rotate turns the photo · drag the frame to reposition" : "Drag inside the frame · drag the handles to resize"}
           </p>
         </div>
 
@@ -792,7 +727,7 @@ export function CropEditor({ layer, resolvedUrl, onDone, onCancel }: CropEditorP
         className="relative min-h-0 min-w-0 flex-1 overflow-clip bg-[#0a0a0a]"
         style={{ touchAction: "none" }}
         role="application"
-        aria-label="Crop workspace — drag the photo, use the handles to change the crop"
+        aria-label="Crop workspace — drag inside the frame to move it, use the handles to resize"
         tabIndex={0}
         onPointerDown={onWorkspacePointerDown}
         onPointerMove={onWorkspacePointerMove}
@@ -978,6 +913,23 @@ function CropWorkspace({
           userSelect: "none",
           WebkitUserSelect: "none",
           pointerEvents: "none",
+        }}
+      />
+
+      {/* the frame interior — the move affordance for the crop geometry.
+          Pointer events bubble to the workspace, which only starts a frame
+          move when the drag begins INSIDE this rect; the photo itself is
+          inert (pointer-events: none) and never moves or scales. */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          left: vp.x,
+          top: vp.y,
+          width: vp.w,
+          height: vp.h,
+          cursor: "move",
+          touchAction: "none",
         }}
       />
 

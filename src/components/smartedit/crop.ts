@@ -338,6 +338,120 @@ export function clampCropSession(
 }
 
 /**
+ * The photo's on-screen rect (workspace px) for a session — the FROZEN
+ * presentation. Crop-geometry gestures (frame move, handle resize, ratio,
+ * keyboard nudges) must never change this box: the crop frame is edited
+ * OVER the photo, so the photo cannot move, scale or shift under the
+ * user's finger. Only session init/reset, the dedicated 90° rotate control
+ * and workspace resizes re-derive the presentation.
+ */
+export function photoScreenBox(
+  session: CropSession,
+  rotated: { width: number; height: number },
+): { cx: number; cy: number; w: number; h: number } {
+  return {
+    cx: session.vp.x + session.vp.w / 2 + session.offset.x,
+    cy: session.vp.y + session.vp.h / 2 + session.offset.y,
+    w: Math.max(1, rotated.width) * session.zoom,
+    h: Math.max(1, rotated.height) * session.zoom,
+  };
+}
+
+/**
+ * Apply a candidate crop viewport while keeping the photo's on-screen rect
+ * EXACTLY fixed (Crop Mode's image-presentation freeze). The candidate is
+ * clamped into the photo box ∩ the usable workspace and up to the minimum
+ * crop size (CROP_MIN_VIEWPORT_PX on screen; CROP_MIN_IMAGE_PX image px at
+ * the current zoom), preserving `aspect` when the crop is ratio-locked.
+ * The session offset is then recomputed so the photo centre lands on the
+ * exact same screen point — moving/resizing the frame edits the CROP
+ * GEOMETRY (what cropFromSession commits), never the photo presentation.
+ *
+ * The result satisfies clampCropSession's coverage invariants by
+ * construction; the closing clampCropSession call is a safety net for
+ * pathological inputs (tiny images / extreme ratios), not an adjustment.
+ */
+export function editCropViewport(
+  session: CropSession,
+  rotated: { width: number; height: number },
+  workspace: { width: number; height: number },
+  candidate: { x: number; y: number; w: number; h: number },
+  aspect: number | null = null,
+): CropSession {
+  const box = photoScreenBox(session, rotated);
+  const minPx = Math.max(CROP_MIN_VIEWPORT_PX, CROP_MIN_IMAGE_PX * session.zoom);
+  const ratio = aspect !== null && aspect > 0 ? aspect : null;
+
+  let w = Math.max(CROP_MIN_VIEWPORT_PX, candidate.w);
+  let h = Math.max(CROP_MIN_VIEWPORT_PX, candidate.h);
+  if (ratio !== null) {
+    // Ratio-locked: raise the rect so BOTH axes respect the screen floor,
+    // then re-fit the ratio (a 5×5 candidate at 4:5 becomes 64×80 — the
+    // pre-bump above alone would lose the ratio).
+    const wFloor = Math.max(minPx, minPx * ratio);
+    const hFloor = Math.max(minPx, minPx / ratio);
+    if (w < wFloor || h < hFloor) {
+      w = Math.max(w, wFloor);
+      h = Math.max(h, hFloor);
+      if (w / h > ratio) w = h * ratio;
+      else h = w / ratio;
+    }
+  } else {
+    w = Math.max(w, minPx);
+    h = Math.max(h, minPx);
+  }
+
+  // The frame may never grow past the photo. (Coverage WITHOUT
+  // re-presenting the photo: clampCropSession alone would instead zoom or
+  // pan the photo to follow the frame — exactly what Crop Mode must not
+  // do to the image.)
+  const maxW = Math.max(CROP_MIN_VIEWPORT_PX, box.w);
+  const maxH = Math.max(CROP_MIN_VIEWPORT_PX, box.h);
+  if (w > maxW || h > maxH) {
+    if (ratio !== null) {
+      const fit = fitRectAspect({ width: maxW, height: maxH }, ratio);
+      w = fit.width;
+      h = fit.height;
+    } else {
+      w = Math.min(w, maxW);
+      h = Math.min(h, maxH);
+    }
+  }
+
+  // Centre the candidate so the frame stays inside the photo box AND the
+  // usable workspace (the handles must remain reachable).
+  const halfW = w / 2;
+  const halfH = h / 2;
+  const cx = clampRange(
+    candidate.x + candidate.w / 2,
+    box.cx - box.w / 2 + halfW,
+    box.cx + box.w / 2 - halfW,
+    CROP_WORKSPACE_MARGIN + halfW,
+    workspace.width - CROP_WORKSPACE_MARGIN - halfW,
+  );
+  const cy = clampRange(
+    candidate.y + candidate.h / 2,
+    box.cy - box.h / 2 + halfH,
+    box.cy + box.h / 2 - halfH,
+    CROP_WORKSPACE_MARGIN + halfH,
+    workspace.height - CROP_WORKSPACE_MARGIN - halfH,
+  );
+
+  const vp = { x: cx - halfW, y: cy - halfH, w, h };
+  // Frozen-photo compensation: the photo centre stays exactly where it was.
+  const offset = { x: box.cx - cx, y: box.cy - cy };
+  return clampCropSession({ ...session, vp, offset }, rotated, workspace);
+}
+
+/** Clamp v into the intersection of two [min, max] ranges (midpoint when empty). */
+function clampRange(v: number, minA: number, maxA: number, minB: number, maxB: number): number {
+  const lo = Math.max(minA, minB);
+  const hi = Math.min(maxA, maxB);
+  if (lo > hi) return (lo + hi) / 2;
+  return Math.min(Math.max(v, lo), hi);
+}
+
+/**
  * Derive the persisted CropState from a (clamped) session. The viewport
  * centre maps to the crop rect centre; the viewport size maps to the crop
  * size — everything else (frame style, export) derives from the crop.
