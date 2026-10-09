@@ -453,28 +453,13 @@ export function HomeCarousel({ folio, enabled, returning, onSelect, hidden, apiR
             </li>
           ))}
         </ul>
-        <h2>Elsewhere</h2>
+        <h2>Paper Stish</h2>
         <ul>
-          <li>Full index — every project by name</li>
-          <li>Newsletter</li>
-          <li>
-            <a href="https://www.instagram.com/jesperlandberg222/" target="_blank" rel="noopener">
-              Instagram
-            </a>
-          </li>
-          <li>
-            <a href="https://x.com/jesper_alpacka" target="_blank" rel="noopener">
-              X
-            </a>
-          </li>
-          <li>
-            <a href="https://www.linkedin.com/in/jesper-landberg-ba2984256/" target="_blank" rel="noopener">
-              LinkedIn
-            </a>
-          </li>
-          <li>
-            <a href="mailto:jesper@alpacka.studio">jesper@alpacka.studio</a>
-          </li>
+          <li>Browse personal website ideas</li>
+          <li>Newsletter sign-ups (currently unavailable)</li>
+          <li><a href="/privacy">Privacy Policy</a></li>
+          <li><a href="/terms">Terms of Service</a></li>
+          <li><a href="mailto:sandeepdolai.info@gmail.com">Support</a></li>
         </ul>
       </div>
 

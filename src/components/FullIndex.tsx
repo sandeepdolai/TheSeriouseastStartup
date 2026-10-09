@@ -14,8 +14,8 @@ export function FullIndex({ entered, onSelect }: Props) {
         <h1>Index — every project by {SITE.name}</h1>
         <p>
           {" "}
-          The full catalogue, featured or not. A featured project has a case study on this site; the
-          rest are listed by name, with the client&apos;s own site linked where there is one.{" "}
+          Browse example directions for personal websites made with Paper Stish. Select an example
+          to explore its style and imagine how you would make it your own.{" "}
         </p>
       </div>
       <div className="absolute inset-0">

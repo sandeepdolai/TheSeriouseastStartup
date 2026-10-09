@@ -17,151 +17,79 @@ export interface Project {
 }
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-const P = `${BASE_PATH}/projects/`;
+const T = `${BASE_PATH}/templates/`;
 
+/** Original Paper Stish examples shown in the immersive starter carousel. */
 export const FEATURED: Project[] = [
   {
-    title: "Nathan Riley",
-    slug: "nathan-riley",
-    description:
-      "Nathan is a UK-based digital creative specializing in art direction, surrealist 3D visuals, interactive experiences, and motion design.",
-    link: "https://www.nrly.co/",
-    tags: [{ title: "2023", url: null }],
+    title: "Love of My Life",
+    slug: "love-of-my-life",
+    description: "A personal page for your favorite person, filled with memories, photos, and the words you want them to keep.",
+    link: null,
+    tags: [{ title: "Personal website", url: null }, { title: "Love", url: null }],
     awards: 0,
-    aspect: 2048 / 1172,
-    media: [
-      P + "1786209541-nathan-thumb.mp4",
-      P + "1786207557-nathan-2.jpg",
-      P + "1786207557-nathan-1.jpg",
-      P + "1786207557-nathan-3.jpg",
-    ],
+    aspect: 1200 / 1600,
+    media: [T + "love-of-my-life.webp", T + "love-of-my-life-art.webp", T + "love-bow.webp"],
   },
   {
-    title: "Casa Di Solare",
-    slug: "casa-di-solare",
-    description:
-      "Solare extends Nikolas Type‘s Font Catalogue with a timeless, hyper-useable quintessential variable font, suitable for a wide field of applications.",
-    link: "https://casadisolare.com/",
-    tags: [
-      { title: "Unseen", url: "https://unseen.co/" },
-      { title: "2024", url: null },
-    ],
-    awards: 4,
-    aspect: 2048 / 1204,
-    media: [
-      P + "1786212651-solare-thumb.mp4",
-      P + "1786212741-sol-1.mp4",
-      P + "1786212835-sol-2mp4.mp4",
-    ],
-  },
-  {
-    title: "The Lookback",
-    slug: "the-lookback",
-    description:
-      "Digital capsule for Better Off® studio to document what inspired them and what they created over the last months/years.",
-    link: "https://tlb.betteroff.studio/",
-    tags: [
-      { title: "BetterOff® Studio", url: "https://betteroff.studio/" },
-      { title: "2026", url: null },
-      { title: "Gil Huybrecht", url: "https://gilhuybrecht.com" },
-    ],
-    awards: 3,
-    aspect: 1250 / 720,
-    media: [
-      P + "1786208843-tlb-thumbnail.mp4",
-      P + "1785656624-bo2.mp4",
-      P + "1785656629-image-39.jpg",
-      P + "1785656633-tlb4.jpg",
-    ],
-  },
-  {
-    title: "Book of Happiness",
-    slug: "book-of-happiness",
-    description:
-      "Helping leaders keep themselves and their people happy and mentally healthy.",
-    link: "https://www.findworkhappiness.com/",
-    tags: [
-      { title: "2024", url: null },
-      { title: "David Lubofsky", url: "https://www.davidlubofsky.com/" },
-    ],
-    awards: 4,
-    aspect: 2048 / 1114,
-    media: [
-      P + "1786210053-book-thumbnail.mp4",
-      P + "1786210260-book-2.jpg",
-      P + "1786210260-book-3.jpg",
-      P + "1786210260-book-1.jpg",
-    ],
-  },
-  {
-    title: "Dogelon Mars",
-    slug: "dogelon-mars",
-    description:
-      "Follow the story of Dogelon Mars as he explores the greatest mysteries of the universe and seeks to return to the planet he once called home with the help of the friends he’s made during his intergalactic travels.",
-    link: "https://dogelonmars.com",
-    tags: [
-      { title: "Griflan", url: "https://griflan.com" },
-      { title: "2024", url: null },
-    ],
-    awards: 3,
-    aspect: 3360 / 2200,
-    media: [
-      P + "1786207957-dogelon-2.jpg",
-      P + "1786207957-dogelon-1.jpg",
-      P + "1786207957-dogelon-4.jpg",
-      P + "1786207957-dogelon-3.jpg",
-    ],
-  },
-  {
-    title: "Gil Huybrecht",
-    slug: "gil-huybrecht",
-    description:
-      "Gil Huybrecht is a Belgian digital designer and art director, based around Antwerp. He specializes in typography-heavy web design, art direction, interaction design, and branding.",
-    link: "https://gilhuybrecht.com",
-    tags: [
-      { title: "2026", url: null },
-      { title: "Gil Huybrecht", url: "https://gilhuybrecht.com" },
-    ],
-    awards: 1,
-    aspect: 1196 / 720,
-    media: [
-      P + "1786213274-gil-thumb.mp4",
-      P + "1786213789-gil-1.mp4",
-      P + "1786213860-gil-2.mp4",
-    ],
-  },
-  {
-    title: "Discoveryland",
-    slug: "discoveryland",
-    description:
-      "Partnered with Outpost and Discovery Land Company to create an immersive, storytelling brand experience that showcasing DLCs international portfolio and capabilities while acting as a seamless transition across their 23 properties.",
-    link: "https://discoverylandco.com/",
-    tags: [
-      { title: "Outpost", url: "https://outpost.design/" },
-      { title: "2026", url: null },
-    ],
+    title: "Favorite Person",
+    slug: "favorite-person",
+    description: "A little corner of the internet for the person who makes ordinary days feel special.",
+    link: null,
+    tags: [{ title: "Personal website", url: null }, { title: "For someone", url: null }],
     awards: 0,
-    aspect: 1372 / 1029,
-    media: [
-      P + "1786432901-dlc-thumbnail.jpg",
-      P + "1786433326-dlc-2.mp4",
-      P + "1786433326-dlc-1.mp4",
-    ],
+    aspect: 1200 / 1600,
+    media: [T + "love-favorite-person-art.webp", T + "love-cats.webp", T + "love-polaroid-frame.webp"],
   },
   {
-    title: "Griflan",
-    slug: "griflan",
-    description:
-      "Griflan is a creative studio at the intersection of design, strategy, and compelling storytelling, shaping brands that move culture and leave a lasting mark.",
-    link: "https://griflan.com",
-    tags: [{ title: "2026", url: null }],
-    awards: 3,
-    aspect: 1162 / 720,
-    media: [
-      P + "1786433825-griflan-2.mp4",
-      P + "1786433825-griflan-3.mp4",
-      P + "1786433825-griflan-1.mp4",
-    ],
+    title: "Little Memories",
+    slug: "little-memories",
+    description: "Bring photos, notes, and tiny moments together in one page you can share with a link.",
+    link: null,
+    tags: [{ title: "Memories", url: null }, { title: "Personal website", url: null }],
+    awards: 0,
+    aspect: 4 / 5,
+    media: [T + "love-polaroid-frame.webp", T + "love-paper-texture.webp", T + "love-bow.webp"],
+  },
+  {
+    title: "A Love Note",
+    slug: "a-love-note",
+    description: "Turn the message you keep rewriting into a thoughtful, shareable little website.",
+    link: null,
+    tags: [{ title: "Love note", url: null }, { title: "Personal website", url: null }],
+    awards: 0,
+    aspect: 3 / 4,
+    media: [T + "love-cats.webp", T + "love-bow.webp", T + "love-favorite-person-art.webp"],
+  },
+  {
+    title: "For Someone Special",
+    slug: "for-someone-special",
+    description: "A warm starting point for a birthday, anniversary, surprise, or just-because message.",
+    link: null,
+    tags: [{ title: "Surprise", url: null }, { title: "Personal website", url: null }],
+    awards: 0,
+    aspect: 4 / 5,
+    media: [T + "love-of-my-life-art.webp", T + "love-paper-texture.webp", T + "love-of-my-life.webp"],
+  },
+  {
+    title: "Our Little World",
+    slug: "our-little-world",
+    description: "Make a page that feels like your own shared universe, with space for photos and inside jokes.",
+    link: null,
+    tags: [{ title: "Us", url: null }, { title: "Personal website", url: null }],
+    awards: 0,
+    aspect: 4 / 5,
+    media: [T + "love-cats.webp", T + "love-polaroid-frame.webp", T + "love-bow.webp"],
+  },
+  {
+    title: "Everyday Reasons",
+    slug: "everyday-reasons",
+    description: "A simple way to collect the little reasons someone means the world to you.",
+    link: null,
+    tags: [{ title: "Message", url: null }, { title: "Personal website", url: null }],
+    awards: 0,
+    aspect: 4 / 5,
+    media: [T + "love-favorite-person-art.webp", T + "love-paper-texture.webp", T + "love-of-my-life.webp"],
   },
 ];
 
@@ -171,45 +99,20 @@ export interface IndexItem {
   external: boolean;
 }
 
-/** The /full index — every project by name (featured get case studies) */
-export const FULL_INDEX: IndexItem[] = [
-  { title: "The Lookback", href: `${BASE_PATH}/projects/the-lookback`, external: false },
-  { title: "DoThings", href: "https://dothingsnyc.com/", external: true },
-  { title: "53 West 53", href: "https://53w53.com/", external: true },
-  { title: "Ross Mason®", href: "https://iamrossmason.com/", external: true },
-  { title: "Vucko™", href: "https://vucko.co/", external: true },
-  { title: "Ingrao", href: "https://ingrao.jesperlandberg.com/", external: true },
-  { title: "111 West 57th Street", href: "https://111w57.com/", external: true },
-  { title: "Better Off®", href: "https://betteroff.studio/", external: true },
-  { title: "Techspeed", href: "https://techspeed.com/", external: true },
-  { title: "Nathan Riley", href: `${BASE_PATH}/projects/nathan-riley`, external: false },
-  { title: "Dogelon Mars", href: `${BASE_PATH}/projects/dogelon-mars`, external: false },
-  { title: "Discoveryland", href: `${BASE_PATH}/projects/discoveryland`, external: false },
-  { title: "Griflan", href: `${BASE_PATH}/projects/griflan`, external: false },
-  { title: "Book of Happiness", href: `${BASE_PATH}/projects/book-of-happiness`, external: false },
-  { title: "Chris Wilcock", href: "https://www.chriswilcock.co/", external: true },
-  { title: "David Lubofsky", href: "https://www.davidlubofsky.com/", external: true },
-  { title: "Casa Di Solare", href: `${BASE_PATH}/projects/casa-di-solare`, external: false },
-  { title: "Gil Huybrecht", href: `${BASE_PATH}/projects/gil-huybrecht`, external: false },
-  { title: "Fivepathways", href: "https://fivepathways.com/", external: true },
-  { title: "Energy Park", href: "https://energy-park.outpost.design/", external: true },
-  { title: "Outpost", href: "https://outpost.design/", external: true },
-  { title: "Mew", href: "https://mew.xyz/", external: true },
-  { title: "Primland", href: "https://ownprimland.com", external: true },
-];
+export const FULL_INDEX: IndexItem[] = FEATURED.map((project) => ({
+  title: project.title,
+  href: `${BASE_PATH}/projects/${project.slug}`,
+  external: false,
+}));
 
 export const SITE = {
   name: "Paper Stish",
-  role: "design engineer",
+  role: "personal website maker",
   summary:
-    "Jesper Landberg, Swedish design engineer, named Awwwards Independent of the Year in 2022 and 2024, building visually rich, motion-driven websites.",
+    "Create a personal design for someone special, then publish it as a shareable website with Paper Stish.",
   about:
-    "Usually lead or sole developer, responsible for front-end architecture, animation, interaction and CMS, alongside international agencies and creative teams. Freelance, and available to studios and clients anywhere.",
-  awards: "77 awards — 30× Awwwards, 40× FWA, 3× Webby, 2× Lovie.",
-  email: "jesper@alpacka.studio",
-  profiles: [
-    { title: "Instagram", url: "https://www.instagram.com/jesperlandberg222/" },
-    { title: "X", url: "https://x.com/jesper_alpacka" },
-    { title: "LinkedIn", url: "https://www.linkedin.com/in/jesper-landberg-ba2984256/" },
-  ],
+    "Start with an idea, make the design yours, and send one simple link. Published websites open in a browser without requiring visitors to sign in.",
+  awards: "Create something personal. Make it yours. Share it with a link.",
+  email: "sandeepdolai.info@gmail.com",
+  profiles: [] as { title: string; url: string }[],
 };
