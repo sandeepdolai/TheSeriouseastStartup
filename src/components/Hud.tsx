@@ -3,15 +3,16 @@
 import { SITE } from "@/lib/projects";
 
 interface HudProps {
-  view: "home" | "my" | "saved" | "project" | "smart-edit";
+  view: "home" | "my" | "saved" | "project" | "smart-edit" | "website-templates";
   overlay: "profile" | null;
   onProfile: () => void;
   onSaved: () => void;
   onHome: () => void;
   onMy: () => void;
+  onWebsiteTemplates: () => void;
 }
 
-export function Hud({ view, overlay, onProfile, onSaved, onHome, onMy }: HudProps) {
+export function Hud({ view, overlay, onProfile, onSaved, onHome, onMy, onWebsiteTemplates }: HudProps) {
   const savedOpen = view === "saved";
 
   return (
@@ -46,10 +47,24 @@ export function Hud({ view, overlay, onProfile, onSaved, onHome, onMy }: HudProp
               onHome();
             }}
             className={`relative transition-opacity duration-500 ease-out ${
-              view === "my" || view === "saved" ? "opacity-50 hover:opacity-100" : ""
+              view === "my" || view === "saved" || view === "website-templates" ? "opacity-50 hover:opacity-100" : ""
             }`}
           >
             Template
+          </a>
+          <span aria-hidden="true">/</span>
+          <a
+            href="#"
+            aria-current={view === "website-templates" ? "page" : undefined}
+            onClick={(e) => {
+              e.preventDefault();
+              onWebsiteTemplates();
+            }}
+            className={`relative transition-opacity duration-500 ease-out ${
+              view === "website-templates" ? "" : "opacity-50 hover:opacity-100"
+            }`}
+          >
+            Website
           </a>
           <span aria-hidden="true">/</span>
           <a
