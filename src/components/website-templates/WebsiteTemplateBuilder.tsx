@@ -65,7 +65,7 @@ async function optimizePhoto(file: File): Promise<string> {
   return dataUrl;
 }
 
-export function WebsiteTemplateBuilder() {
+export function WebsiteTemplateBuilder({ onClose }: { onClose?: () => void } = {}) {
   const { data: session, status } = useSession();
   const [values, setValues] = useState<TemplatePublicationValues>(DEFAULT_VALUES);
   const [username, setUsername] = useState("");
@@ -205,10 +205,30 @@ export function WebsiteTemplateBuilder() {
   return (
     <main className={styles.screen}>
       <header className={styles.topbar}>
-        <a className={styles.brand} href="/">Paper Stish</a>
+        <a
+          className={styles.brand}
+          href="/"
+          onClick={(event) => {
+            if (!onClose) return;
+            event.preventDefault();
+            onClose();
+          }}
+        >
+          Paper Stish
+        </a>
         <div className={styles.topbarRight}>
           <span>Website Templates · Code template</span>
-          <a className={styles.backLink} href="/">Exit</a>
+          <a
+            className={styles.backLink}
+            href="/"
+            onClick={(event) => {
+              if (!onClose) return;
+              event.preventDefault();
+              onClose();
+            }}
+          >
+            Exit
+          </a>
         </div>
       </header>
 
