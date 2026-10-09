@@ -9,7 +9,7 @@ import { TemplateBrowser } from "./TemplateBrowser";
 import { Hud } from "./Hud";
 import { MyProjects } from "./MyProjects";
 import { SavedTemplates } from "./SavedTemplates";
-import { WebsiteTemplateBuilder } from "./website-templates/WebsiteTemplateBuilder";
+import { WebsiteTemplateBrowser } from "./website-templates/WebsiteTemplateBrowser";
 import { SmartEditEditor } from "./smartedit/SmartEditEditor";
 import { type CanvasRatio, createDocument } from "./smartedit/types";
 import { ProjectSheet } from "./ProjectSheet";
@@ -21,13 +21,13 @@ import { listLocalProjects, putLocalProject } from "@/lib/localProjects";
 type View = "home" | "my" | "saved" | "project" | "smart-edit" | "website-templates";
 type Overlay = "profile" | null;
 
-export function App() {
+export function App({ initialView = "home" }: { initialView?: View } = {}) {
   const folio = useFolio();
   if (!folio) return null;
-  return <AppContent folio={folio} />;
+  return <AppContent folio={folio} initialView={initialView} />;
 }
 
-function AppContent({ folio }: { folio: Folio }) {
+function AppContent({ folio, initialView }: { folio: Folio; initialView: View }) {
   const { data: session, status } = useSession();
   const accountEmail = session?.user?.email ?? null;
   useEffect(() => {
@@ -65,7 +65,7 @@ function AppContent({ folio }: { folio: Folio }) {
     // (including legacy localStorage records) happens there on first read.
     migrate("paper-stish-username");
   }, [accountEmail]);
-  const [view, setView] = useState<View>("home");
+  const [view, setView] = useState<View>(initialView);
   const [projectSlug, setProjectSlug] = useState<string | null>(null);
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [sheetEntered, setSheetEntered] = useState(false);
@@ -387,8 +387,9 @@ function AppContent({ folio }: { folio: Folio }) {
   }, [accountEmail, closeOverlay, createSmartEdit, openSmartEdit, overlay]);
 
   const goWebsiteTemplates = useCallback(() => {
-    if (busy.current || view === "website-templates") return;
+    if (busy.current) return;
     if (overlay) closeOverlay();
+    if (view === "website-templates") return;
     setView("website-templates");
     setProjectSlug(null);
     setReturning(null);
@@ -421,13 +422,13 @@ function AppContent({ folio }: { folio: Folio }) {
   }, [view, overlay, closeOverlay, closeProject, closeSmartEdit, closeWebsiteTemplates, wipeTo]);
 
   const goMy = useCallback(() => {
-    if (busy.current || (view !== "home" && view !== "my" && view !== "saved")) return;
+    if (busy.current || (view !== "home" && view !== "my" && view !== "saved" && view !== "website-templates")) return;
     if (overlay) closeOverlay();
     wipeTo("my");
   }, [view, overlay, closeOverlay, wipeTo]);
 
   const goSaved = useCallback(() => {
-    if (busy.current || overlay || (view !== "home" && view !== "my")) return;
+    if (busy.current || overlay || (view !== "home" && view !== "my" && view !== "website-templates")) return;
     wipeTo("saved");
   }, [view, overlay, wipeTo]);
 
@@ -447,7 +448,7 @@ function AppContent({ folio }: { folio: Folio }) {
 
       {view === "saved" && <SavedTemplates entered={savedEntered} />}
 
-      {view === "website-templates" && <WebsiteTemplateBuilder onClose={closeWebsiteTemplates} />}
+      {view === "website-templates" && <WebsiteTemplateBrowser />}
 
       {view === "smart-edit" && smartEditProjectId && (
         <SmartEditEditor projectId={smartEditProjectId} onClose={closeSmartEdit} />
