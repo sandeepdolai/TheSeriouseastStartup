@@ -1,0 +1,27 @@
+.editableText {
+  border-radius: 2px;
+  cursor: text;
+  outline-offset: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.editableText:hover:not(:focus) {
+  outline: 1px dashed rgba(166, 83, 67, .42);
+}
+
+.editableText:focus {
+  outline: 1px dashed rgba(166, 83, 67, .72);
+  outline-offset: 4px;
+}
+
+.editableText[contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
+  white-space: pre-wrap;
+}
+
+.editableText[contenteditable="true"]:empty::before {
+  content: "Type here";
+  opacity: .45;
+  pointer-events: none;
+}
