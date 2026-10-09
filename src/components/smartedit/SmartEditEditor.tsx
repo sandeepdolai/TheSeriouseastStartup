@@ -1156,6 +1156,12 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
             setSavedFlash(true);
             window.setTimeout(() => setSavedFlash(false), 1800);
           }}
+          onUnpublished={() => {
+            setPublishedRecord(null);
+            setWebsitePublishOpen(false);
+            setSavedFlash(true);
+            window.setTimeout(() => setSavedFlash(false), 1800);
+          }}
         />
       )}
 
