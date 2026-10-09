@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { putLocalProject } from "@/lib/localProjects";
 import {
   publishResultToRecord,
@@ -55,6 +55,16 @@ export function SmartEditPublishWebsiteDialog({
   const [copied, setCopied] = useState(false);
   const [localSaveWarning, setLocalSaveWarning] = useState(false);
   const uploads = useRef(new Map<string, CloudinaryUpload>());
+
+  useEffect(() => {
+    if (previousPublished?.username) return;
+    try {
+      const remembered = window.localStorage.getItem("paper-stish-publish-username");
+      if (remembered) setUsername((current) => current || remembered);
+    } catch {
+      // Remembered username is an optional convenience.
+    }
+  }, [previousPublished?.username]);
 
   const publish = async () => {
     if (publishing) return;

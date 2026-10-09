@@ -765,7 +765,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
               Publish to All Users
             </button>
           )}
-          <IconButton label="Publish Website" onClick={openWebsitePublishDialog} disabled={status === "loading"}>
+          <IconButton label="Publish Website" onClick={openWebsitePublishDialog} disabled={status === "loading"} className="hidden s:flex">
             <IconPublish />
           </IconButton>
           <IconButton label="Download" onClick={() => setExportOpen(true)}>
@@ -929,9 +929,9 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
           <IconLayers />
           <span className="text-9 tracking-[-0.01em]">Layers</span>
         </ToolButton>
-        <ToolButton label="Export image" onClick={() => setExportOpen(true)}>
-          <IconDownload />
-          <span className="text-9 tracking-[-0.01em]">Export</span>
+        <ToolButton label="Publish Website" onClick={openWebsitePublishDialog}>
+          <IconPublish />
+          <span className="text-9 tracking-[-0.01em]">Publish</span>
         </ToolButton>
         <ToolButton label="Delete selected" onClick={deleteSelected}>
           <span className="text-white/55">
