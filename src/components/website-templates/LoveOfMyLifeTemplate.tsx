@@ -81,7 +81,7 @@ export function LoveOfMyLifeTemplate({
             </p>
             <InlineEditableText
               as="h1"
-              className={styles.mainHeading}
+              id="personal-site-heading"
               value={heading}
               editing={editing}
               multiline
@@ -165,6 +165,7 @@ export function LoveOfMyLifeTemplate({
           <div className={styles.noteBody}>
             <InlineEditableText
               as="h2"
+              id="personal-site-note"
               value={noteHeading}
               editing={editing}
               multiline
