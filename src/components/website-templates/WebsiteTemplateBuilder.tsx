@@ -98,7 +98,6 @@ export function WebsiteTemplateBuilder() {
       const photoUrl = await optimizePhoto(file);
       changeValue("photoUrl", photoUrl);
       setPhotoName(file.name);
-      setPublished(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not use this photo.");
     } finally {
@@ -189,7 +188,6 @@ export function WebsiteTemplateBuilder() {
                 maxLength={200}
                 onChange={(event) => {
                   changeValue("heading", event.target.value);
-                  setPublished(null);
                 }}
                 placeholder="To the love of my life"
               />
@@ -204,7 +202,6 @@ export function WebsiteTemplateBuilder() {
                   maxLength={40}
                   onChange={(event) => {
                     changeValue("years", event.target.value);
-                    setPublished(null);
                   }}
                   placeholder="3"
                 />
@@ -217,7 +214,6 @@ export function WebsiteTemplateBuilder() {
                   maxLength={80}
                   onChange={(event) => {
                     changeValue("yearsLabel", event.target.value);
-                    setPublished(null);
                   }}
                   placeholder="years of us"
                 />
@@ -232,7 +228,6 @@ export function WebsiteTemplateBuilder() {
                 maxLength={80}
                 onChange={(event) => {
                   changeValue("sideNote", event.target.value);
-                  setPublished(null);
                 }}
                 placeholder="My favorite person, always"
               />
@@ -246,7 +241,6 @@ export function WebsiteTemplateBuilder() {
                 maxLength={4000}
                 onChange={(event) => {
                   changeValue("message", event.target.value);
-                  setPublished(null);
                 }}
                 placeholder="Write something personal..."
               />
@@ -283,7 +277,6 @@ export function WebsiteTemplateBuilder() {
                   onClick={() => {
                     changeValue("photoUrl", null);
                     setPhotoName("");
-                    setPublished(null);
                   }}
                 >
                   Remove
@@ -310,7 +303,6 @@ export function WebsiteTemplateBuilder() {
                   autoCorrect="off"
                   onChange={(event) => {
                     setUsername(event.target.value);
-                    setPublished(null);
                   }}
                   placeholder="your-name"
                 />
@@ -325,7 +317,6 @@ export function WebsiteTemplateBuilder() {
                   autoCorrect="off"
                   onChange={(event) => {
                     setWebsiteName(event.target.value);
-                    setPublished(null);
                   }}
                   placeholder="our-story"
                 />
