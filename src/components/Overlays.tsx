@@ -120,11 +120,13 @@ export function ProfileOverlay({
   onMyProjects,
   onSmartEdit,
   onAdminTemplates,
+  onWebsiteTemplates,
 }: OverlayProps & {
   onMyProjects?: () => void;
   onMyTemplates?: () => void;
   onSmartEdit?: () => void;
   onAdminTemplates?: () => void;
+  onWebsiteTemplates?: () => void;
 }) {
   const { ref, visible } = useReveal(open);
   const { data: session, status } = useSession();
@@ -154,7 +156,7 @@ export function ProfileOverlay({
           <div data-reveal className="mb-10">
             <ProfileAction
               icon={<SparkIcon />}
-              onClick={() => window.location.assign("/website-templates")}
+              onClick={onWebsiteTemplates}
             >
               Website Templates
             </ProfileAction>
