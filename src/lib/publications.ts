@@ -41,6 +41,10 @@ export const TEMPLATE_VALUES_MAX_BYTES = 4_000_000;
 /** Editable values of a normal template (Birthday, Love of My Life). */
 export interface TemplatePublicationValues {
   heading?: string;
+  /** Extra editable copy used by the fixed personal website themes. */
+  intro?: string;
+  noteHeading?: string;
+  signature?: string;
   years?: string;
   yearsLabel?: string;
   sideNote?: string;
@@ -132,6 +136,9 @@ export function validateTemplateValues(raw: unknown): TemplatePublicationValues 
 
   const values: TemplatePublicationValues = {
     heading: boundedString(v.heading, 200),
+    intro: boundedString(v.intro, 400),
+    noteHeading: boundedString(v.noteHeading, 240),
+    signature: boundedString(v.signature, 160),
     years: boundedString(v.years, 40),
     yearsLabel: boundedString(v.yearsLabel, 80),
     sideNote: boundedString(v.sideNote, 80),
