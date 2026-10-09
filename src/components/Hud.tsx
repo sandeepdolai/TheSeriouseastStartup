@@ -63,8 +63,9 @@ export function Hud({ view, overlay, onProfile, onSaved, onHome, onMy, onWebsite
             className={`relative transition-opacity duration-500 ease-out ${
               view === "website-templates" ? "" : "opacity-50 hover:opacity-100"
             }`}
+            aria-label="Open Website Templates gallery"
           >
-            Website
+            Website Templates
           </a>
           <span aria-hidden="true">/</span>
           <a
