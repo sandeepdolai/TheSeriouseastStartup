@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { ease, tween } from "@/gl/react";
 import { isAdminEmail } from "@/lib/admin";
@@ -239,38 +239,6 @@ export function ProfileOverlay({
 
 export function NewsletterOverlay({ open }: OverlayProps) {
   const { ref, visible } = useReveal(open);
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (busy) return;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setStatus("Enter a valid email address");
-      return;
-    }
-    setBusy(true);
-    setStatus("Subscribing…");
-    try {
-      const res = await fetch("/api/newsletter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setStatus(data.message || "Subscribed");
-        setEmail("");
-      } else {
-        setStatus(data.error || "Something went wrong");
-      }
-    } catch {
-      setStatus("Something went wrong");
-    } finally {
-      setBusy(false);
-    }
-  };
 
   return (
     <div
@@ -279,40 +247,8 @@ export function NewsletterOverlay({ open }: OverlayProps) {
       style={{ visibility: visible ? "visible" : "hidden" }}
     >
       <div className="absolute inset-x-20 top-1/2 flex -translate-y-1/2 flex-col items-center text-center text-white">
-        <p data-reveal className="text-14 leading-14 tracking-[-0.02em] max-w-[30rem] s:max-w-[32.5rem]">
-          Get occasional updates about new Paper Stish features, templates, and ideas for making a personal website feel special.
-        </p>
-        <form data-reveal onSubmit={submit} className="mt-25 s:mt-30 flex w-full max-w-[26rem] s:max-w-[32rem] items-center gap-x-8" noValidate>
-          <div className="relative flex h-40 s:h-45 w-full items-center rounded-full bg-black px-20 text-14 tracking-[-0.02em] min-w-0 flex-1">
-            <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              type="email"
-              name="email"
-              autoComplete="email"
-              autoCapitalize="off"
-              autoCorrect="off"
-              spellCheck={false}
-              enterKeyHint="send"
-              aria-label="Email address"
-              placeholder="Email address"
-              className="pointer-events-auto h-full w-full border-0 bg-transparent text-white outline-none [font:inherit] [letter-spacing:inherit] placeholder:text-white/40"
-            />
-          </div>
-          <button
-            type="submit"
-            aria-label="Subscribe"
-            disabled={busy}
-            className="pointer-events-auto size-40 s:size-45 flex-none rounded-full bg-white text-black flex items-center justify-center transition-transform duration-300 hover:scale-105 disabled:opacity-70"
-          >
-            <svg viewBox="0 0 24 24" className="size-15" fill="none" stroke="currentColor" strokeWidth="2.4">
-              <path d="M5 12h13M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-          <input type="text" name="company" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" />
-        </form>
-        <p data-reveal role="status" aria-live="polite" className="label mt-15 min-h-[1.2em] w-full text-center">
-          <span className="inline-block opacity-60">{status}</span>
+        <p data-reveal className="max-w-[30rem] text-14 leading-17 tracking-[-0.02em] s:max-w-[32.5rem]">
+          Newsletter sign-ups aren&apos;t open yet. No email address is collected here.
         </p>
       </div>
     </div>
