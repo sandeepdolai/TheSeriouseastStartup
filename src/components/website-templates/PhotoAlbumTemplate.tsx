@@ -1,5 +1,6 @@
 "use client";
 
+import type { KeyboardEvent } from "react";
 import type { TemplatePublicationValues } from "@/lib/publications";
 import { InlineEditableText } from "./InlineEditableText";
 import styles from "./PhotoAlbumTemplate.module.css";
@@ -61,7 +62,7 @@ export function PhotoAlbumTemplate({
     title: editing ? "Tap to replace this photo" : undefined,
     onClick: editing ? () => onPhotoClick?.(index) : undefined,
     onKeyDown: editing
-      ? (event: React.KeyboardEvent<HTMLDivElement>) => {
+      ? (event: KeyboardEvent<HTMLDivElement>) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
             onPhotoClick?.(index);
