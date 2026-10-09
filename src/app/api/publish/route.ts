@@ -30,16 +30,16 @@ export async function POST(req: Request) {
   const user = await requireUser();
   if (!user) return jsonError(401, "Sign in to publish Paper Stish websites.");
 
-  // Enough head-room for the Smart Edit document limit (4 MB) plus fields.
-  const body = await readJsonBody(req, SMART_EDIT_MAX_DOCUMENT_BYTES + 128 * 1024);
+  // Accept either a Smart Edit document or bounded code-template values.
+  const body = await readJsonBody(
+    req,
+    Math.max(SMART_EDIT_MAX_DOCUMENT_BYTES, TEMPLATE_VALUES_MAX_BYTES) + 128 * 1024,
+  );
   if (!body) return jsonError(413, "This website is too large to publish. Remove a few images and try again.");
 
   const templateSlug = typeof body.templateSlug === "string" ? body.templateSlug : "";
   if (!(PUBLISHABLE_TEMPLATE_SLUGS as readonly string[]).includes(templateSlug)) {
     return jsonError(400, "This template cannot be published yet.");
-  }
-  if (templateSlug !== "smart-edit") {
-    return jsonError(400, "Website publishing is currently available for Smart Edit designs only.");
   }
   const slug = templateSlug as PublishableTemplateSlug;
 
