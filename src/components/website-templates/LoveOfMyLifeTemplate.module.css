@@ -260,3 +260,14 @@
     text-align: left;
   }
 }
+
+
+.editablePhoto {
+  cursor: pointer;
+  outline-offset: 5px;
+  -webkit-tap-highlight-color: transparent;
+}
+.editablePhoto:hover,
+.editablePhoto:focus-visible {
+  outline: 1px dashed rgba(184, 72, 70, .72);
+}
