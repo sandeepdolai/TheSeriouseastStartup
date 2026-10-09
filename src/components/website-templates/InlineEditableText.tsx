@@ -34,16 +34,8 @@ export function InlineEditableText({
   useEffect(() => {
     if (!active) return;
     const element = elementRef.current;
-    if (!element) return;
-    element.textContent = value;
-    element.focus();
-    const selection = window.getSelection();
-    const range = document.createRange();
-    range.selectNodeContents(element);
-    range.collapse(false);
-    selection?.removeAllRanges();
-    selection?.addRange(range);
-  }, [active, value]);
+    if (element && document.activeElement !== element) element.focus();
+  }, [active]);
 
   const finish = (commit: boolean) => {
     const element = elementRef.current;
