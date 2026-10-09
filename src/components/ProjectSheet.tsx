@@ -22,6 +22,8 @@ interface Props {
   mediaAspects?: number[];
   relatedPrev?: Project | null;
   relatedNext?: Project | null;
+  /** Use caller-provided related items instead of the global portfolio carousel. */
+  relatedOnly?: boolean;
   onDuplicate?: () => void;
   onSaveTemplate?: () => void;
   onSwipeStart?: (direction: -1 | 1) => void;
@@ -91,10 +93,11 @@ export function ProjectSheet({
   mediaAspects,
   relatedPrev,
   relatedNext,
+  relatedOnly = false,
 }: Props) {
   const idx = FEATURED.findIndex((p) => p.slug === project.slug);
-  const prev = idx >= 0 ? FEATURED[(idx - 1 + FEATURED.length) % FEATURED.length] : relatedPrev ?? null;
-  const next = idx >= 0 ? FEATURED[(idx + 1) % FEATURED.length] : relatedNext ?? null;
+  const prev = !relatedOnly && idx >= 0 ? FEATURED[(idx - 1 + FEATURED.length) % FEATURED.length] : relatedPrev ?? null;
+  const next = !relatedOnly && idx >= 0 ? FEATURED[(idx + 1) % FEATURED.length] : relatedNext ?? null;
 
   const sheetRef = useRef<HTMLDivElement>(null);
   const mediaRef = useRef<HTMLDivElement>(null);

@@ -28,6 +28,7 @@ export const PUBLISHABLE_TEMPLATE_SLUGS = [
   "smart-edit",
   "birthday-template",
   "love-of-my-life",
+  "photo-album",
 ] as const;
 
 export type PublishableTemplateSlug = (typeof PUBLISHABLE_TEMPLATE_SLUGS)[number];
@@ -45,6 +46,10 @@ export interface TemplatePublicationValues {
   sideNote?: string;
   message?: string;
   photoUrl?: string | null;
+  /** Photo Album supports up to six optimized, user-uploaded images. */
+  images?: string[];
+  /** Optional captions, aligned with the album image array. */
+  captions?: string[];
 }
 
 /** What the public viewer receives for a published website. */
@@ -105,6 +110,26 @@ export function validateTemplateValues(raw: unknown): TemplatePublicationValues 
       ? null
       : boundedString(v.photoUrl, 8_000_000);
   if (photoUrl !== null && (!photoUrl || !PHOTO_URL_RE.test(photoUrl))) return null;
+  let images: string[] | undefined;
+  if (v.images !== undefined) {
+    if (!Array.isArray(v.images) || v.images.length > 6) return null;
+    images = [];
+    for (const item of v.images) {
+      if (typeof item !== "string" || item.length > 560_000 || !PHOTO_URL_RE.test(item)) return null;
+      images.push(item);
+    }
+  }
+
+  let captions: string[] | undefined;
+  if (v.captions !== undefined) {
+    if (!Array.isArray(v.captions) || v.captions.length > 6) return null;
+    captions = [];
+    for (const item of v.captions) {
+      if (typeof item !== "string" || item.length > 120) return null;
+      captions.push(item);
+    }
+  }
+
   const values: TemplatePublicationValues = {
     heading: boundedString(v.heading, 200),
     years: boundedString(v.years, 40),
@@ -112,6 +137,8 @@ export function validateTemplateValues(raw: unknown): TemplatePublicationValues 
     sideNote: boundedString(v.sideNote, 80),
     message: boundedString(v.message, 4000),
     photoUrl,
+    images,
+    captions,
   };
   return values;
 }

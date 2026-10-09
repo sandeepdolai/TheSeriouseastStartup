@@ -93,6 +93,22 @@ export const FEATURED: Project[] = [
   },
 ];
 
+
+/** Website themes shown in the Website gallery (separate from image templates). */
+export const WEBSITE_TEMPLATES: Project[] = [
+  ...FEATURED,
+  {
+    title: "Photo Album",
+    slug: "photo-album",
+    description: "A scrapbook-inspired website for six photos, tiny captions, and a message that keeps the memories together.",
+    link: null,
+    tags: [{ title: "Photos", url: null }, { title: "Memories", url: null }],
+    awards: 0,
+    aspect: 4 / 5,
+    media: [T + "love-polaroid-frame.webp", T + "love-paper-texture.webp", T + "love-of-my-life-art.webp"],
+  },
+];
+
 export interface IndexItem {
   title: string;
   href: string;
