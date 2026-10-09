@@ -57,9 +57,9 @@ async function optimizePhoto(file: File): Promise<string> {
   context.fillRect(0, 0, canvas.width, canvas.height);
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-  let dataUrl = canvas.toDataURL("image/jpeg", 0.78);
-  if (dataUrl.length > 2_200_000) dataUrl = canvas.toDataURL("image/jpeg", 0.58);
-  if (dataUrl.length > 2_800_000) {
+  let dataUrl = canvas.toDataURL("image/jpeg", 0.76);
+  if (dataUrl.length > 1_600_000) dataUrl = canvas.toDataURL("image/jpeg", 0.52);
+  if (dataUrl.length > 1_800_000) {
     throw new Error("This photo is still too large after compression. Choose another image.");
   }
   return dataUrl;
@@ -71,6 +71,7 @@ export function WebsiteTemplateBuilder() {
   const [username, setUsername] = useState("");
   const [websiteName, setWebsiteName] = useState("our-story");
   const [photoName, setPhotoName] = useState("");
+  const [draftReady, setDraftReady] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [photoLoading, setPhotoLoading] = useState(false);
   const [error, setError] = useState("");
@@ -79,12 +80,54 @@ export function WebsiteTemplateBuilder() {
 
   useEffect(() => {
     try {
-      const remembered = window.localStorage.getItem("paper-stish-publish-username");
-      if (remembered) setUsername(remembered);
+      const rawDraft = window.localStorage.getItem("paper-stish-coded-template-draft");
+      if (rawDraft) {
+        const draft = JSON.parse(rawDraft) as Record<string, unknown>;
+        const rawValues =
+          draft.values && typeof draft.values === "object" && !Array.isArray(draft.values)
+            ? (draft.values as Record<string, unknown>)
+            : {};
+        const text = (key: string, fallback: string, max: number) =>
+          typeof rawValues[key] === "string" ? (rawValues[key] as string).slice(0, max) : fallback;
+        const rawPhoto = rawValues.photoUrl;
+        const photoUrl =
+          typeof rawPhoto === "string" &&
+          rawPhoto.length <= 1_800_000 &&
+          /^(data:image\/|https?:\/\/)/.test(rawPhoto)
+            ? rawPhoto
+            : null;
+        setValues({
+          heading: text("heading", DEFAULT_VALUES.heading ?? "", 200),
+          years: text("years", DEFAULT_VALUES.years ?? "", 40),
+          yearsLabel: text("yearsLabel", DEFAULT_VALUES.yearsLabel ?? "", 80),
+          sideNote: text("sideNote", DEFAULT_VALUES.sideNote ?? "", 80),
+          message: text("message", DEFAULT_VALUES.message ?? "", 4000),
+          photoUrl,
+        });
+        if (typeof draft.username === "string") setUsername(draft.username.slice(0, 60));
+        if (typeof draft.websiteName === "string") setWebsiteName(draft.websiteName.slice(0, 60));
+        if (typeof draft.photoName === "string") setPhotoName(draft.photoName.slice(0, 200));
+      } else {
+        const remembered = window.localStorage.getItem("paper-stish-publish-username");
+        if (remembered) setUsername(remembered.slice(0, 60));
+      }
     } catch {
-      // Remembered values are optional convenience only.
+      // A broken or unavailable local draft must not block the editor.
     }
+    setDraftReady(true);
   }, []);
+
+  useEffect(() => {
+    if (!draftReady) return;
+    try {
+      window.localStorage.setItem(
+        "paper-stish-coded-template-draft",
+        JSON.stringify({ values, username, websiteName, photoName }),
+      );
+    } catch {
+      // Local drafts are a convenience; publishing remains available.
+    }
+  }, [draftReady, values, username, websiteName, photoName]);
 
   const changeValue = <K extends keyof TemplatePublicationValues>(
     key: K,
@@ -164,7 +207,7 @@ export function WebsiteTemplateBuilder() {
       <header className={styles.topbar}>
         <a className={styles.brand} href="/">Paper Stish</a>
         <div className={styles.topbarRight}>
-          <span>Website Templates · Test build</span>
+          <span>Website Templates · Code template</span>
           <a className={styles.backLink} href="/">Exit</a>
         </div>
       </header>
