@@ -1,17 +1,20 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/components/AuthProvider";
-import { WebsiteTemplateBuilder } from "@/components/website-templates/WebsiteTemplateBuilder";
+import { FolioProvider } from "@/gl/react";
+import { App } from "@/components/App";
 
 export const metadata: Metadata = {
   title: "Website Templates | Paper Stish",
-  description: "Customize and publish a code-built personal website with Paper Stish.",
+  description: "Browse website templates in Paper Stish. Website editing is coming later.",
   robots: { index: false, follow: false },
 };
 
 export default function WebsiteTemplatesPage() {
   return (
     <AuthProvider>
-      <WebsiteTemplateBuilder />
+      <FolioProvider>
+        <App initialView="website-templates" />
+      </FolioProvider>
     </AuthProvider>
   );
 }
