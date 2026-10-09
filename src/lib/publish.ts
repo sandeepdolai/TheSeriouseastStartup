@@ -61,12 +61,11 @@ export function decodePublishedPayload(value: string): PublishedTemplatePayload 
       photoUrl: typeof parsed.photoUrl === "string" ? parsed.photoUrl : null,
       data:
         parsed.data && typeof parsed.data === "object"
-          ? Object.fromEntries(
+          ? (Object.fromEntries(
               Object.entries(parsed.data as Record<string, unknown>).filter(
                 ([, value]) => typeof value === "string" || value === null,
               ),
-            ) as Record<string, string | null>
-            )
+            ) as Record<string, string | null>)
           : undefined,
       publishedAt:
         typeof parsed.publishedAt === "string"
