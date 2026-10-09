@@ -10,8 +10,8 @@
    • mobile: bottom tool dock, panels as bottom sheets
    Persistence is DEVICE-FIRST: the editable project lives on this
    device — debounced IndexedDB draft (700ms) + account-scoped project
-   record in IndexedDB (3s autosave / manual save). The server is only
-   contacted when the user presses Publish.
+   record in IndexedDB (3s autosave / manual save). Admin template
+   publishing is a separate, optional server action.
 ─────────────────────────────────────────────────────────────────────────── */
 
 import {
@@ -23,7 +23,6 @@ import {
 } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { getAccountKey } from "@/lib/accountStorage";
-import { type PublishedRecord } from "@/lib/publications";
 import { isAdminEmail } from "@/lib/admin";
 import {
   getLocalProject,
@@ -65,7 +64,6 @@ import { SmartEditCanvas } from "./SmartEditCanvas";
 import { SelectionOverlay } from "./selectionOverlay";
 import { CropEditor } from "./cropEditor";
 import { PublishTemplateDialog } from "./publishDialog";
-import { SmartEditPublishWebsiteDialog } from "./SmartEditPublishWebsiteDialog";
 import { exportDocument } from "./exportRenderer";
 import {
   AuthGate,
@@ -74,7 +72,6 @@ import {
   IconDelete as DelIcon,
   IconDown,
   IconDownload,
-  IconPublish,
   IconDuplicate,
   IconEdit,
   IconEye,
@@ -121,8 +118,6 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   const [adminTemplateDraft, setAdminTemplateDraft] = useState(false);
   /** admin “Publish to All Users” → Publish Template dialog (no immediate POST) */
   const [publishOpen, setPublishOpen] = useState(false);
-  const [websitePublishOpen, setWebsitePublishOpen] = useState(false);
-  const [publishedRecord, setPublishedRecord] = useState<PublishedRecord | null>(null);
   /** id of the image layer currently open in Crop Mode (covers the editor) */
   const [cropTarget, setCropTarget] = useState<string | null>(null);
 
@@ -165,13 +160,10 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
         kind?: string;
         document?: SmartEditDocument;
         assets?: Record<string, AssetRecord>;
-        published?: PublishedRecord;
       } | null;
 
       if (alive) {
         setAdminTemplateDraft(isAdminEmail(session?.user?.email));
-        const savedPublication = (record?.data as { published?: PublishedRecord } | undefined)?.published;
-        setPublishedRecord(savedPublication && typeof savedPublication.url === "string" ? savedPublication : null);
       }
 
       const draft = await idb.getDraft<{
@@ -427,7 +419,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   // already committed to the store) — no caret stays active behind an open
   // sheet. Closing a sheet never touches the editing state.
   const sheetsOpen =
-    libraryOpen || inspectorOpen || exportOpen || !!authGate || textEditorOpen || publishOpen || websitePublishOpen;
+    libraryOpen || inspectorOpen || exportOpen || !!authGate || textEditorOpen || publishOpen;
   const prevSheetsOpenRef = useRef(false);
   useEffect(() => {
     if (sheetsOpen && !prevSheetsOpenRef.current) {
@@ -459,22 +451,6 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
     setAuthGate(null);
     setPublishOpen(true);
   }, []);
-
-  const openWebsitePublishDialog = useCallback(() => {
-    const state = useEditorStore.getState();
-    if (state.editingId) state.startEditing(null);
-    setLibraryOpen(false);
-    setInspectorOpen(false);
-    setExportOpen(false);
-    setTextEditorOpen(false);
-    setPublishOpen(false);
-    setAuthGate(null);
-    if (status !== "authenticated") {
-      setAuthGate("save");
-      return;
-    }
-    setWebsitePublishOpen(true);
-  }, [status]);
 
   const save = useCallback(async () => {
     if (status !== "authenticated") {
@@ -765,9 +741,6 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
               Publish to All Users
             </button>
           )}
-          <IconButton label="Publish Website" onClick={openWebsitePublishDialog} disabled={status === "loading"} className="hidden s:flex">
-            <IconPublish />
-          </IconButton>
           <IconButton label="Download" onClick={() => setExportOpen(true)}>
             <IconDownload />
           </IconButton>
@@ -928,10 +901,6 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
         <ToolButton label="Layers" onClick={() => setInspectorOpen(true)}>
           <IconLayers />
           <span className="text-9 tracking-[-0.01em]">Layers</span>
-        </ToolButton>
-        <ToolButton label="Publish Website" onClick={openWebsitePublishDialog}>
-          <IconPublish />
-          <span className="text-9 tracking-[-0.01em]">Publish</span>
         </ToolButton>
         <ToolButton label="Delete selected" onClick={deleteSelected}>
           <span className="text-white/55">
@@ -1137,28 +1106,6 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
           onClose={() => setPublishOpen(false)}
           onPublished={() => {
             setPublishOpen(false);
-            setSavedFlash(true);
-            window.setTimeout(() => setSavedFlash(false), 1800);
-          }}
-        />
-      )}
-
-      {/* Public website publishing is separate from admin template publishing. */}
-      {websitePublishOpen && load.phase === "ready" && (
-        <SmartEditPublishWebsiteDialog
-          projectId={projectId}
-          account={account}
-          previousPublished={publishedRecord}
-          onClose={() => setWebsitePublishOpen(false)}
-          onPublished={(record) => {
-            setPublishedRecord(record);
-            void writeProjectRecord();
-            setSavedFlash(true);
-            window.setTimeout(() => setSavedFlash(false), 1800);
-          }}
-          onUnpublished={() => {
-            setPublishedRecord(null);
-            setWebsitePublishOpen(false);
             setSavedFlash(true);
             window.setTimeout(() => setSavedFlash(false), 1800);
           }}
