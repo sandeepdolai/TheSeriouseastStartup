@@ -151,6 +151,14 @@ export function ProfileOverlay({
         </div>
 
         <div className="px-15 pb-15 s:px-20 s:pb-20">
+          <div data-reveal className="mb-10">
+            <ProfileAction
+              icon={<SparkIcon />}
+              onClick={() => window.location.assign("/website-templates")}
+            >
+              Website Templates
+            </ProfileAction>
+          </div>
           {!signedIn ? (
             <div data-reveal className="rounded-[1.55rem] bg-[#272727] p-20 s:p-25">
               <div className="flex items-start gap-12">
