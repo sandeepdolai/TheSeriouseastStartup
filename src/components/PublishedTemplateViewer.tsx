@@ -11,6 +11,7 @@ import {
   type PublishedWebsitePayload,
 } from "@/lib/publications";
 import { SmartEditViewer } from "@/components/smartedit/SmartEditViewer";
+import { LoveOfMyLifeTemplate } from "@/components/website-templates/LoveOfMyLifeTemplate";
 
 interface Props {
   username: string;
@@ -117,6 +118,19 @@ export function PublishedTemplateViewer({
       );
     }
 
+    if (
+      (serverPublication.templateSlug === "love-of-my-life" ||
+        serverPublication.templateSlug === "birthday-template") &&
+      serverPublication.values
+    ) {
+      return (
+        <LoveOfMyLifeTemplate
+          title={serverPublication.title}
+          values={serverPublication.values}
+          variant={serverPublication.templateSlug === "birthday-template" ? "birthday" : "love"}
+        />
+      );
+    }
   }
 
   return (
