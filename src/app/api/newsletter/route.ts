@@ -8,19 +8,31 @@ export async function POST(req: Request) {
     const email = typeof body?.email === "string" ? body.email.trim() : "";
     const company = typeof body?.company === "string" ? body.company.trim() : "";
 
+    // Silently ignore honeypot submissions.
     if (company) {
-      // honeypot filled — pretend success
-      return NextResponse.json({ ok: true, message: "Subscribed" });
+      return NextResponse.json({ ok: true, message: "Thanks." });
     }
 
-    if (!EMAIL_RE.test(email)) {
-      return NextResponse.json({ ok: false, error: "Enter a valid email address" }, { status: 400 });
+    if (!EMAIL_RE.test(email) || email.length > 254) {
+      return NextResponse.json(
+        { ok: false, error: "Enter a valid email address." },
+        { status: 400 },
+      );
     }
 
-    // In production this would forward to a mailing provider.
-    // Here we accept and acknowledge, mirroring the reference site's behaviour.
-    return NextResponse.json({ ok: true, message: "Subscribed — see you in the next one." });
+    // No mailing provider is configured. Do not store or falsely acknowledge
+    // a subscription until a real opt-in flow is connected.
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Newsletter sign-ups are not open yet. Your email has not been saved.",
+      },
+      { status: 503 },
+    );
   } catch {
-    return NextResponse.json({ ok: false, error: "Something went wrong" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "Something went wrong. Please try again later." },
+      { status: 500 },
+    );
   }
 }

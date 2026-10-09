@@ -29,6 +29,7 @@ interface Props {
   previousPublished: PublishedRecord | null;
   onClose: () => void;
   onPublished: (record: PublishedRecord) => void;
+  onUnpublished: () => void;
 }
 
 async function dataUrlForAsset(id: string): Promise<string | undefined> {
@@ -44,11 +45,13 @@ export function SmartEditPublishWebsiteDialog({
   previousPublished,
   onClose,
   onPublished,
+  onUnpublished,
 }: Props) {
   const title = useEditorStore((state) => state.title);
   const [username, setUsername] = useState(previousPublished?.username ?? "");
   const [viewerName, setViewerName] = useState(previousPublished?.viewerName ?? "");
   const [publishing, setPublishing] = useState(false);
+  const [unpublishing, setUnpublishing] = useState(false);
   const [error, setError] = useState("");
   const [published, setPublished] = useState<PublishedRecord | null>(null);
   const [copyError, setCopyError] = useState("");
@@ -238,8 +241,47 @@ export function SmartEditPublishWebsiteDialog({
     }
   };
 
+  const unpublish = async () => {
+    if (!previousPublished || publishing || unpublishing) return;
+    const confirmed = window.confirm(
+      "Unpublish this website? Anyone opening its current link will no longer be able to view it.",
+    );
+    if (!confirmed) return;
+
+    setUnpublishing(true);
+    setError("");
+    try {
+      const response = await fetch("/api/publish", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateId: previousPublished.templateId }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error || "Could not unpublish this website. Try again.");
+      }
+
+      const saved = await putLocalProject({
+        id: projectId,
+        account,
+        title,
+        templateSlug: "smart-edit",
+        updatedAt: new Date().toISOString(),
+        data: { published: null },
+      });
+      onUnpublished();
+      if (!saved) {
+        window.alert("The website is unpublished, but this device could not update its local project record.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not unpublish this website. Try again.");
+    } finally {
+      setUnpublishing(false);
+    }
+  };
+
   const guardedClose = () => {
-    if (!publishing) onClose();
+    if (!publishing && !unpublishing) onClose();
   };
 
   const copyLink = async () => {
@@ -353,7 +395,7 @@ export function SmartEditPublishWebsiteDialog({
         <button
           type="button"
           onClick={guardedClose}
-          disabled={publishing}
+          disabled={publishing || unpublishing}
           className="h-46 rounded-full border border-white/12 bg-white/5 text-12 text-white transition-colors hover:bg-white/10 disabled:opacity-40"
         >
           Cancel
@@ -361,12 +403,22 @@ export function SmartEditPublishWebsiteDialog({
         <button
           type="button"
           onClick={() => void publish()}
-          disabled={publishing}
+          disabled={publishing || unpublishing}
           className="h-46 rounded-full bg-white text-12 text-black transition-opacity hover:opacity-85 disabled:opacity-45"
         >
           {publishing ? "Publishing…" : previousPublished ? "Republish website" : "Publish website"}
         </button>
       </div>
+      {previousPublished && (
+        <button
+          type="button"
+          onClick={() => void unpublish()}
+          disabled={publishing || unpublishing}
+          className="h-42 rounded-full border border-[#e5484d]/30 bg-[#e5484d]/8 text-11 text-[#ffaaa8] transition-colors hover:bg-[#e5484d]/15 disabled:opacity-45"
+        >
+          {unpublishing ? "Unpublishing…" : "Unpublish website"}
+        </button>
+      )}
       <p className="text-9 leading-13 text-white/30">
         The public link is created only when you press Publish. Republish keeps the same link.
       </p>

@@ -38,6 +38,9 @@ export async function POST(req: Request) {
   if (!(PUBLISHABLE_TEMPLATE_SLUGS as readonly string[]).includes(templateSlug)) {
     return jsonError(400, "This template cannot be published yet.");
   }
+  if (templateSlug !== "smart-edit") {
+    return jsonError(400, "Website publishing is currently available for Smart Edit designs only.");
+  }
   const slug = templateSlug as PublishableTemplateSlug;
 
   const username = slugPart(typeof body.username === "string" ? body.username : "", "");
@@ -95,6 +98,11 @@ export async function POST(req: Request) {
     }
   }
 
+  const publicationCount = await db.publication.count({ where: { ownerId: user.id } });
+  if (publicationCount >= 50) {
+    return jsonError(429, "You have reached the limit of 50 published websites. Unpublish one before creating another.");
+  }
+
   for (let attempt = 0; attempt < 4; attempt += 1) {
     try {
       const publication = await db.publication.create({
@@ -125,4 +133,24 @@ export async function POST(req: Request) {
     }
   }
   return jsonError(500, "Could not generate a unique link. Try again.");
+}
+
+/** DELETE /api/publish — unpublish a website owned by the current account. */
+export async function DELETE(req: Request) {
+  const user = await requireUser();
+  if (!user) return jsonError(401, "Sign in to manage Paper Stish websites.");
+
+  const body = await readJsonBody(req, 8 * 1024);
+  const templateId = typeof body?.templateId === "string" ? body.templateId : "";
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(templateId)) {
+    return jsonError(400, "That website link could not be identified.");
+  }
+
+  const publication = await db.publication.findUnique({ where: { templateId } });
+  if (!publication || publication.ownerId !== user.id) {
+    return jsonError(404, "That published website was not found.");
+  }
+
+  await db.publication.delete({ where: { templateId } });
+  return Response.json({ ok: true });
 }

@@ -1,31 +1,46 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://the-seriouseast-startup.vercel.app";
+const siteTitle = "Paper Stish | Personal Websites";
+const siteDescription =
+  "Create a personal design, then publish it as a shareable website with Paper Stish.";
+
 export const metadata: Metadata = {
-  title: "Paper Stish",
-  description:
-    "Jesper Landberg, Swedish design engineer, named Awwwards Independent of the Year in 2022 and 2024, building visually rich, motion-driven websites.",
+  metadataBase: new URL(siteUrl),
+  title: siteTitle,
+  description: siteDescription,
+  applicationName: "Paper Stish",
   keywords: [
-    "Jesper Landberg",
-    "design engineer",
-    "creative developer",
-    "WebGL",
-    "motion design",
+    "Paper Stish",
+    "personal websites",
+    "shareable websites",
+    "personal design",
+    "Smart Edit",
   ],
-  authors: [{ name: "Jesper Landberg" }],
+  authors: [{ name: "Paper Stish" }],
   openGraph: {
-    title: "Paper Stish",
-    description:
-      "Design engineer building visually rich, motion-driven websites. 77 awards — 30× Awwwards, 40× FWA, 3× Webby, 2× Lovie.",
+    title: siteTitle,
+    description: siteDescription,
     type: "website",
+    siteName: "Paper Stish",
+    url: "/",
+  },
+  twitter: {
+    card: "summary",
+    title: siteTitle,
+    description: siteDescription,
+  },
+  icons: {
+    icon: "/logo.svg",
   },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
   themeColor: "#000000",
 };
 
@@ -37,17 +52,17 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-          <style>{`
-            @font-face {
-              font-display: swap;
-              font-family: sans;
-              font-style: normal;
-              font-weight: 200 1000;
-              src: url(${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/fonts/ABCDiatypePlusVariable.woff2) format("woff2-variations");
-            }
-          `}</style>
-        </head>
-        <body className="antialiased bg-black text-white">{children}</body>
+        <style>{`
+          @font-face {
+            font-display: swap;
+            font-family: sans;
+            font-style: normal;
+            font-weight: 200 1000;
+            src: url(${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/fonts/ABCDiatypePlusVariable.woff2) format("woff2-variations");
+          }
+        `}</style>
+      </head>
+      <body className="antialiased bg-black text-white">{children}</body>
     </html>
   );
 }

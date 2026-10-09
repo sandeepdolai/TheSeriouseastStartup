@@ -41,7 +41,7 @@ export async function readJsonBody(req: Request, maxBytes: number): Promise<Reco
   } catch {
     return null;
   }
-  if (text.length > maxBytes + 64 * 1024) return null;
+  if (new TextEncoder().encode(text).byteLength > maxBytes + 64 * 1024) return null;
   try {
     const parsed = JSON.parse(text);
     return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : null;

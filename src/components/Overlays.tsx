@@ -205,7 +205,6 @@ export function ProfileOverlay({
                   <ProfileAction icon={<SparkIcon />} onClick={onAdminTemplates}>Admin Templates</ProfileAction>
                 )}
                 <ProfileAction icon={<UserIcon />} onClick={onMyProjects}>My Projects</ProfileAction>
-                <ProfileAction>Manage subscription</ProfileAction>
               </div>
 
               <div data-reveal className="mt-15 border-t border-white/10 pt-15 text-center">
@@ -222,9 +221,15 @@ export function ProfileOverlay({
         </div>
 
         <div className="px-25 pb-22 text-center s:px-30 s:pb-25">
-          <p className="label opacity-35 mb-8">Privacy • Terms Of Service • Support</p>
+          <nav aria-label="Legal and support" className="label mb-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-6 text-white/45">
+            <a href="/privacy" className="transition-opacity hover:text-white">Privacy</a>
+            <span aria-hidden="true">•</span>
+            <a href="/terms" className="transition-opacity hover:text-white">Terms</a>
+            <span aria-hidden="true">•</span>
+            <a href="mailto:sandeepdolai.info@gmail.com" className="transition-opacity hover:text-white">Support</a>
+          </nav>
           <p className="text-10 font-medium tracking-[-0.01em] text-white/35">
-            Making someone else happy is one of the best feelings.
+            Making something personal should feel simple.
           </p>
         </div>
       </div>
@@ -275,7 +280,7 @@ export function NewsletterOverlay({ open }: OverlayProps) {
     >
       <div className="absolute inset-x-20 top-1/2 flex -translate-y-1/2 flex-col items-center text-center text-white">
         <p data-reveal className="text-14 leading-14 tracking-[-0.02em] max-w-[30rem] s:max-w-[32.5rem]">
-          An occasional newsletter with insights and thoughts from a design engineer, drawn from over a decade of freelancing.
+          Get occasional updates about new Paper Stish features, templates, and ideas for making a personal website feel special.
         </p>
         <form data-reveal onSubmit={submit} className="mt-25 s:mt-30 flex w-full max-w-[26rem] s:max-w-[32rem] items-center gap-x-8" noValidate>
           <div className="relative flex h-40 s:h-45 w-full items-center rounded-full bg-black px-20 text-14 tracking-[-0.02em] min-w-0 flex-1">
