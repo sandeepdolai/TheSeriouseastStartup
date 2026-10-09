@@ -208,7 +208,7 @@ function AppContent({ folio }: { folio: Folio }) {
     setProjectSlug(null);
     setReturning(slug);
     const entry = slug ? folio.cards.find((c) => c.slug === slug) : null;
-    if (entry) {
+    if (entry && slug) {
       entry.mesh.visible = true;
       entry.flying = true;
       setCarouselHidden(false);
