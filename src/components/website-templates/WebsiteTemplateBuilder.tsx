@@ -86,7 +86,10 @@ export function WebsiteTemplateBuilder() {
     }
   }, []);
 
-  const changeValue = (key: keyof TemplatePublicationValues, value: string | null) => {
+  const changeValue = <K extends keyof TemplatePublicationValues>(
+    key: K,
+    value: TemplatePublicationValues[K],
+  ) => {
     setValues((current) => ({ ...current, [key]: value }));
   };
 
