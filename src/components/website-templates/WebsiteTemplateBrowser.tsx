@@ -2,18 +2,20 @@
 
 import { useCallback, useState } from "react";
 import { useFolio } from "@/gl/react";
-import { FEATURED } from "@/lib/projects";
+import { WEBSITE_TEMPLATES } from "@/lib/projects";
 import { HomeCarousel } from "../HomeCarousel";
 import { ProjectSheet } from "../ProjectSheet";
+import { WebsiteEditor, type WebsiteEditorTemplateSlug } from "./WebsiteEditor";
 
-/**
- * Website templates use the same immersive browsing and detail-sheet
- * architecture as Paper Stish's image templates. Editing and publishing
- * are intentionally not connected here; the website editor comes later.
- */
+function isEditableSlug(slug: string): slug is WebsiteEditorTemplateSlug {
+  return slug === "love-of-my-life" || slug === "birthday-template" || slug === "photo-album";
+}
+
+/** Browse fixed website themes, preview one, then edit only its images and text. */
 export function WebsiteTemplateBrowser() {
   const folio = useFolio();
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+  const [editingSlug, setEditingSlug] = useState<WebsiteEditorTemplateSlug | null>(null);
   const [swipe, setSwipe] = useState<{
     phase: "idle" | "drag" | "commit" | "cancel";
     direction: -1 | 1 | null;
@@ -21,20 +23,21 @@ export function WebsiteTemplateBrowser() {
   }>({ phase: "idle", direction: null, x: 0 });
 
   const selectedIndex = selectedSlug
-    ? FEATURED.findIndex((project) => project.slug === selectedSlug)
+    ? WEBSITE_TEMPLATES.findIndex((project) => project.slug === selectedSlug)
     : -1;
-  const selected = selectedIndex >= 0 ? FEATURED[selectedIndex] : null;
+  const selected = selectedIndex >= 0 ? WEBSITE_TEMPLATES[selectedIndex] : null;
   const relatedPrev =
-    selectedIndex >= 0 && FEATURED.length > 1
-      ? FEATURED[(selectedIndex - 1 + FEATURED.length) % FEATURED.length]
+    selectedIndex >= 0 && WEBSITE_TEMPLATES.length > 1
+      ? WEBSITE_TEMPLATES[(selectedIndex - 1 + WEBSITE_TEMPLATES.length) % WEBSITE_TEMPLATES.length]
       : null;
   const relatedNext =
-    selectedIndex >= 0 && FEATURED.length > 1
-      ? FEATURED[(selectedIndex + 1) % FEATURED.length]
+    selectedIndex >= 0 && WEBSITE_TEMPLATES.length > 1
+      ? WEBSITE_TEMPLATES[(selectedIndex + 1) % WEBSITE_TEMPLATES.length]
       : null;
+  const editableSlug = selected && isEditableSlug(selected.slug) ? selected.slug : null;
 
   const selectProject = useCallback((slug: string) => {
-    if (!FEATURED.some((project) => project.slug === slug)) return;
+    if (!WEBSITE_TEMPLATES.some((project) => project.slug === slug)) return;
     setSelectedSlug(slug);
     setSwipe({ phase: "idle", direction: null, x: 0 });
   }, []);
@@ -59,25 +62,25 @@ export function WebsiteTemplateBrowser() {
 
   const commitSwipe = useCallback(
     (direction: -1 | 1) => {
-      if (selectedIndex < 0 || FEATURED.length < 2) {
+      if (selectedIndex < 0 || WEBSITE_TEMPLATES.length < 2) {
         cancelSwipe();
         return;
       }
-      setSwipe((current) => ({
-        ...current,
-        phase: "commit",
-        direction,
-      }));
+      setSwipe((current) => ({ ...current, phase: "commit", direction }));
       window.setTimeout(() => {
         const targetIndex =
-          (selectedIndex + (direction < 0 ? 1 : -1) + FEATURED.length) %
-          FEATURED.length;
-        setSelectedSlug(FEATURED[targetIndex].slug);
+          (selectedIndex + (direction < 0 ? 1 : -1) + WEBSITE_TEMPLATES.length) %
+          WEBSITE_TEMPLATES.length;
+        setSelectedSlug(WEBSITE_TEMPLATES[targetIndex].slug);
         setSwipe({ phase: "idle", direction: null, x: 0 });
       }, 360);
     },
     [cancelSwipe, selectedIndex],
   );
+
+  if (editingSlug) {
+    return <WebsiteEditor templateSlug={editingSlug} onClose={() => setEditingSlug(null)} />;
+  }
 
   return (
     <>
@@ -88,7 +91,7 @@ export function WebsiteTemplateBrowser() {
           returning={null}
           onSelect={selectProject}
           hidden={false}
-          projects={FEATURED}
+          projects={WEBSITE_TEMPLATES}
         />
       )}
 
@@ -98,8 +101,9 @@ export function WebsiteTemplateBrowser() {
           project={selected}
           relatedPrev={relatedPrev}
           relatedNext={relatedNext}
+          relatedOnly
           entered
-          interactive={FEATURED.length > 1}
+          interactive={WEBSITE_TEMPLATES.length > 1}
           swipePhase={swipe.phase}
           swipeDirection={swipe.direction}
           swipeX={swipe.x}
@@ -114,9 +118,19 @@ export function WebsiteTemplateBrowser() {
           onPrev={selectProject}
           onNext={selectProject}
           actionContent={
-            <p className="text-12 uppercase tracking-[0.04em] text-black/50">
-              Website editor coming later
-            </p>
+            editableSlug ? (
+              <button
+                type="button"
+                onClick={() => setEditingSlug(editableSlug)}
+                className="h-48 rounded-full bg-black px-20 text-12 uppercase tracking-[0.04em] text-white transition-transform duration-300 hover:scale-[1.02]"
+              >
+                Customize website
+              </button>
+            ) : (
+              <p className="text-12 uppercase tracking-[0.04em] text-black/50">
+                Website editor coming later
+              </p>
+            )
           }
         />
       )}
