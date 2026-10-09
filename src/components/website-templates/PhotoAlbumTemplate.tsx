@@ -52,7 +52,8 @@ export function PhotoAlbumTemplate({
   const heading = editing ? (values.heading ?? fallbackHeading) : values.heading?.trim() || fallbackHeading;
   const message = editing ? (values.message ?? fallbackMessage) : values.message?.trim() || fallbackMessage;
   const uploaded = (values.images ?? []).filter((image) => typeof image === "string" && image.length > 0).slice(0, 6);
-  const photos = uploaded.length ? uploaded : DEFAULT_ALBUM_PHOTOS;
+  // Keep six designed photo positions visible; changing one photo never removes the others.
+  const photos = [...uploaded, ...DEFAULT_ALBUM_PHOTOS.slice(uploaded.length)].slice(0, 6);
   const captions = values.captions ?? [];
 
   const photoSurfaceProps = (index: number) => ({
