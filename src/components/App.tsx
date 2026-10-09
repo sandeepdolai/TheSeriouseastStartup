@@ -99,6 +99,7 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    if (!folio) return;
     const mq = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
     const desktopish = navigator.maxTouchPoints === 0 && !/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
     if (!mq && !desktopish) return;
