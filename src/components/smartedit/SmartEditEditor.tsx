@@ -23,6 +23,7 @@ import {
 } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { getAccountKey } from "@/lib/accountStorage";
+import { type PublishedRecord } from "@/lib/publications";
 import { isAdminEmail } from "@/lib/admin";
 import {
   getLocalProject,
@@ -64,6 +65,7 @@ import { SmartEditCanvas } from "./SmartEditCanvas";
 import { SelectionOverlay } from "./selectionOverlay";
 import { CropEditor } from "./cropEditor";
 import { PublishTemplateDialog } from "./publishDialog";
+import { SmartEditPublishWebsiteDialog } from "./SmartEditPublishWebsiteDialog";
 import { exportDocument } from "./exportRenderer";
 import {
   AuthGate,
@@ -72,6 +74,7 @@ import {
   IconDelete as DelIcon,
   IconDown,
   IconDownload,
+  IconPublish,
   IconDuplicate,
   IconEdit,
   IconEye,
@@ -118,6 +121,8 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   const [adminTemplateDraft, setAdminTemplateDraft] = useState(false);
   /** admin “Publish to All Users” → Publish Template dialog (no immediate POST) */
   const [publishOpen, setPublishOpen] = useState(false);
+  const [websitePublishOpen, setWebsitePublishOpen] = useState(false);
+  const [publishedRecord, setPublishedRecord] = useState<PublishedRecord | null>(null);
   /** id of the image layer currently open in Crop Mode (covers the editor) */
   const [cropTarget, setCropTarget] = useState<string | null>(null);
 
@@ -160,10 +165,13 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
         kind?: string;
         document?: SmartEditDocument;
         assets?: Record<string, AssetRecord>;
+        published?: PublishedRecord;
       } | null;
 
       if (alive) {
         setAdminTemplateDraft(isAdminEmail(session?.user?.email));
+        const savedPublication = (record?.data as { published?: PublishedRecord } | undefined)?.published;
+        setPublishedRecord(savedPublication && typeof savedPublication.url === "string" ? savedPublication : null);
       }
 
       const draft = await idb.getDraft<{
@@ -419,7 +427,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   // already committed to the store) — no caret stays active behind an open
   // sheet. Closing a sheet never touches the editing state.
   const sheetsOpen =
-    libraryOpen || inspectorOpen || exportOpen || !!authGate || textEditorOpen || publishOpen;
+    libraryOpen || inspectorOpen || exportOpen || !!authGate || textEditorOpen || publishOpen || websitePublishOpen;
   const prevSheetsOpenRef = useRef(false);
   useEffect(() => {
     if (sheetsOpen && !prevSheetsOpenRef.current) {
@@ -451,6 +459,22 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
     setAuthGate(null);
     setPublishOpen(true);
   }, []);
+
+  const openWebsitePublishDialog = useCallback(() => {
+    const state = useEditorStore.getState();
+    if (state.editingId) state.startEditing(null);
+    setLibraryOpen(false);
+    setInspectorOpen(false);
+    setExportOpen(false);
+    setTextEditorOpen(false);
+    setPublishOpen(false);
+    setAuthGate(null);
+    if (status !== "authenticated") {
+      setAuthGate("save");
+      return;
+    }
+    setWebsitePublishOpen(true);
+  }, [status]);
 
   const save = useCallback(async () => {
     if (status !== "authenticated") {
@@ -741,6 +765,9 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
               Publish to All Users
             </button>
           )}
+          <IconButton label="Publish Website" onClick={openWebsitePublishDialog} disabled={status === "loading"}>
+            <IconPublish />
+          </IconButton>
           <IconButton label="Download" onClick={() => setExportOpen(true)}>
             <IconDownload />
           </IconButton>
@@ -1110,6 +1137,22 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
           onClose={() => setPublishOpen(false)}
           onPublished={() => {
             setPublishOpen(false);
+            setSavedFlash(true);
+            window.setTimeout(() => setSavedFlash(false), 1800);
+          }}
+        />
+      )}
+
+      {/* Public website publishing is separate from admin template publishing. */}
+      {websitePublishOpen && load.phase === "ready" && (
+        <SmartEditPublishWebsiteDialog
+          projectId={projectId}
+          account={account}
+          previousPublished={publishedRecord}
+          onClose={() => setWebsitePublishOpen(false)}
+          onPublished={(record) => {
+            setPublishedRecord(record);
+            void writeProjectRecord();
             setSavedFlash(true);
             window.setTimeout(() => setSavedFlash(false), 1800);
           }}
