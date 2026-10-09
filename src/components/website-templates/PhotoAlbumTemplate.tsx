@@ -118,7 +118,7 @@ export function PhotoAlbumTemplate({
             </div>
           </div>
           <figure className={styles.cover}>
-            <div className={`${styles.photoMat} ${styles.coverMat} ${editing ? styles.editablePhoto : ""}`} {...photoSurfaceProps(0)}>
+            <div className={`${styles.photoMat} ${editing ? styles.editablePhoto : ""}`} {...photoSurfaceProps(0)}>
               <img src={photos[0]} alt={captionValue(0)} />
             </div>
             <figcaption>
