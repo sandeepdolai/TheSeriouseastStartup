@@ -1,6 +1,6 @@
 "use client";
 
-import { createElement, useEffect, useRef, useState, type ElementType, type KeyboardEvent } from "react";
+import { createElement, useEffect, useRef, useState, type ElementType, type KeyboardEvent, type MouseEvent } from "react";
 import styles from "./InlineEditableText.module.css";
 
 interface Props {
@@ -80,15 +80,9 @@ export function InlineEditableText({
       "aria-multiline": editing ? multiline : undefined,
       title: editing && !active ? "Tap to edit" : undefined,
       onClick: editing
-        ? (event: React.MouseEvent<HTMLElement>) => {
+        ? (event: MouseEvent<HTMLElement>) => {
             event.stopPropagation();
             if (!active) setActive(true);
-          }
-        : undefined,
-      onInput: editing && active
-        ? (event: React.FormEvent<HTMLElement>) => {
-            // Keep typing inside the DOM until blur so the caret never jumps.
-            void event.currentTarget.innerText;
           }
         : undefined,
       onBlur: editing && active ? () => finish(true) : undefined,
