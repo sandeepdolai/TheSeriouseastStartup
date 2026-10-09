@@ -10,6 +10,7 @@ interface Props {
   multiline?: boolean;
   className?: string;
   ariaLabel?: string;
+  id?: string;
   onCommit?: (value: string) => void;
 }
 
@@ -24,6 +25,7 @@ export function InlineEditableText({
   multiline = false,
   className = "",
   ariaLabel = "Edit website text",
+  id,
   onCommit,
 }: Props) {
   const [active, setActive] = useState(false);
@@ -72,6 +74,7 @@ export function InlineEditableText({
     {
       ref: elementRef,
       className: classes || undefined,
+      id,
       contentEditable: editing && active,
       suppressContentEditableWarning: true,
       tabIndex: editing ? 0 : undefined,
