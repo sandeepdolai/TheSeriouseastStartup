@@ -131,11 +131,11 @@ export function validateTemplateValues(raw: unknown): TemplatePublicationValues 
   }
 
   const values: TemplatePublicationValues = {
-    heading: boundedString(v.heading, 160),
+    heading: boundedString(v.heading, 200),
     years: boundedString(v.years, 40),
     yearsLabel: boundedString(v.yearsLabel, 80),
     sideNote: boundedString(v.sideNote, 80),
-    message: boundedString(v.message, 1200),
+    message: boundedString(v.message, 4000),
     photoUrl,
     images,
     captions,
