@@ -62,9 +62,10 @@ export function decodePublishedPayload(value: string): PublishedTemplatePayload 
       data:
         parsed.data && typeof parsed.data === "object"
           ? Object.fromEntries(
-              Object.entries(parsed.data).filter(
+              Object.entries(parsed.data as Record<string, unknown>).filter(
                 ([, value]) => typeof value === "string" || value === null,
               ),
+            ) as Record<string, string | null>
             )
           : undefined,
       publishedAt:

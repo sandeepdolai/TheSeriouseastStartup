@@ -32,6 +32,7 @@ const MI = {
   grid: 0.08,
   lip: 0.2,
   refl: 0.5,
+  reflGap: 0.02,
   reflSpread: 0.35,
   reflLight: 0.6,
 };

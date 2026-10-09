@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { useFolio } from "@/gl/react";
+import type { Folio } from "@/gl/scene";
 import { FEATURED } from "@/lib/projects";
 import { TemplateBrowser } from "./TemplateBrowser";
 import { Hud } from "./Hud";
@@ -21,6 +22,11 @@ type Overlay = "profile" | null;
 
 export function App() {
   const folio = useFolio();
+  if (!folio) return null;
+  return <AppContent folio={folio} />;
+}
+
+function AppContent({ folio }: { folio: Folio }) {
   const { data: session, status } = useSession();
   const accountEmail = session?.user?.email ?? null;
   useEffect(() => {
