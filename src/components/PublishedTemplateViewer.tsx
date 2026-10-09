@@ -12,6 +12,7 @@ import {
 } from "@/lib/publications";
 import { SmartEditViewer } from "@/components/smartedit/SmartEditViewer";
 import { LoveOfMyLifeTemplate } from "@/components/website-templates/LoveOfMyLifeTemplate";
+import { PhotoAlbumTemplate } from "@/components/website-templates/PhotoAlbumTemplate";
 
 interface Props {
   username: string;
@@ -130,6 +131,10 @@ export function PublishedTemplateViewer({
           variant={serverPublication.templateSlug === "birthday-template" ? "birthday" : "love"}
         />
       );
+    }
+
+    if (serverPublication.templateSlug === "photo-album" && serverPublication.values) {
+      return <PhotoAlbumTemplate title={serverPublication.title} values={serverPublication.values} />;
     }
   }
 
