@@ -195,3 +195,15 @@
   .photoCard figcaption { gap: 6px; font-size: 11px; }
   .footer { flex-direction: column; gap: 6px; }
 }
+
+
+.editablePhoto {
+  position: relative;
+  cursor: pointer;
+  outline-offset: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+.editablePhoto:hover,
+.editablePhoto:focus-visible {
+  outline: 1px dashed rgba(164, 76, 60, .7);
+}

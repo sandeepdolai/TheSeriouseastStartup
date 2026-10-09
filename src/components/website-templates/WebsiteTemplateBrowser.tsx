@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useFolio } from "@/gl/react";
 import { WEBSITE_TEMPLATES } from "@/lib/projects";
 import { HomeCarousel } from "../HomeCarousel";
@@ -21,6 +21,19 @@ export function WebsiteTemplateBrowser() {
     direction: -1 | 1 | null;
     x: number;
   }>({ phase: "idle", direction: null, x: 0 });
+
+  // After Google sign-in, resume the exact website editor the user was in.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const requestedSlug = url.searchParams.get("edit");
+    if (requestedSlug && isEditableSlug(requestedSlug)) {
+      setEditingSlug(requestedSlug);
+    }
+    if (url.searchParams.has("edit")) {
+      url.searchParams.delete("edit");
+      window.history.replaceState(window.history.state, "", url.toString());
+    }
+  }, []);
 
   const selectedIndex = selectedSlug
     ? WEBSITE_TEMPLATES.findIndex((project) => project.slug === selectedSlug)

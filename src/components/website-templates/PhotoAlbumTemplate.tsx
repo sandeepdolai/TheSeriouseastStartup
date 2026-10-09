@@ -1,10 +1,13 @@
 "use client";
 
+import type { KeyboardEvent } from "react";
 import type { TemplatePublicationValues } from "@/lib/publications";
+import { InlineEditableText } from "./InlineEditableText";
 import styles from "./PhotoAlbumTemplate.module.css";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-const DEFAULT_PHOTOS = [
+
+export const DEFAULT_ALBUM_PHOTOS = [
   BASE_PATH + "/templates/love-of-my-life-art.webp",
   BASE_PATH + "/templates/love-cats.webp",
   BASE_PATH + "/templates/love-favorite-person-art.webp",
@@ -12,7 +15,8 @@ const DEFAULT_PHOTOS = [
   BASE_PATH + "/templates/love-of-my-life.webp",
   BASE_PATH + "/templates/love-polaroid-frame.webp",
 ];
-const DEFAULT_CAPTIONS = [
+
+export const DEFAULT_ALBUM_CAPTIONS = [
   "The little things",
   "A day worth keeping",
   "Our kind of ordinary",
@@ -21,30 +25,92 @@ const DEFAULT_CAPTIONS = [
   "One for the album",
 ];
 
-export function PhotoAlbumTemplate({ values = {}, title }: {
+type EditableField = "heading" | "message";
+
+interface Props {
   values?: TemplatePublicationValues;
   title?: string;
-}) {
-  const heading = values.heading?.trim() || "A little album of us";
-  const message = values.message?.trim() ||
+  editing?: boolean;
+  onTextChange?: (field: EditableField, value: string) => void;
+  onCaptionChange?: (index: number, value: string) => void;
+  onPhotoClick?: (index: number) => void;
+  onExit?: () => void;
+}
+
+export function PhotoAlbumTemplate({
+  values = {},
+  title,
+  editing = false,
+  onTextChange,
+  onCaptionChange,
+  onPhotoClick,
+  onExit,
+}: Props) {
+  const fallbackHeading = "A little album of us";
+  const fallbackMessage =
     "The days go by quickly. These are the moments I want to keep close, one little memory at a time.";
+  const heading = editing ? (values.heading ?? fallbackHeading) : values.heading?.trim() || fallbackHeading;
+  const message = editing ? (values.message ?? fallbackMessage) : values.message?.trim() || fallbackMessage;
   const uploaded = (values.images ?? []).filter((image) => typeof image === "string" && image.length > 0).slice(0, 6);
-  const photos = uploaded.length ? uploaded : DEFAULT_PHOTOS;
+  // Keep six designed photo positions visible; changing one photo never removes the others.
+  const photos = [...uploaded, ...DEFAULT_ALBUM_PHOTOS.slice(uploaded.length)].slice(0, 6);
   const captions = values.captions ?? [];
+
+  const photoSurfaceProps = (index: number) => ({
+    role: editing ? "button" as const : undefined,
+    tabIndex: editing ? 0 : undefined,
+    "aria-label": editing ? "Replace photo " + (index + 1) : undefined,
+    title: editing ? "Tap to replace this photo" : undefined,
+    onClick: editing ? () => onPhotoClick?.(index) : undefined,
+    onKeyDown: editing
+      ? (event: KeyboardEvent<HTMLDivElement>) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onPhotoClick?.(index);
+          }
+        }
+      : undefined,
+  });
+
+  const captionValue = (index: number) => editing
+    ? (captions[index] ?? DEFAULT_ALBUM_CAPTIONS[index] ?? "A favorite moment")
+    : captions[index]?.trim() || DEFAULT_ALBUM_CAPTIONS[index] || "A favorite moment";
 
   return (
     <main className={styles.page}>
       <div className={styles.paper}>
         <header className={styles.header}>
-          <a className={styles.wordmark} href="/" aria-label="Paper Stish home">little album<span>♡</span></a>
+          <a
+            className={styles.wordmark}
+            href="/"
+            aria-label={editing ? "Back to website templates" : "Paper Stish home"}
+            onClick={editing && onExit ? (event) => { event.preventDefault(); onExit(); } : undefined}
+          >
+            little album<span>♡</span>
+          </a>
           <p className={styles.headerNote}>A COLLECTION OF LITTLE MOMENTS</p>
         </header>
 
         <section className={styles.hero}>
           <div className={styles.intro}>
             <p className={styles.eyebrow}><span aria-hidden="true">✳</span> OUR PHOTO ALBUM</p>
-            <h1>{heading}</h1>
-            <p className={styles.message}>{message}</p>
+            <InlineEditableText
+              as="h1"
+              value={heading}
+              editing={editing}
+              multiline
+              ariaLabel="Album heading"
+              onCommit={(value) => onTextChange?.("heading", value)}
+            />
+            <InlineEditableText
+              as="p"
+              className={styles.message}
+              value={message}
+              editing={editing}
+              multiline
+              ariaLabel="Album message"
+              onCommit={(value) => onTextChange?.("message", value)}
+            />
             <div className={styles.stamp}>
               <span className={styles.stampTop}>KEPT WITH LOVE</span>
               <span className={styles.stampHeart} aria-hidden="true">♡</span>
@@ -52,10 +118,17 @@ export function PhotoAlbumTemplate({ values = {}, title }: {
             </div>
           </div>
           <figure className={styles.cover}>
-            <div className={styles.coverMat}>
-              <img src={photos[0]} alt={captions[0]?.trim() || DEFAULT_CAPTIONS[0]} />
+            <div className={`${styles.photoMat} ${editing ? styles.editablePhoto : ""}`} {...photoSurfaceProps(0)}>
+              <img src={photos[0]} alt={captionValue(0)} />
             </div>
-            <figcaption>{captions[0]?.trim() || DEFAULT_CAPTIONS[0]}</figcaption>
+            <figcaption>
+              <InlineEditableText
+                value={captionValue(0)}
+                editing={editing}
+                ariaLabel="Cover photo caption"
+                onCommit={(value) => onCaptionChange?.(0, value)}
+              />
+            </figcaption>
             <span className={styles.tape} aria-hidden="true" />
           </figure>
         </section>
@@ -68,17 +141,22 @@ export function PhotoAlbumTemplate({ values = {}, title }: {
           <div className={styles.grid}>
             {photos.map((photo, index) => (
               <figure className={styles.photoCard} key={index}>
-                <div className={styles.photoMat}>
+                <div className={`${styles.photoMat} ${editing ? styles.editablePhoto : ""}`} {...photoSurfaceProps(index)}>
                   <img
                     src={photo}
-                    alt={captions[index]?.trim() || DEFAULT_CAPTIONS[index] || "Photo album memory"}
+                    alt={captionValue(index)}
                     loading={index > 1 ? "lazy" : "eager"}
                     decoding="async"
                   />
                 </div>
                 <figcaption>
                   <span className={styles.photoNumber}>{String(index + 1).padStart(2, "0")}</span>
-                  <span>{captions[index]?.trim() || DEFAULT_CAPTIONS[index] || "A favorite moment"}</span>
+                  <InlineEditableText
+                    value={captionValue(index)}
+                    editing={editing}
+                    ariaLabel={"Caption for photo " + (index + 1)}
+                    onCommit={(value) => onCaptionChange?.(index, value)}
+                  />
                 </figcaption>
               </figure>
             ))}
