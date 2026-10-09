@@ -96,26 +96,7 @@ export const FEATURED: Project[] = [
 
 /** Website themes shown in the Website gallery (separate from image templates). */
 export const WEBSITE_TEMPLATES: Project[] = [
-  {
-    title: "Love of My Life",
-    slug: "love-of-my-life",
-    description: "A personal page for your favorite person, with your photo and the words you want them to keep.",
-    link: null,
-    tags: [{ title: "Personal website", url: null }, { title: "Love", url: null }],
-    awards: 0,
-    aspect: 1200 / 1600,
-    media: [T + "love-of-my-life.webp", T + "love-of-my-life-art.webp", T + "love-bow.webp"],
-  },
-  {
-    title: "Birthday Website",
-    slug: "birthday-template",
-    description: "A small birthday surprise with a favorite photo and a message written just for them.",
-    link: null,
-    tags: [{ title: "Birthday", url: null }, { title: "Personal website", url: null }],
-    awards: 0,
-    aspect: 4 / 5,
-    media: [T + "love-favorite-person-art.webp", T + "love-cats.webp", T + "love-bow.webp"],
-  },
+  ...FEATURED,
   {
     title: "Photo Album",
     slug: "photo-album",
