@@ -1,0 +1,262 @@
+.page {
+  --paper-blue: #163b81;
+  --paper-blue-soft: #385a94;
+  --paper-red: #b84846;
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  padding: clamp(22px, 4.8vw, 68px);
+  background-color: #f5efdf;
+  background-image:
+    radial-gradient(ellipse at 13% 10%, rgba(255, 255, 255, .72), transparent 36%),
+    radial-gradient(ellipse at 88% 78%, rgba(224, 208, 173, .25), transparent 38%);
+  color: var(--paper-blue);
+  font-family: "Patrick Hand", "Gochi Hand", cursive;
+}
+.inner {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 1080px);
+  margin: 0 auto;
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid rgba(22, 59, 129, .22);
+  padding-bottom: 16px;
+}
+.wordmark {
+  color: var(--paper-blue);
+  font-family: "Gochi Hand", "Patrick Hand", cursive;
+  font-size: 25px;
+  letter-spacing: -.06em;
+}
+.wordmark span {
+  display: inline-block;
+  margin-left: 4px;
+  color: var(--paper-red);
+  font-size: 19px;
+}
+.headerNote {
+  color: var(--paper-blue-soft);
+  font: 600 9px/1.4 sans-serif;
+  letter-spacing: .15em;
+  text-align: right;
+}
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
+  align-items: center;
+  gap: clamp(28px, 7vw, 92px);
+  padding: clamp(46px, 8vw, 100px) 0 clamp(50px, 8vw, 95px);
+}
+.copy {
+  min-width: 0;
+}
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 22px;
+  color: var(--paper-red);
+  font: 600 9px/1.4 sans-serif;
+  letter-spacing: .16em;
+}
+.eyebrow span {
+  font-size: 18px;
+}
+.copy h1 {
+  max-width: 11ch;
+  font-family: "Gochi Hand", "Patrick Hand", cursive;
+  font-size: clamp(48px, 7.2vw, 90px);
+  font-weight: 400;
+  letter-spacing: -.065em;
+  line-height: .92;
+  overflow-wrap: anywhere;
+}
+.intro {
+  max-width: 340px;
+  margin-top: 25px;
+  color: var(--paper-blue-soft);
+  font-size: clamp(16px, 1.6vw, 19px);
+  line-height: 1.5;
+}
+.years {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 26px;
+  border-top: 1px solid rgba(22, 59, 129, .25);
+  border-bottom: 1px solid rgba(22, 59, 129, .25);
+  padding: 9px 0;
+}
+.years strong {
+  font: 500 clamp(21px, 3vw, 30px)/1 "Gochi Hand", cursive;
+}
+.years span {
+  font-size: 13px;
+}
+.sideNote {
+  margin-top: 24px;
+  color: var(--paper-red);
+  font-size: 15px;
+}
+.sideNote span {
+  padding-right: 5px;
+}
+.photoFrame {
+  position: relative;
+  width: min(100%, 355px);
+  margin: 0 auto;
+  transform: rotate(2deg);
+  border: 1px solid rgba(22, 59, 129, .14);
+  background: #fffdf6;
+  padding: 12px 12px 18px;
+  box-shadow: 0 22px 55px rgba(50, 48, 33, .14);
+}
+.photoMat {
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: #e7dfcd;
+}
+.photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.photoFrame figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 3px 0;
+  color: var(--paper-blue-soft);
+  font-size: 12px;
+}
+.photoFrame figcaption span:first-child {
+  font: 600 8px/1.5 sans-serif;
+  letter-spacing: .1em;
+}
+.photoFrame figcaption span:last-child {
+  color: var(--paper-red);
+  font-size: 20px;
+}
+.bow {
+  position: absolute;
+  top: -29px;
+  right: -25px;
+  width: clamp(65px, 8vw, 105px);
+  height: auto;
+  transform: rotate(10deg);
+  filter: drop-shadow(0 5px 5px rgba(40, 30, 20, .1));
+}
+.note {
+  display: grid;
+  grid-template-columns: minmax(120px, .36fr) minmax(0, 1fr);
+  gap: clamp(24px, 6vw, 78px);
+  border-top: 1px solid rgba(22, 59, 129, .22);
+  padding: clamp(28px, 5vw, 54px) 0 clamp(46px, 7vw, 80px);
+}
+.noteLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  color: var(--paper-red);
+  font: 600 9px/1.5 sans-serif;
+  letter-spacing: .12em;
+}
+.noteLabel span:first-child {
+  font-family: "Gochi Hand", cursive;
+  font-size: 23px;
+  font-weight: 400;
+}
+.noteBody h2 {
+  max-width: 22ch;
+  font-family: "Gochi Hand", "Patrick Hand", cursive;
+  font-size: clamp(27px, 4vw, 43px);
+  font-weight: 400;
+  letter-spacing: -.045em;
+  line-height: 1.05;
+}
+.noteBody > p:not(.signature) {
+  max-width: 66ch;
+  margin-top: 20px;
+  color: var(--paper-blue-soft);
+  font-size: clamp(16px, 1.65vw, 20px);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.signature {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-top: 25px;
+  color: var(--paper-red);
+  font-size: 16px;
+}
+.signature span {
+  font-size: 24px;
+}
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-top: 1px solid rgba(22, 59, 129, .22);
+  padding-top: 15px;
+  color: var(--paper-blue-soft);
+  font: 600 8px/1.5 sans-serif;
+  letter-spacing: .1em;
+}
+.footer span:last-child {
+  text-align: right;
+}
+.birthday {
+  --paper-blue: #83364a;
+  --paper-blue-soft: #99596a;
+  --paper-red: #bd6d34;
+  background-color: #faeee3;
+  background-image:
+    radial-gradient(ellipse at 78% 15%, rgba(255, 255, 255, .8), transparent 35%),
+    radial-gradient(ellipse at 12% 78%, rgba(220, 159, 131, .18), transparent 40%);
+}
+@media (max-width: 700px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 36px;
+    padding-top: 54px;
+  }
+  .copy h1 {
+    max-width: 12ch;
+    font-size: clamp(49px, 15vw, 76px);
+  }
+  .photoFrame {
+    width: min(84%, 340px);
+  }
+  .note {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 25px;
+  }
+}
+@media (max-width: 430px) {
+  .page {
+    padding: 20px 17px 28px;
+  }
+  .headerNote {
+    max-width: 125px;
+    font-size: 8px;
+  }
+  .footer {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .footer span:last-child {
+    text-align: left;
+  }
+}
