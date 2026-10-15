@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { putLocalProject } from "@/lib/localProjects";
 import {
   publishResultToRecord,
@@ -30,6 +30,39 @@ interface Props {
   onClose: () => void;
   onPublished: (record: PublishedRecord) => void;
   onUnpublished: () => void;
+}
+
+function PublishSuccessSheet({
+  onClose,
+  children,
+}: {
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className="fixed inset-x-0 top-[calc(var(--se-header-h,7.2rem)+env(safe-area-inset-top))] s:top-0 z-[90] flex items-end s:items-center justify-center bg-black/60 px-0 s:px-15 backdrop-blur-[6px]"
+      style={{ bottom: "var(--se-kb, 0px)" }}
+      onPointerDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="publish-success-title"
+        className="flex max-h-[calc(100%-14px)] w-full flex-col overflow-hidden rounded-t-[32px] border-t border-white/10 bg-[#303030] text-white shadow-[0_-20px_60px_rgba(0,0,0,0.5)] s:max-h-[86svh] s:max-w-[540px] s:rounded-[28px] s:border s:border-white/10"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <div className="flex shrink-0 justify-center pb-[2px] pt-[18px] s:hidden" aria-hidden="true">
+          <span className="h-[4px] w-[72px] rounded-full bg-white/75" />
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-[22px] pb-[24px] pt-[28px] s:px-[30px] s:pb-[28px] s:pt-[28px]">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 async function dataUrlForAsset(id: string): Promise<string | undefined> {
@@ -307,6 +340,33 @@ export function SmartEditPublishWebsiteDialog({
     }
   };
 
+  const shareLink = async () => {
+    if (!published) return;
+    setCopyError("");
+
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: published.viewerName || "My Paper Stish website",
+          text: "Send this link to anyone, anywhere.",
+          url: published.url,
+        });
+        return;
+      } catch (err) {
+        // Dismissing the native share sheet is not an error.
+        if (err instanceof Error && err.name === "AbortError") return;
+        // Continue to the clipboard fallback when native sharing fails.
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(published.url);
+      setCopied(true);
+    } catch {
+      setCopyError("Sharing is unavailable here. Copy the published link manually.");
+    }
+  };
+
   const qrCodeUrl = published
     ? `https://api.qrserver.com/v1/create-qr-code/?size=320x320&format=png&margin=12&data=${encodeURIComponent(published.url)}`
     : "";
@@ -336,25 +396,77 @@ export function SmartEditPublishWebsiteDialog({
   };
 
   const body = published ? (
-    <div className="grid gap-14">
-      <p className="text-13 leading-19 text-white/65">
-        Your website is live. Anyone with the link can open it without signing in.
+    <div className="grid gap-0">
+      <div className="mx-auto mb-[22px] flex size-[58px] items-center justify-center text-white" aria-hidden="true">
+        <svg viewBox="0 0 56 56" className="size-[54px]" fill="none">
+          <circle cx="28" cy="28" r="22" stroke="currentColor" strokeWidth="2.2" />
+          <path d="m16.5 28.5 7.5 7.5 15.5-17" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+
+      <h2
+        id="publish-success-title"
+        className="text-center text-[28px] font-semibold leading-[1.16] tracking-[-0.035em] text-white s:text-[30px]"
+      >
+        Your website is live.
+      </h2>
+      <p className="mx-auto mt-[18px] max-w-[440px] text-center text-[18px] leading-[1.45] text-white/90">
+        Send this link to anyone, anywhere. They’ll see it just the way you made it.
       </p>
-      <label className="grid gap-7">
-        <span className="text-10 text-white/45">Your public website link</span>
+
+      <button
+        type="button"
+        onClick={() => void copyLink()}
+        className="mt-[28px] flex h-[52px] w-full items-center justify-center rounded-full bg-[#2166f3] px-16 text-[16px] font-semibold text-white transition-colors hover:bg-[#1e5bd8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-50"
+      >
+        {copied ? "Link copied" : "Copy link"}
+      </button>
+
+      {copyError && (
+        <p role="status" className="mt-10 text-[12px] leading-[1.45] text-[#ffaaaa]">
+          {copyError}
+        </p>
+      )}
+      {localSaveWarning && (
+        <p role="status" className="mt-10 text-[12px] leading-[1.45] text-[#f1c27a]">
+          The website was published, but its link could not be saved with this local project. Copy the link now.
+        </p>
+      )}
+
+      <label className="mt-[22px] grid gap-8">
+        <span className="text-[12px] font-medium text-white/70">Your published website link</span>
         <input
           readOnly
           value={published.url}
           onFocus={(event) => event.currentTarget.select()}
           aria-label="Published website link"
-          className="w-full rounded-[13px] border border-white/10 bg-white/5 px-12 py-11 text-12 text-white outline-none focus:border-white/30"
+          className="h-[48px] w-full min-w-0 rounded-[14px] border border-white/15 bg-black/15 px-12 text-[13px] text-white outline-none focus:border-white/45"
         />
       </label>
-      <div className="rounded-[13px] border border-white/10 bg-white/[0.03] p-12">
-        <div className="flex items-center justify-between gap-10">
+
+      <div className="mt-[12px] grid grid-cols-2 gap-[10px]">
+        <button
+          type="button"
+          onClick={() => void shareLink()}
+          className="flex h-[48px] items-center justify-center rounded-full border border-white/20 bg-white/[0.04] px-10 text-[14px] font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        >
+          Share
+        </button>
+        <a
+          href={published.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex h-[48px] items-center justify-center rounded-full border border-white/20 bg-white/[0.04] px-10 text-[14px] font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        >
+          Open website
+        </a>
+      </div>
+
+      <div className="mt-[24px] border-t border-white/12 pt-[18px]">
+        <div className="flex items-center justify-between gap-12">
           <div className="min-w-0">
-            <p className="text-12 text-white">QR code</p>
-            <p className="mt-4 text-10 leading-15 text-white/45">Scan to open your published website.</p>
+            <p className="text-[15px] font-medium text-white">QR code</p>
+            <p className="mt-5 text-[12px] leading-[1.4] text-white/65">Scan to open your website</p>
           </div>
           <button
             type="button"
@@ -362,14 +474,15 @@ export function SmartEditPublishWebsiteDialog({
               setShowQrCode((visible) => !visible);
               setQrError("");
             }}
-            className="shrink-0 rounded-full border border-white/15 px-12 py-8 text-11 text-white transition-colors hover:bg-white/10"
+            aria-expanded={showQrCode}
+            className="shrink-0 rounded-full border border-white/20 px-12 py-9 text-[12px] font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           >
-            {showQrCode ? "Hide QR code" : "Generate QR code"}
+            {showQrCode ? "Hide QR code" : "Show QR code"}
           </button>
         </div>
         {showQrCode && (
-          <div className="mt-12 grid justify-items-center gap-10">
-            <div className="rounded-[12px] bg-white p-10">
+          <div className="mt-[18px] grid justify-items-center gap-[12px]">
+            <div className="rounded-[14px] bg-white p-10">
               <img
                 src={qrCodeUrl}
                 alt={`QR code for ${published.viewerName}`}
@@ -382,44 +495,25 @@ export function SmartEditPublishWebsiteDialog({
               type="button"
               onClick={() => void downloadQrCode()}
               disabled={qrDownloading}
-              className="h-40 w-full rounded-full bg-white text-11 text-black transition-opacity hover:opacity-85 disabled:opacity-50"
+              className="h-[46px] w-full rounded-full border border-white/20 bg-white/[0.04] text-[13px] font-medium text-white transition-colors hover:bg-white/10 disabled:opacity-50"
             >
-              {qrDownloading ? "Preparing download…" : "Download QR code (PNG)"}
+              {qrDownloading ? "Preparing download…" : "Save as PNG"}
             </button>
-            {qrError && <p role="status" className="text-10 leading-15 text-[#f1c27a]">{qrError}</p>}
-            <p className="text-center text-9 leading-13 text-white/35">The code points to your public link. Anyone who scans it can open your website.</p>
+            {qrError && (
+              <p role="status" className="text-[12px] leading-[1.45] text-[#f1c27a]">
+                {qrError}
+              </p>
+            )}
           </div>
         )}
       </div>
-      {localSaveWarning && (
-        <p className="text-11 leading-16 text-[#f1c27a]">
-          The website was published, but its link could not be saved with this local project. Copy the link now.
-        </p>
-      )}
-      {copyError && <p className="text-11 leading-15 text-[#ff8f93]">{copyError}</p>}
-      <div className="grid grid-cols-2 gap-8">
-        <button
-          type="button"
-          onClick={() => void copyLink()}
-          className="h-44 rounded-full bg-white text-12 text-black transition-opacity hover:opacity-85"
-        >
-          {copied ? "Copied" : "Copy link"}
-        </button>
-        <a
-          href={published.url}
-          target="_blank"
-          rel="noreferrer"
-          className="flex h-44 items-center justify-center rounded-full border border-white/12 bg-white/5 text-12 text-white transition-colors hover:bg-white/10"
-        >
-          Open website
-        </a>
-      </div>
+
       <button
         type="button"
         onClick={guardedClose}
-        className="h-44 rounded-full border border-white/12 bg-white/5 text-12 text-white transition-colors hover:bg-white/10"
+        className="mt-[24px] h-[48px] w-full rounded-full border border-white/20 bg-white/[0.04] text-[14px] font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
       >
-        Done
+        Back to editing
       </button>
     </div>
   ) : (
@@ -506,12 +600,14 @@ export function SmartEditPublishWebsiteDialog({
     </div>
   );
 
-  return (
+  return published ? (
+    <PublishSuccessSheet onClose={guardedClose}>{body}</PublishSuccessSheet>
+  ) : (
     <>
       <div className="hidden s:block">
         <ModalShell
-          title={published ? "Website published" : "Publish Website"}
-          subtitle={published ? "Share the finished website." : title || "Smart Edit"}
+          title="Publish Website"
+          subtitle={title || "Smart Edit"}
           onClose={guardedClose}
           width={540}
         >
@@ -519,10 +615,7 @@ export function SmartEditPublishWebsiteDialog({
         </ModalShell>
       </div>
       <div className="s:hidden">
-        <SheetShell
-          title={published ? "Website published" : "Publish Website"}
-          onClose={guardedClose}
-        >
+        <SheetShell title="Publish Website" onClose={guardedClose}>
           {body}
         </SheetShell>
       </div>
