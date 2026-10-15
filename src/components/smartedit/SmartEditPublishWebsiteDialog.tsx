@@ -336,7 +336,7 @@ export function SmartEditPublishWebsiteDialog({
       await navigator.clipboard.writeText(published.url);
       setCopied(true);
     } catch {
-      setCopyError("Copy was blocked by your browser. Select the link above and copy it manually.");
+      setCopyError("Copy was blocked by your browser. Select the published link below and copy it manually.");
     }
   };
 
