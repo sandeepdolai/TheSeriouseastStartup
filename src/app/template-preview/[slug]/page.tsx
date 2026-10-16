@@ -17,6 +17,9 @@ const PREVIEW_SLUGS: WebsiteTemplatePreviewSlug[] = [
   "forever-and-ever",
   "our-calendar",
   "birthday-today",
+  "love-of-my-life",
+  "birthday-template",
+  "photo-album",
 ];
 
 export default async function WebsiteTemplatePreviewPage({
