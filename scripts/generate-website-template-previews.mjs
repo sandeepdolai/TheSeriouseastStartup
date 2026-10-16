@@ -85,6 +85,25 @@ async function main() {
     for (const { slug, waitMs } of PREVIEWS) {
       const url = `${origin}/template-preview/${slug}`;
       const outputPath = path.join(outputDirectory, `${slug}-preview.png`);
+
+      // Validate the original HTML for the two embedded website templates
+      // before screenshotting. A missing/generated fallback must never silently
+      // become a cover image.
+      if (slug === "love-heart" || slug === "forever-and-ever") {
+        const sourceResponse = await fetch(`${origin}/website-templates/${slug}.html`);
+        if (!sourceResponse.ok) {
+          throw new Error(`Original ${slug} HTML returned HTTP ${sourceResponse.status}.`);
+        }
+        const sourceHtml = await sourceResponse.text();
+        const expectedMarkup = slug === "love-heart"
+          ? "<title>Love Heart</title>"
+          : 'aria-label="Love letter notebook page"';
+        if (!sourceHtml.includes(expectedMarkup)) {
+          throw new Error(`Generated ${slug} HTML does not match the original template markup.`);
+        }
+        console.log(`Verified original ${slug} HTML (${sourceHtml.length} characters).`);
+      }
+
       console.log(`Capturing real ${slug} website render → ${outputPath}`);
       run("npx", [
         "--yes",
