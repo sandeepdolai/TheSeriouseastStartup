@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { getAccountKey } from "@/lib/accountStorage";
+import { WEBSITE_TEMPLATES } from "@/lib/projects";
 import { listLocalProjects } from "@/lib/localProjects";
 import { SmartEditPreview } from "./smartedit/SmartEditPreview";
 import { CANVAS_RATIOS, type AssetRecord, type CanvasRatio, type SmartEditDocument } from "./smartedit/types";
@@ -25,6 +26,8 @@ interface LocalProject {
     kind?: string;
     document?: SmartEditDocument;
     assets?: Record<string, AssetRecord>;
+    values?: Record<string, unknown>;
+    published?: { url?: string };
   };
 }
 
@@ -165,11 +168,22 @@ export function MyProjects({ entered, onOpenProject, onCreateSmartEdit }: Props)
                     />
                   ) : project.thumbnail ? (
                     <img src={project.thumbnail} alt="" className="absolute inset-0 size-full object-cover" />
+                  ) : WEBSITE_TEMPLATES.find((template) => template.slug === project.templateSlug)?.media[0] ? (
+                    <img
+                      src={WEBSITE_TEMPLATES.find((template) => template.slug === project.templateSlug)!.media[0]}
+                      alt=""
+                      className="absolute inset-0 size-full object-cover"
+                    />
                   ) : (
                     <div className="absolute inset-0 bg-black/20" />
                   )}
                 </div>
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+                {project.templateSlug && project.templateSlug !== "smart-edit" && (
+                  <span className="pointer-events-none absolute right-10 top-10 s:right-14 s:top-14 rounded-full border border-white/25 bg-black/45 px-8 py-5 text-[8px] uppercase tracking-[0.12em] text-white/85 backdrop-blur-sm">
+                    {project.data?.published?.url ? "Published" : "Draft"}
+                  </span>
+                )}
                 <p className="pointer-events-none absolute bottom-10 inset-x-10 s:bottom-10 s:inset-x-20 flex items-end justify-between text-white">
                   <span className="min-w-0 truncate text-16 s:text-18 tracking-[-0.05em]">{project.title}</span>
                   <span className="relative ml-6 inline-flex size-25 s:size-25 flex-none items-center justify-center rounded-full bg-black text-white transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true">
