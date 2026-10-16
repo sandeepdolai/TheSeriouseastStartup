@@ -48,7 +48,9 @@ async function main() {
 
   // The screenshot is generated from the actual rendered template component.
   // Pin the CLI/browser version to keep the capture environment reproducible.
-  run("npx", ["--yes", `playwright@${PLAYWRIGHT_VERSION}`, "install", "chromium"]);
+  if (process.env.PLAYWRIGHT_SKIP_INSTALL !== "1") {
+    run("npx", ["--yes", `playwright@${PLAYWRIGHT_VERSION}`, "install", "chromium"]);
+  }
 
   const server = spawn(
     process.execPath,
