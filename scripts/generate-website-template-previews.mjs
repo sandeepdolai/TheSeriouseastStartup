@@ -4,7 +4,7 @@ import path from "node:path";
 import process from "node:process";
 
 const PREVIEWS = [
-  { slug: "love-heart", waitMs: 9000 },
+  { slug: "love-heart", waitMs: 30000 },
   { slug: "forever-and-ever", waitMs: 2200 },
   { slug: "our-calendar", waitMs: 1400 },
   { slug: "birthday-today", waitMs: 1400 },
