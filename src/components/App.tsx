@@ -72,6 +72,7 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
   const [myEntered, setMyEntered] = useState(false);
   const [savedEntered, setSavedEntered] = useState(false);
   const [smartEditProjectId, setSmartEditProjectId] = useState<string | null>(null);
+  const [websiteDraftToOpen, setWebsiteDraftToOpen] = useState<{ projectId: string; templateSlug: string } | null>(null);
   const [carouselHidden, setCarouselHidden] = useState(false);
   const [returning, setReturning] = useState<string | null>(null);
   const [accountGateOpen, setAccountGateOpen] = useState(false);
@@ -442,7 +443,16 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
         <MyProjects
           entered={myEntered}
           onOpenProject={(projectId, templateSlug) => {
-            if (templateSlug === "smart-edit") void openSmartEdit(projectId);
+            if (templateSlug === "smart-edit") {
+              void openSmartEdit(projectId);
+              return;
+            }
+            if (
+              ["love-of-my-life", "birthday-template", "birthday-today", "photo-album", "love-heart", "forever-and-ever", "our-calendar"].includes(templateSlug)
+            ) {
+              setWebsiteDraftToOpen({ projectId, templateSlug });
+              goWebsiteTemplates();
+            }
           }}
           onCreateSmartEdit={createSmartEdit}
         />
@@ -450,7 +460,12 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
 
       {view === "saved" && <SavedTemplates entered={savedEntered} />}
 
-      {view === "website-templates" && <WebsiteTemplateBrowser />}
+      {view === "website-templates" && (
+        <WebsiteTemplateBrowser
+          draftToOpen={websiteDraftToOpen}
+          onDraftOpened={() => setWebsiteDraftToOpen(null)}
+        />
+      )}
 
       {view === "smart-edit" && smartEditProjectId && (
         <SmartEditEditor projectId={smartEditProjectId} onClose={closeSmartEdit} />
