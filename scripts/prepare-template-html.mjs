@@ -12,7 +12,7 @@ async function main() {
     const encoded = await readFile(compressedPath, "utf8");
     const html = gunzipSync(Buffer.from(encoded.trim(), "base64")).toString("utf8");
 
-    if (!/<html[\\s>]/i.test(html) || !/<body[\\s>]/i.test(html)) {
+    if (!/<html[\s>]/i.test(html) || !/<body[\s>]/i.test(html)) {
       throw new Error(`The decoded ${slug} source is not a complete HTML document.`);
     }
 
