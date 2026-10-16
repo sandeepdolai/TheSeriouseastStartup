@@ -5,7 +5,7 @@ import type { TemplatePublicationValues } from "@/lib/publications";
 import styles from "./ForeverAndEverTemplate.module.css";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-const TEMPLATE_URL = `${BASE_PATH}/api/template-source/forever-and-ever`;
+const TEMPLATE_URL = `${BASE_PATH}/website-templates/forever-and-ever.html`;
 const EMPTY_DOCUMENT = '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{width:100%;height:100%;margin:0;background:#e9edf5;overflow:hidden}</style></head><body></body></html>';
 export const FOREVER_AND_EVER_TEXT_DEFAULTS = {
   heading: "I love you forever\nand ever, my baby !",
