@@ -24,6 +24,29 @@ function run(command, args, options = {}) {
   execFileSync(command, args, { stdio: "inherit", ...options });
 }
 
+async function fetchTemplateSource(slug, maxAttempts = 5) {
+  const url = `${origin}/website-templates/${slug}.html`;
+  let lastError = "no response";
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) return await response.text();
+      lastError = `HTTP ${response.status}`;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+    }
+
+    if (attempt < maxAttempts) {
+      const delayMs = attempt * 750;
+      console.warn(`Source preflight ${slug} attempt ${attempt} failed (${lastError}); retrying in ${delayMs}ms.`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  throw new Error(`Could not verify original ${slug} HTML after ${maxAttempts} attempts: ${lastError}`);
+}
+
 async function waitForServer(server, timeoutMs = 180_000) {
   const started = Date.now();
   let lastError = "not started";
@@ -90,11 +113,7 @@ async function main() {
       // before screenshotting. A missing/generated fallback must never silently
       // become a cover image.
       if (slug === "love-heart" || slug === "forever-and-ever") {
-        const sourceResponse = await fetch(`${origin}/website-templates/${slug}.html`);
-        if (!sourceResponse.ok) {
-          throw new Error(`Original ${slug} HTML returned HTTP ${sourceResponse.status}.`);
-        }
-        const sourceHtml = await sourceResponse.text();
+        const sourceHtml = await fetchTemplateSource(slug);
         const expectedMarkup = slug === "love-heart"
           ? "<title>Love Heart</title>"
           : 'aria-label="Love letter notebook page"';
