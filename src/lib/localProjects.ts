@@ -207,12 +207,45 @@ async function migrateLegacy(account: string): Promise<void> {
   }
 }
 
+/** Copy guest-device projects into an authenticated device scope. This
+ * keeps drafts made before sign-in visible in My after Google sign-in; the
+ * draft payload remains in this browser's IndexedDB and is never uploaded. */
+async function copyGuestProjectsIntoAccount(account: string): Promise<void> {
+  if (account === GUEST_ACCOUNT_KEY) return;
+
+  if (!(await idbAvailable())) {
+    const guests = fallbackRead(GUEST_ACCOUNT_KEY);
+    if (!guests.length) return;
+    const existing = fallbackRead(account);
+    const ids = new Set(existing.map((project) => project.id));
+    const copies = guests
+      .filter((project) => !ids.has(project.id))
+      .map((project) => ({ ...project, account }));
+    if (copies.length) fallbackWrite(account, [...existing, ...copies]);
+    return;
+  }
+
+  const all = (await idbRun<StoredLocalProject[]>("readonly", (s) => s.getAll())) ?? [];
+  const accountIds = new Set(
+    all.filter((project) => project?.account === account).map((project) => project.id),
+  );
+  for (const project of all.filter((item) => item?.account === GUEST_ACCOUNT_KEY)) {
+    if (accountIds.has(project.id)) continue;
+    const copy: StoredLocalProject = { ...project, account };
+    await idbRun<IDBValidKey>("readwrite", (s) =>
+      s.put(copy, recordKey(account, copy.id)),
+    );
+    accountIds.add(copy.id);
+  }
+}
+
 /* ── Public API ─────────────────────────────────────────────────────────── */
 
 /** List the account's local projects (newest first), migrating legacy
  *  localStorage data on first use. */
 export async function listLocalProjects(account: string): Promise<StoredLocalProject[]> {
   await migrateLegacy(account);
+  await copyGuestProjectsIntoAccount(account);
   if (!(await idbAvailable())) {
     return sortByNewest(fallbackRead(account));
   }
@@ -245,6 +278,7 @@ export async function getLocalProject(
 ): Promise<StoredLocalProject | null> {
   if (!id || id.length > 100) return null;
   await migrateLegacy(account);
+  await copyGuestProjectsIntoAccount(account);
   if (!(await idbAvailable())) {
     return fallbackRead(account).find((record) => record.id === id) ?? null;
   }
