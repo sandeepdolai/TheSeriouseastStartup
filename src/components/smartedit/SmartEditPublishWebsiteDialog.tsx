@@ -87,7 +87,9 @@ export function SmartEditPublishWebsiteDialog({
   const [unpublishing, setUnpublishing] = useState(false);
   const [error, setError] = useState("");
   const [published, setPublished] = useState<PublishedRecord | null>(null);
+  const [publicationMode, setPublicationMode] = useState<"new" | "update">("new");
   const [copyError, setCopyError] = useState("");
+  const [shareNotice, setShareNotice] = useState("");
   const [copied, setCopied] = useState(false);
   const [showQrCode, setShowQrCode] = useState(false);
   const [qrDownloading, setQrDownloading] = useState(false);
@@ -115,9 +117,11 @@ export function SmartEditPublishWebsiteDialog({
       return;
     }
 
+    setPublicationMode(previousPublished?.templateId ? "update" : "new");
     setPublishing(true);
     setError("");
     setCopyError("");
+    setShareNotice("");
     setCopied(false);
     setShowQrCode(false);
     setQrError("");
@@ -332,6 +336,8 @@ export function SmartEditPublishWebsiteDialog({
   const copyLink = async () => {
     if (!published) return;
     setCopyError("");
+    setShareNotice("");
+    setCopied(false);
     try {
       await navigator.clipboard.writeText(published.url);
       setCopied(true);
@@ -343,6 +349,8 @@ export function SmartEditPublishWebsiteDialog({
   const shareLink = async () => {
     if (!published) return;
     setCopyError("");
+    setShareNotice("");
+    setCopied(false);
 
     if (typeof navigator.share === "function") {
       try {
@@ -362,8 +370,9 @@ export function SmartEditPublishWebsiteDialog({
     try {
       await navigator.clipboard.writeText(published.url);
       setCopied(true);
+      setShareNotice("The share menu isn’t available, so we copied the link instead.");
     } catch {
-      setCopyError("Sharing is unavailable here. Copy the published link manually.");
+      setCopyError("Sharing is unavailable here. Select the published link above and copy it manually.");
     }
   };
 
@@ -408,18 +417,32 @@ export function SmartEditPublishWebsiteDialog({
         id="publish-success-title"
         className="text-center text-[28px] font-semibold leading-[1.16] tracking-[-0.035em] text-white s:text-[30px]"
       >
-        Your website is live.
+        {publicationMode === "update" ? "Your website is up to date." : "Your website is live."}
       </h2>
-      <p className="mx-auto mt-[18px] max-w-[440px] text-center text-[18px] leading-[1.45] text-white/90">
-        Send this link to anyone, anywhere. They’ll see it just the way you made it.
+      <p className="mx-auto mt-[16px] max-w-[440px] text-center text-[16px] leading-[1.5] text-white/85 s:text-[17px]">
+        {publicationMode === "update"
+          ? "Your latest changes are live. Your existing link still works."
+          : "Anyone with this link can view your website. Your design stays editable."}
       </p>
+
+      <label className="mt-[24px] grid gap-8">
+        <span className="text-[12px] font-medium text-white/75">Your website link</span>
+        <input
+          readOnly
+          value={published.url}
+          onFocus={(event) => event.currentTarget.select()}
+          aria-label="Published website link"
+          className="h-[50px] w-full min-w-0 rounded-[14px] border border-white/15 bg-black/20 px-12 text-[13px] text-white outline-none focus:border-white/45"
+        />
+      </label>
 
       <button
         type="button"
         onClick={() => void copyLink()}
-        className="mt-[28px] flex h-[52px] w-full items-center justify-center rounded-full bg-[#2166f3] px-16 text-[16px] font-semibold text-white transition-colors hover:bg-[#1e5bd8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-50"
+        aria-live="polite"
+        className="mt-[12px] flex h-[54px] w-full items-center justify-center rounded-full bg-[#2166f3] px-16 text-[16px] font-semibold text-white transition-colors hover:bg-[#1e5bd8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
       >
-        {copied ? "Link copied" : "Copy link"}
+        {copied ? "Copied!" : "Copy link"}
       </button>
 
       {copyError && (
@@ -427,22 +450,16 @@ export function SmartEditPublishWebsiteDialog({
           {copyError}
         </p>
       )}
-      {localSaveWarning && (
-        <p role="status" className="mt-10 text-[12px] leading-[1.45] text-[#f1c27a]">
-          The website was published, but its link could not be saved with this local project. Copy the link now.
+      {shareNotice && (
+        <p role="status" className="mt-10 text-[12px] leading-[1.45] text-white/75">
+          {shareNotice}
         </p>
       )}
-
-      <label className="mt-[22px] grid gap-8">
-        <span className="text-[12px] font-medium text-white/70">Your published website link</span>
-        <input
-          readOnly
-          value={published.url}
-          onFocus={(event) => event.currentTarget.select()}
-          aria-label="Published website link"
-          className="h-[48px] w-full min-w-0 rounded-[14px] border border-white/15 bg-black/15 px-12 text-[13px] text-white outline-none focus:border-white/45"
-        />
-      </label>
+      {localSaveWarning && (
+        <p role="status" className="mt-10 rounded-[12px] border border-[#f1c27a]/25 bg-[#f1c27a]/[0.07] px-12 py-10 text-[12px] leading-[1.45] text-[#f1c27a]">
+          Your website is live, but its link could not be saved with this device’s local project. Copy the link now.
+        </p>
+      )}
 
       <div className="mt-[12px] grid grid-cols-2 gap-[10px]">
         <button
@@ -515,6 +532,9 @@ export function SmartEditPublishWebsiteDialog({
       >
         Back to editing
       </button>
+      <p className="mt-10 text-center text-[12px] leading-[1.45] text-white/55">
+        Your website stays published when you return to editing.
+      </p>
     </div>
   ) : (
     <div className="grid gap-14">
