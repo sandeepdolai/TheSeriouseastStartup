@@ -24,7 +24,7 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: website-template-previews-${{ github.event.pull_request.number }}
+  group: website-template-previews-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
   cancel-in-progress: true
 
 jobs:
