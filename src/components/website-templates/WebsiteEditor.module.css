@@ -952,3 +952,126 @@
   .successView .dialogActions { gap: 8px; }
   .successView .secondaryAction { padding-left: 10px; padding-right: 10px; font-size: 12.5px; }
 }
+
+
+/* Link editor: use the same charcoal card language as the published-success UI. */
+.dialogBackdrop.linkEditorBackdrop {
+  place-items: center;
+  padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom));
+  background: rgba(0, 0, 0, .68);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.dialog.linkEditorDialog {
+  display: block;
+  width: min(100%, 560px);
+  max-height: calc(100dvh - 28px);
+  padding: 28px 30px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-radius: 30px;
+  color: #f4f5f7;
+  background: #303030;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, .5);
+  animation: none;
+}
+
+.linkEditorDialog .publishFormView {
+  gap: 16px;
+}
+
+.linkEditorDialog .dialogEyebrow {
+  padding: 0 42px;
+  color: #8cadd6;
+}
+
+.linkEditorDialog .dialogTitle {
+  font-size: clamp(30px, 7.2vw, 36px);
+  font-weight: 700;
+  line-height: 1.08;
+}
+
+.linkEditorDialog .dialogCopy {
+  max-width: 38ch;
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+
+.urlPreviewEditor {
+  margin-top: 3px;
+  border-color: #414754;
+  border-radius: 16px;
+  background: #1a1d24;
+}
+
+.urlPreviewEditor .urlPreviewBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.urlPreviewEditor .urlPreviewText {
+  max-width: 100%;
+  overflow: hidden;
+  overflow-wrap: normal;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  line-height: 1.45;
+}
+
+.urlPreviewEditor .urlPreviewHint {
+  margin-top: 5px;
+  color: #9aa4b5;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.linkEditorDialog .publishFields {
+  gap: 17px;
+}
+
+.linkEditorDialog .inputShell {
+  border-color: #414754;
+  border-radius: 15px;
+  background: #252525;
+}
+
+.linkEditorDialog .inputShell:focus-within {
+  border-color: #8cadd6;
+  background: #292b31;
+  box-shadow: 0 0 0 3px rgba(140, 173, 214, .15);
+}
+
+.linkEditorDialog .fieldHelp {
+  color: #a1a8b5;
+}
+
+.linkEditorDialog .ideaChip {
+  border-color: #515151;
+  color: #e0e0e3;
+}
+.linkEditorDialog .ideaChip:hover {
+  border-color: #707070;
+  background: #393939;
+}
+
+@media (max-width: 600px) {
+  .dialogBackdrop.linkEditorBackdrop {
+    place-items: center;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  }
+  .dialog.linkEditorDialog {
+    width: 100%;
+    max-width: 560px;
+    max-height: calc(100dvh - 24px);
+    padding: 24px 22px calc(22px + env(safe-area-inset-bottom, 0px));
+    border-radius: 30px;
+  }
+  .linkEditorDialog .publishFormView { gap: 15px; }
+  .linkEditorDialog .dialogCopy { font-size: 14px; }
+}
+
+@media (max-width: 380px) {
+  .dialog.linkEditorDialog { padding-left: 18px; padding-right: 18px; }
+}
