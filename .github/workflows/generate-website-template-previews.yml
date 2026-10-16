@@ -5,6 +5,11 @@ on:
     branches: ["main"]
     paths:
       - "src/components/website-templates/**"
+      - "public/templates/**"
+      - "public/website-templates/love-heart.html.gz.b64"
+      - "public/website-templates/forever-and-ever.html.gz.b64"
+      - "public/website-templates/our-calendar-source.html"
+      - "public/website-templates/our-calendar-cake.png"
       - "src/lib/projects.ts"
       - "src/components/ProjectSheet.tsx"
       - "src/app/template-preview/**"
