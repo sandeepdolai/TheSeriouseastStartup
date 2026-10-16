@@ -32,32 +32,44 @@ export function WebsiteTemplatePreviewRenderer({
   useEffect(() => {
     let cancelled = false;
 
-    const waitForFrameReady = () => new Promise<void>((resolve, reject) => {
-      const selector = '[data-template-preview-frame-ready="true"]';
-      const existing = document.querySelector(selector);
-      if (existing) {
-        resolve();
-        return;
-      }
+    const waitForTemplateSource = () => new Promise<void>((resolve, reject) => {
+      const loadedSelector = '[data-template-preview-source-loaded="true"]';
+      const errorSelector = "[data-template-preview-source-error]";
+      let settled = false;
+      let observer: MutationObserver;
+      let timeout = 0;
 
-      const observer = new MutationObserver(() => {
-        if (document.querySelector(selector)) {
-          window.clearTimeout(timeout);
-          observer.disconnect();
-          resolve();
+      const finish = (error?: Error) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeout);
+        observer.disconnect();
+        if (error) reject(error);
+        else resolve();
+      };
+
+      const inspect = () => {
+        const failed = document.querySelector<HTMLElement>(errorSelector);
+        if (failed) {
+          finish(new Error(
+            `${slug} source failed to load: ${failed.getAttribute("data-template-preview-source-error") || "unknown error"}`,
+          ));
+          return;
         }
-      });
+        if (document.querySelector(loadedSelector)) finish();
+      };
+
+      observer = new MutationObserver(inspect);
+      timeout = window.setTimeout(() => {
+        finish(new Error(`Timed out waiting for the original ${slug} HTML source to load.`));
+      }, 45_000);
       observer.observe(document.body, {
         attributes: true,
-        attributeFilter: ["data-template-preview-frame-ready"],
+        attributeFilter: ["data-template-preview-source-loaded", "data-template-preview-source-error"],
         childList: true,
         subtree: true,
       });
-
-      const timeout = window.setTimeout(() => {
-        observer.disconnect();
-        reject(new Error(`The ${slug} template's embedded page did not signal readiness.`));
-      }, 45_000);
+      inspect();
     });
 
     const waitForImages = async () => {
@@ -82,7 +94,7 @@ export function WebsiteTemplatePreviewRenderer({
 
     const finalize = async () => {
       if (slug === "love-heart" || slug === "forever-and-ever") {
-        await waitForFrameReady();
+        await waitForTemplateSource();
       }
       await Promise.race([
         document.fonts?.ready ?? Promise.resolve(),
