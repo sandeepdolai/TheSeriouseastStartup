@@ -10,6 +10,7 @@ import { Hud } from "./Hud";
 import { MyProjects } from "./MyProjects";
 import { SavedTemplates } from "./SavedTemplates";
 import { WebsiteTemplateBrowser } from "./website-templates/WebsiteTemplateBrowser";
+import type { WebsiteEditorTemplateSlug } from "./website-templates/WebsiteEditor";
 import { SmartEditEditor } from "./smartedit/SmartEditEditor";
 import { type CanvasRatio, createDocument } from "./smartedit/types";
 import { ProjectSheet } from "./ProjectSheet";
@@ -20,6 +21,16 @@ import { listLocalProjects, putLocalProject } from "@/lib/localProjects";
 
 type View = "home" | "my" | "saved" | "project" | "smart-edit" | "website-templates";
 type Overlay = "profile" | null;
+
+function isWebsiteEditorSlug(slug: string): slug is WebsiteEditorTemplateSlug {
+  return slug === "love-of-my-life" ||
+    slug === "birthday-template" ||
+    slug === "birthday-today" ||
+    slug === "photo-album" ||
+    slug === "love-heart" ||
+    slug === "forever-and-ever" ||
+    slug === "our-calendar";
+}
 
 export function App({ initialView = "home" }: { initialView?: View } = {}) {
   const folio = useFolio();
@@ -72,6 +83,7 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
   const [myEntered, setMyEntered] = useState(false);
   const [savedEntered, setSavedEntered] = useState(false);
   const [smartEditProjectId, setSmartEditProjectId] = useState<string | null>(null);
+  const [websiteDraftToOpen, setWebsiteDraftToOpen] = useState<{ id: string; templateSlug: WebsiteEditorTemplateSlug } | null>(null);
   const [carouselHidden, setCarouselHidden] = useState(false);
   const [returning, setReturning] = useState<string | null>(null);
   const [accountGateOpen, setAccountGateOpen] = useState(false);
@@ -403,12 +415,20 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
 
   const closeWebsiteTemplates = useCallback(() => {
     if (busy.current) return;
+    setWebsiteDraftToOpen(null);
     setView("home");
     setProjectSlug(null);
     setReturning(null);
     setCarouselHidden(false);
     setSheetEntered(false);
     setSwipe({ active: false, phase: "idle", direction: null, targetSlug: null, x: 0 });
+    folio.closeHole();
+  }, [folio]);
+
+  const returnToMyWebsiteDraft = useCallback(() => {
+    setWebsiteDraftToOpen(null);
+    setView("my");
+    setMyEntered(true);
     folio.closeHole();
   }, [folio]);
 
@@ -423,6 +443,7 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
 
   const goMy = useCallback(() => {
     if (busy.current || (view !== "home" && view !== "my" && view !== "saved" && view !== "website-templates")) return;
+    setWebsiteDraftToOpen(null);
     if (overlay) closeOverlay();
     wipeTo("my");
   }, [view, overlay, closeOverlay, wipeTo]);
@@ -442,7 +463,18 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
         <MyProjects
           entered={myEntered}
           onOpenProject={(projectId, templateSlug) => {
-            if (templateSlug === "smart-edit") void openSmartEdit(projectId);
+            if (templateSlug === "smart-edit") {
+              void openSmartEdit(projectId);
+              return;
+            }
+            if (!isWebsiteEditorSlug(templateSlug)) return;
+            setWebsiteDraftToOpen({ id: projectId, templateSlug });
+            setView("website-templates");
+            setMyEntered(false);
+            setSavedEntered(false);
+            setCarouselHidden(false);
+            setSwipe({ active: false, phase: "idle", direction: null, targetSlug: null, x: 0 });
+            folio.closeHole();
           }}
           onCreateSmartEdit={createSmartEdit}
         />
@@ -450,7 +482,12 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
 
       {view === "saved" && <SavedTemplates entered={savedEntered} />}
 
-      {view === "website-templates" && <WebsiteTemplateBrowser />}
+      {view === "website-templates" && (
+        <WebsiteTemplateBrowser
+          initialDraft={websiteDraftToOpen}
+          onDraftClose={returnToMyWebsiteDraft}
+        />
+      )}
 
       {view === "smart-edit" && smartEditProjectId && (
         <SmartEditEditor projectId={smartEditProjectId} onClose={closeSmartEdit} />
