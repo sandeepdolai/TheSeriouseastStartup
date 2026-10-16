@@ -10,8 +10,10 @@ on:
       - "src/app/template-preview/**"
       - "scripts/generate-website-template-previews.mjs"
       - "package.json"
+      - ".github/workflows/generate-website-template-previews.yml"
 
 permissions:
+  actions: write
   contents: write
   pull-requests: read
 
