@@ -59,6 +59,7 @@ export function ForeverAndEverTemplate({
   onExit,
 }: Props) {
   const [html, setHtml] = useState(EMPTY_DOCUMENT);
+  const [previewFrameReady, setPreviewFrameReady] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const iframeReady = useRef(false);
   const latestValues = useRef(values);
@@ -104,6 +105,7 @@ export function ForeverAndEverTemplate({
 
       if (data.type === "paper-stish:template-ready") {
         iframeReady.current = true;
+        setPreviewFrameReady(true);
         const current = latestValues.current;
         const currentText = resolveForeverAndEverText(current);
         lastFrameText.current = textState(current);
@@ -168,7 +170,10 @@ export function ForeverAndEverTemplate({
   }, [editing]);
 
   return (
-    <main className={styles.screen}>
+    <main
+      className={styles.screen}
+      data-template-preview-frame-ready={previewFrameReady ? "true" : undefined}
+    >
       <iframe
         ref={iframeRef}
         title="I love you forever and ever, my baby!"
