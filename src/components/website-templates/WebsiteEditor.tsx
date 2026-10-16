@@ -187,7 +187,7 @@ export function WebsiteEditor({
   const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(false);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [editingPublishDetails, setEditingPublishDetails] = useState(false);
-  const [qrExpanded, setQrExpanded] = useState(true);
+  const [qrExpanded, setQrExpanded] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
   const publishedLinkInput = useRef<HTMLInputElement>(null);
@@ -452,7 +452,7 @@ export function WebsiteEditor({
       });
       const record = publishResultToRecord(result);
       setPublished(record);
-      setQrExpanded(true);
+      setQrExpanded(false);
       setCopyStatus("");
       setHasUnpublishedChanges(false);
       setEditingPublishDetails(false);
@@ -658,7 +658,7 @@ export function WebsiteEditor({
 
       {publishDialogOpen && (
         <div
-          className={styles.dialogBackdrop}
+          className={`${styles.dialogBackdrop} ${showPublishResult ? styles.successBackdrop : ""}`}
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget && !publishing) setPublishDialogOpen(false);
@@ -666,7 +666,7 @@ export function WebsiteEditor({
         >
           <form
             id="website-publish-dialog"
-            className={styles.dialog}
+            className={`${styles.dialog} ${showPublishResult ? styles.successDialog : ""}`}
             role="dialog"
             aria-modal="true"
             aria-labelledby="website-publish-title"
@@ -694,14 +694,15 @@ export function WebsiteEditor({
             {showPublishResult ? (
               <section className={styles.successView} aria-labelledby="website-publish-title">
                 <div className={styles.successMark} aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="m5 12.5 4.5 4.5L19 7.5" />
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="9.5" />
+                    <path d="m7.5 12.3 3.1 3.1 6.2-6.5" />
                   </svg>
                 </div>
-                <p className={styles.dialogEyebrow}><span className={styles.eyebrowDot} /> YOUR WEBSITE IS LIVE</p>
-                <h2 id="website-publish-title" className={styles.dialogTitle}>Ready to share.</h2>
-                <p className={styles.dialogCopy}>Your website is published. Share the link or let someone scan its QR code to open it.</p>
+                <h2 id="website-publish-title" className={styles.dialogTitle}>Your website is live.</h2>
+                <p className={styles.dialogCopy}>Anyone with this link can view it. Your design remains editable.</p>
 
+                <p className={styles.linkLabel}>YOUR WEBSITE LINK</p>
                 <div className={`${styles.urlPreview} ${styles.urlPreviewLive}`}>
                   <svg className={styles.urlLock} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <rect x="5" y="11" width="14" height="9" rx="2.5" />
@@ -715,28 +716,34 @@ export function WebsiteEditor({
                     onFocus={(event) => event.currentTarget.select()}
                     aria-label="Published website link"
                   />
-                  <button type="button" className={styles.iconAction} onClick={() => void copyLink()} aria-label="Copy published website link" title="Copy link">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <rect x="9" y="9" width="11" height="11" rx="2.5" /><path d="M5 15V6.5A2.5 2.5 0 0 1 7.5 4H15" />
-                    </svg>
-                  </button>
                 </div>
 
+                <button type="button" className={styles.successCopyAction} onClick={() => void copyLink()}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="8.5" y="8.5" width="11" height="12" rx="2" />
+                    <path d="M15.5 8.5V5.75A1.75 1.75 0 0 0 13.75 4h-8A1.75 1.75 0 0 0 4 5.75v8A1.75 1.75 0 0 0 5.75 15.5H8.5" />
+                  </svg>
+                  {copyStatus === "Link copied." ? "Copied!" : "Copy link"}
+                </button>
+
                 <div className={styles.dialogActions}>
-                  <button type="button" className={styles.secondaryAction} onClick={() => void copyLink()}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <rect x="9" y="9" width="11" height="11" rx="2.5" /><path d="M5 15V6.5A2.5 2.5 0 0 1 7.5 4H15" />
-                    </svg>
-                    Copy link
-                  </button>
                   <button type="button" className={styles.secondaryAction} onClick={() => void shareLink()}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M12 15V4M8 8l4-4 4 4M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" />
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <circle cx="18" cy="5" r="2.2" />
+                      <circle cx="6" cy="12" r="2.2" />
+                      <circle cx="18" cy="19" r="2.2" />
+                      <path d="m8 11 7.8-4.7M8 13l7.8 4.7" />
                     </svg>
                     Share
                   </button>
+                  <a className={styles.secondaryAction} href={published!.url} target="_blank" rel="noreferrer">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M13 5h6v6M19 5l-9 9" />
+                      <path d="M18 13.5v4A1.5 1.5 0 0 1 16.5 19h-11A1.5 1.5 0 0 1 4 17.5v-11A1.5 1.5 0 0 1 5.5 5h4" />
+                    </svg>
+                    Open website
+                  </a>
                 </div>
-                <a className={styles.openLink} href={published!.url} target="_blank" rel="noreferrer">Open published website <span aria-hidden="true">↗</span></a>
 
                 <button
                   type="button"
@@ -784,7 +791,8 @@ export function WebsiteEditor({
                 )}
 
                 {copyStatus && <p className={styles.statusLine} role="status">{copyStatus}</p>}
-                <button type="button" className={styles.primaryAction} onClick={() => setPublishDialogOpen(false)}>Done</button>
+                <button type="button" className={styles.backToEditingAction} onClick={() => setPublishDialogOpen(false)}>Back to editing</button>
+                <p className={styles.publishedNote}>Your website stays published when you return to editing.</p>
                 <button type="button" className={styles.textAction} onClick={() => { setCopyStatus(""); setEditingPublishDetails(true); }}>Edit link details</button>
               </section>
             ) : (
