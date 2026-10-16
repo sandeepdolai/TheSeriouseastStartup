@@ -34,6 +34,7 @@ export function LoveHeartTemplate({
   onExit,
 }: Props) {
   const [html, setHtml] = useState<string>(EMPTY_DOCUMENT);
+  const [previewFrameReady, setPreviewFrameReady] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const iframeReady = useRef(false);
   const latestValues = useRef(values);
@@ -164,6 +165,7 @@ export function LoveHeartTemplate({
 
       if (data.type === "ready") {
         iframeReady.current = true;
+        setPreviewFrameReady(true);
         const current = latestValues.current;
         frame.contentWindow?.postMessage(
           {
@@ -216,7 +218,10 @@ export function LoveHeartTemplate({
   }, [editing, html, values?.photoUrl, values?.loveMessage]);
 
   return (
-    <main className={styles.screen}>
+    <main
+      className={styles.screen}
+      data-template-preview-frame-ready={previewFrameReady ? "true" : undefined}
+    >
       <iframe
         ref={iframeRef}
         title="Love Heart — animated website"
