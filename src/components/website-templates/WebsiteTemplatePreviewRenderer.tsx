@@ -1,15 +1,21 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { BirthdayTodayTemplate } from "./BirthdayTodayTemplate";
 import { ForeverAndEverTemplate } from "./ForeverAndEverTemplate";
 import { LoveHeartTemplate } from "./LoveHeartTemplate";
+import { LoveOfMyLifeTemplate } from "./LoveOfMyLifeTemplate";
 import { OurCalendarTemplate } from "./OurCalendarTemplate";
+import { PhotoAlbumTemplate } from "./PhotoAlbumTemplate";
 
 export type WebsiteTemplatePreviewSlug =
   | "love-heart"
   | "forever-and-ever"
   | "our-calendar"
-  | "birthday-today";
+  | "birthday-today"
+  | "love-of-my-life"
+  | "birthday-template"
+  | "photo-album";
 
 /**
  * Renders the real, non-editing template component for thumbnail capture.
@@ -21,7 +27,7 @@ export function WebsiteTemplatePreviewRenderer({
 }: {
   slug: WebsiteTemplatePreviewSlug;
 }) {
-  let template;
+  let template: ReactNode;
   switch (slug) {
     case "love-heart":
       template = <LoveHeartTemplate />;
@@ -34,6 +40,15 @@ export function WebsiteTemplatePreviewRenderer({
       break;
     case "birthday-today":
       template = <BirthdayTodayTemplate />;
+      break;
+    case "love-of-my-life":
+      template = <LoveOfMyLifeTemplate title="To the love of my life" variant="love" />;
+      break;
+    case "birthday-template":
+      template = <LoveOfMyLifeTemplate title="Happy Birthday, my favorite person" variant="birthday" />;
+      break;
+    case "photo-album":
+      template = <PhotoAlbumTemplate title="A little album of us" />;
       break;
   }
 
