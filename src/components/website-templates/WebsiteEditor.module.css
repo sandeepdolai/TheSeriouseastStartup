@@ -784,3 +784,171 @@
   .dialog, .successMark, .qrPanel, .buttonSpinner { animation: none; }
   .primaryAction, .ideaChip, .iconAction { transition: none; }
 }
+
+
+/* Website-template publish success view: match the approved in-chat mockup.
+   These modifiers are success-only; the pre-publish address form keeps its current sheet design. */
+.dialogBackdrop.successBackdrop {
+  place-items: center;
+  padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom));
+  background: rgba(0, 0, 0, .68);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.dialog.successDialog {
+  display: block;
+  width: min(100%, 680px);
+  max-height: calc(100dvh - 28px);
+  padding: 28px 30px 24px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-radius: 30px;
+  background: #303030;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, .5);
+  animation: none;
+}
+
+.successView {
+  gap: 14px;
+}
+.successView .successMark {
+  width: 58px;
+  height: 58px;
+  margin: 2px auto 2px;
+  border-color: rgba(255, 255, 255, .76);
+  color: #fff;
+  background: transparent;
+  box-shadow: none;
+  animation: none;
+}
+.successView .successMark svg { width: 34px; height: 34px; }
+.successView .dialogTitle {
+  margin: 0;
+  font-size: clamp(28px, 7vw, 34px);
+  font-weight: 700;
+  letter-spacing: -.045em;
+  line-height: 1.13;
+}
+.successView .dialogCopy {
+  max-width: 36ch;
+  margin: 0 auto 2px;
+  color: rgba(255, 255, 255, .86);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.linkLabel {
+  margin: 2px 0 -6px;
+  color: rgba(255, 255, 255, .76);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: .015em;
+  text-align: left;
+}
+.urlPreviewLive {
+  border-color: #505050;
+  background: #202020;
+}
+.urlPreviewLive .publishedLink {
+  font-size: 13px;
+  line-height: 1.45;
+}
+.successCopyAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 54px;
+  margin-top: -2px;
+  padding: 14px 18px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 999px;
+  color: #fff;
+  background: #0866f5;
+  box-shadow: none;
+  font: 600 15px/1.25 Inter, ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+  transition: background .18s ease, transform .15s ease;
+}
+.successCopyAction:hover { background: #0759d8; }
+.successCopyAction:active { transform: scale(.99); }
+.successCopyAction:focus-visible,
+.backToEditingAction:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+.successCopyAction svg {
+  flex: none;
+  width: 21px;
+  height: 21px;
+}
+.successView .dialogActions { gap: 10px; }
+.successView .secondaryAction {
+  min-height: 48px;
+  border: 1.5px solid #505050;
+  border-radius: 999px;
+  color: #fff;
+  background: transparent;
+  font-size: 13.5px;
+}
+.successView .secondaryAction:hover { background: rgba(255, 255, 255, .06); }
+.successView .secondaryAction svg { width: 18px; height: 18px; }
+.successView .qrToggle {
+  min-height: 70px;
+  margin-top: 8px;
+  padding: 15px 2px;
+  border-top: 1px solid #4a4a4a;
+  border-bottom: 1px solid #4a4a4a;
+  color: #f4f5f7;
+}
+.successView .qrToggleChevron { color: #a5a5a5; }
+.successView .qrPanel {
+  margin-top: -7px;
+  border-color: #454545;
+  background: #202020;
+}
+.backToEditingAction {
+  justify-self: center;
+  min-height: 40px;
+  margin-top: 3px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  background: transparent;
+  font: 600 14px/1.35 Inter, ui-sans-serif, system-ui, sans-serif;
+  text-align: center;
+  cursor: pointer;
+}
+.backToEditingAction:hover { color: rgba(255, 255, 255, .78); }
+.publishedNote {
+  margin: -6px 0 0;
+  color: rgba(255, 255, 255, .64);
+  font-size: 11.5px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .dialogBackdrop.successBackdrop {
+    place-items: center;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  }
+  .dialog.successDialog {
+    width: 100%;
+    max-width: 680px;
+    max-height: calc(100dvh - 24px);
+    padding: 24px 22px calc(22px + env(safe-area-inset-bottom, 0px));
+    border-radius: 30px;
+  }
+  .successView { gap: 13px; }
+  .successView .dialogCopy { font-size: 14px; }
+  .successView .successMark { width: 58px; height: 58px; }
+}
+
+@media (max-width: 380px) {
+  .dialog.successDialog { padding-left: 18px; padding-right: 18px; }
+  .successView .dialogActions { gap: 8px; }
+  .successView .secondaryAction { padding-left: 10px; padding-right: 10px; font-size: 12.5px; }
+}
