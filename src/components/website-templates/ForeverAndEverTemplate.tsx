@@ -5,7 +5,7 @@ import type { TemplatePublicationValues } from "@/lib/publications";
 import styles from "./ForeverAndEverTemplate.module.css";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-const TEMPLATE_URL = `${BASE_PATH}/website-templates/forever-and-ever.html.gz.b64`;
+const TEMPLATE_URL = `${BASE_PATH}/api/template-source/forever-and-ever`;
 const EMPTY_DOCUMENT = '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{width:100%;height:100%;margin:0;background:#e9edf5;overflow:hidden}</style></head><body></body></html>';
 export const FOREVER_AND_EVER_TEXT_DEFAULTS = {
   heading: "I love you forever\nand ever, my baby !",
@@ -75,13 +75,7 @@ export function ForeverAndEverTemplate({
     fetch(TEMPLATE_URL, { cache: "force-cache" })
       .then(async (response) => {
         if (!response.ok) throw new Error("Could not load the original love-letter template.");
-        const encoded = (await response.text()).trim();
-        const binary = window.atob(encoded);
-        const buffer = new ArrayBuffer(binary.length);
-        const bytes = new Uint8Array(buffer);
-        for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-        const stream = new Blob([buffer]).stream().pipeThrough(new DecompressionStream("gzip"));
-        return new Response(stream).text();
+        return response.text();
       })
       .then((source) => {
         if (alive) setHtml(source);
