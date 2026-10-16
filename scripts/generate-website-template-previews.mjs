@@ -8,6 +8,9 @@ const PREVIEWS = [
   { slug: "forever-and-ever", waitMs: 2200 },
   { slug: "our-calendar", waitMs: 1400 },
   { slug: "birthday-today", waitMs: 1400 },
+  { slug: "love-of-my-life", waitMs: 1400 },
+  { slug: "birthday-template", waitMs: 1400 },
+  { slug: "photo-album", waitMs: 1400 },
 ];
 
 const PLAYWRIGHT_VERSION = "1.52.0";
