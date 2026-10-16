@@ -713,7 +713,6 @@ export function WebsiteEditor({
                     className={styles.publishedLink}
                     value={published!.url}
                     readOnly
-                    onFocus={(event) => event.currentTarget.select()}
                     aria-label="Published website link"
                   />
                 </div>
