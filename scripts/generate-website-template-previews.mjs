@@ -89,6 +89,7 @@ async function main() {
         "--browser=chromium",
         "--viewport-size=900,900",
         "--wait-for-selector=[data-template-preview-ready=true]",
+        "--timeout=60000",
         `--wait-for-timeout=${waitMs}`,
         url,
         outputPath,
