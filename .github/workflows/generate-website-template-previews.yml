@@ -14,6 +14,7 @@ on:
       - "src/components/ProjectSheet.tsx"
       - "src/app/template-preview/**"
       - "scripts/generate-website-template-previews.mjs"
+      - "scripts/prepare-template-html.mjs"
       - "package.json"
       - ".github/workflows/generate-website-template-previews.yml"
 
