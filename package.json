@@ -3,8 +3,8 @@
   "version": "0.2.1",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000 2>&1 | tee dev.log",
-    "build": "prisma generate && next build",
+    "dev": "node scripts/generate-website-template-previews.mjs && next dev -p 3000 2>&1 | tee dev.log",
+    "build": "prisma generate && node scripts/generate-website-template-previews.mjs && next build",
     "typecheck": "tsc --noEmit",
     "start": "NODE_ENV=production bun .next/standalone/server.js 2>&1 | tee server.log",
     "lint": "eslint .",
