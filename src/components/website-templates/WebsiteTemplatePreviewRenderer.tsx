@@ -53,10 +53,17 @@ export function WebsiteTemplatePreviewRenderer({
           });
         }
         if (image.currentSrc && image.complete && image.naturalWidth === 0) {
-          throw new Error(`Preview image failed to load: ${image.currentSrc}`);
+          // A failed optional/remote image should not prevent the rest of the
+          // real template from being captured. Keep its natural fallback state.
+          console.warn(`Preview image could not be loaded: ${image.currentSrc}`);
+          continue;
         }
         if (image.naturalWidth > 0 && typeof image.decode === "function") {
-          await image.decode();
+          try {
+            await image.decode();
+          } catch {
+            console.warn(`Preview image could not be decoded: ${image.currentSrc}`);
+          }
         }
       }));
     };
