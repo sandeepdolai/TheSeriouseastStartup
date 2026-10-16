@@ -5,7 +5,7 @@ import process from "node:process";
 
 const PREVIEWS = [
   { slug: "love-heart", waitMs: 30000 },
-  { slug: "forever-and-ever", waitMs: 2200 },
+  { slug: "forever-and-ever", waitMs: 6000 },
   { slug: "our-calendar", waitMs: 1400 },
   { slug: "birthday-today", waitMs: 1400 },
   { slug: "love-of-my-life", waitMs: 1400 },
@@ -45,6 +45,10 @@ async function waitForServer(server, timeoutMs = 180_000) {
 
 async function main() {
   await mkdir(outputDirectory, { recursive: true });
+
+  // The exact source HTML is decoded before Next starts so the template's
+  // iframe fetches the same static document in preview capture and deployment.
+  run(process.execPath, [path.resolve("scripts/prepare-template-html.mjs")]);
 
   // The screenshot is generated from the actual rendered template component.
   // Pin the CLI/browser version to keep the capture environment reproducible.
