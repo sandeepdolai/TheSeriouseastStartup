@@ -55,11 +55,13 @@ export function WebsiteTemplateBrowser({
   const [editingSlug, setEditingSlug] = useState<WebsiteEditorTemplateSlug | null>(null);
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
   const [draftError, setDraftError] = useState("");
+  const [isOpeningTemplate, setIsOpeningTemplate] = useState(false);
   const openingTemplate = useRef(false);
 
   const openWebsiteEditor = useCallback(async (slug: WebsiteEditorTemplateSlug) => {
     if (openingTemplate.current) return;
     openingTemplate.current = true;
+    setIsOpeningTemplate(true);
     setDraftError("");
     try {
       const draftId = await ensureWebsiteDraft(slug, accountKey);
@@ -69,6 +71,7 @@ export function WebsiteTemplateBrowser({
       setDraftError("Paper Stish could not save this draft on your device. Check your browser storage settings and try again.");
     } finally {
       openingTemplate.current = false;
+      setIsOpeningTemplate(false);
     }
   }, [accountKey]);
   const [swipe, setSwipe] = useState<{
@@ -214,7 +217,7 @@ export function WebsiteTemplateBrowser({
               <button
                 type="button"
                 onClick={() => void openWebsiteEditor(editableSlug)}
-                disabled={openingTemplate.current || status === "loading"}
+                disabled={isOpeningTemplate || status === "loading"}
                 className="h-48 rounded-full bg-black px-20 text-12 uppercase tracking-[0.04em] text-white transition-transform duration-300 hover:scale-[1.02]"
               >
                 Customize website
