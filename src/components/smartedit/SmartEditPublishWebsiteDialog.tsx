@@ -41,7 +41,7 @@ function PublishSuccessSheet({
 }) {
   return (
     <div
-      className="fixed inset-x-0 top-[calc(var(--se-header-h,7.2rem)+env(safe-area-inset-top))] s:top-0 z-[90] flex items-end s:items-center justify-center bg-black/60 px-0 s:px-15 backdrop-blur-[6px]"
+      className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 px-[14px] py-[14px] backdrop-blur-[8px] s:px-15 s:py-15"
       style={{ bottom: "var(--se-kb, 0px)" }}
       onPointerDown={(event) => {
         if (event.target === event.currentTarget) onClose();
@@ -51,13 +51,10 @@ function PublishSuccessSheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby="publish-success-title"
-        className="flex max-h-[calc(100%-14px)] w-full flex-col overflow-hidden rounded-t-[32px] border-t border-white/10 bg-[#303030] text-white shadow-[0_-20px_60px_rgba(0,0,0,0.5)] s:max-h-[86svh] s:max-w-[540px] s:rounded-[28px] s:border s:border-white/10"
+        className="max-h-[calc(100dvh-28px)] w-full max-w-[680px] overflow-y-auto overscroll-contain rounded-[30px] border border-white/10 bg-[#303030] text-white shadow-2xl"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <div className="flex shrink-0 justify-center pb-[2px] pt-[18px] s:hidden" aria-hidden="true">
-          <span className="h-[4px] w-[72px] rounded-full bg-white/75" />
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-[22px] pb-[24px] pt-[28px] s:px-[30px] s:pb-[28px] s:pt-[28px]">
+        <div className="px-[22px] py-[28px] s:px-[32px] s:py-[34px]">
           {children}
         </div>
       </div>
@@ -493,7 +490,7 @@ export function SmartEditPublishWebsiteDialog({
         </a>
       </div>
 
-      <div className="mt-[24px] border-t border-white/12 pt-[18px] pb-[18px]">
+      <div className="mt-[24px] border-y border-white/12 py-[18px]">
         <div className="flex items-center justify-between gap-12">
           <div className="min-w-0">
             <p className="text-[15px] font-medium text-white">QR code</p>
@@ -506,7 +503,7 @@ export function SmartEditPublishWebsiteDialog({
               setQrError("");
             }}
             aria-expanded={showQrCode}
-            className="shrink-0 rounded-full border border-white/20 px-12 py-9 text-[12px] font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            className="shrink-0 px-0 py-9 text-[12px] font-medium text-white transition-colors hover:text-white/75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           >
             {showQrCode ? "Hide QR code" : "Show QR code"}
           </button>
@@ -542,7 +539,7 @@ export function SmartEditPublishWebsiteDialog({
       <button
         type="button"
         onClick={guardedClose}
-        className="mt-[24px] h-[48px] w-full rounded-full border border-white/20 bg-white/[0.04] text-[14px] font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        className="mt-[16px] h-[40px] w-full text-center text-[14px] font-semibold text-white transition-colors hover:text-white/75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
       >
         Back to editing
       </button>
