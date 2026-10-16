@@ -28,6 +28,7 @@ export function WebsiteTemplateBrowser({
   const [editingSlug, setEditingSlug] = useState<WebsiteEditorTemplateSlug | null>(null);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [draftError, setDraftError] = useState("");
+  const [selectedIsSaved, setSelectedIsSaved] = useState(false);
   const [swipe, setSwipe] = useState<{
     phase: "idle" | "drag" | "commit" | "cancel";
     direction: -1 | 1 | null;
@@ -99,6 +100,57 @@ export function WebsiteTemplateBrowser({
     ? WEBSITE_TEMPLATES.findIndex((project) => project.slug === selectedSlug)
     : -1;
   const selected = selectedIndex >= 0 ? WEBSITE_TEMPLATES[selectedIndex] : null;
+  useEffect(() => {
+    if (!selected) {
+      setSelectedIsSaved(false);
+      return;
+    }
+
+    try {
+      const key = `paper-stish-saved-templates:${getAccountKey(session?.user?.email)}`;
+      const raw = window.localStorage.getItem(key);
+      const records = raw ? JSON.parse(raw) : [];
+      setSelectedIsSaved(Array.isArray(records) && records.some((item) =>
+        item && typeof item === "object" &&
+        [item.id, item.slug, item.templateSlug].some((value) => value === selected.slug),
+      ));
+    } catch {
+      setSelectedIsSaved(false);
+    }
+  }, [selected?.slug, session?.user?.email]);
+
+  const saveTemplate = useCallback(() => {
+    if (!selected) return;
+    setDraftError("");
+
+    try {
+      const key = `paper-stish-saved-templates:${getAccountKey(session?.user?.email)}`;
+      const raw = window.localStorage.getItem(key);
+      const parsed = raw ? JSON.parse(raw) : [];
+      const records = Array.isArray(parsed) ? parsed.filter((item) => item && typeof item === "object") : [];
+      const savedRecord = {
+        id: selected.slug,
+        slug: selected.slug,
+        templateSlug: selected.slug,
+        title: selected.title,
+        thumbnail: selected.media[0],
+        savedAt: new Date().toISOString(),
+      };
+      const existingIndex = records.findIndex((item) =>
+        [item.id, item.slug, item.templateSlug].some((value) => value === selected.slug),
+      );
+      if (existingIndex >= 0) {
+        records[existingIndex] = { ...records[existingIndex], ...savedRecord };
+      } else {
+        records.unshift(savedRecord);
+      }
+      window.localStorage.setItem(key, JSON.stringify(records));
+      setSelectedIsSaved(true);
+    } catch {
+      setDraftError("Could not save this website template on this device.");
+    }
+  }, [selected, session?.user?.email]);
+
   const relatedPrev =
     selectedIndex >= 0 && WEBSITE_TEMPLATES.length > 1
       ? WEBSITE_TEMPLATES[(selectedIndex - 1 + WEBSITE_TEMPLATES.length) % WEBSITE_TEMPLATES.length]
@@ -207,13 +259,28 @@ export function WebsiteTemplateBrowser({
                 </p>
               )}
               {editableSlug ? (
-                <button
-                  type="button"
-                  onClick={() => void beginEditing(editableSlug)}
-                  className="h-48 rounded-full bg-black px-20 text-12 uppercase tracking-[0.04em] text-white transition-transform duration-300 hover:scale-[1.02]"
-                >
-                  Customize website
-                </button>
+                <div className="flex flex-wrap items-center gap-12">
+                  <button
+                    type="button"
+                    onClick={() => void beginEditing(editableSlug)}
+                    className="flex size-48 shrink-0 items-center justify-center rounded-full bg-black text-white transition-transform duration-300 hover:scale-105"
+                    aria-label="Duplicate website template"
+                    title="Duplicate website template"
+                  >
+                    <svg viewBox="0 0 24 24" className="size-17" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="8" y="8" width="11" height="11" rx="2" />
+                      <path d="M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveTemplate}
+                    disabled={selectedIsSaved}
+                    className="h-48 rounded-full bg-black/[0.06] px-20 text-12 uppercase tracking-[0.04em] text-black transition-transform duration-300 hover:scale-[1.02] disabled:cursor-default disabled:opacity-55"
+                  >
+                    {selectedIsSaved ? "Saved" : "Save"}
+                  </button>
+                </div>
               ) : (
                 <p className="text-12 uppercase tracking-[0.04em] text-black/50">
                   Website editor coming later
