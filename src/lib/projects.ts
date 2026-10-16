@@ -64,6 +64,16 @@ export const WEBSITE_TEMPLATES: Project[] = [
     aspect: 1,
     media: [`${BASE_PATH}/website-templates/birthday-today-preview.png`],
   },
+  {
+    title: "Introducing Him",
+    slug: "introducing-him",
+    description: "A social-post-inspired romantic page with a personal photo and a continuously scrolling love poem.",
+    link: null,
+    tags: [],
+    awards: 0,
+    aspect: 1,
+    media: [`${BASE_PATH}/website-templates/introducing-him-preview.png`],
+  },
 ];
 
 export interface IndexItem {

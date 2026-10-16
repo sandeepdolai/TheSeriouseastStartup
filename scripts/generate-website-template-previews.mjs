@@ -6,6 +6,7 @@ import process from "node:process";
 const PREVIEWS = [
   { slug: "love-heart", waitMs: 30000 },
   { slug: "forever-and-ever", waitMs: 6000 },
+  { slug: "introducing-him", waitMs: 2200 },
   { slug: "our-calendar", waitMs: 1400 },
   { slug: "birthday-today", waitMs: 1400 },
   { slug: "love-of-my-life", waitMs: 1400 },
@@ -112,11 +113,13 @@ async function main() {
       // Validate the original HTML for the two embedded website templates
       // before screenshotting. A missing/generated fallback must never silently
       // become a cover image.
-      if (slug === "love-heart" || slug === "forever-and-ever") {
+      if (slug === "love-heart" || slug === "forever-and-ever" || slug === "introducing-him") {
         const sourceHtml = await fetchTemplateSource(slug);
         const expectedMarkup = slug === "love-heart"
           ? "<title>Love Heart</title>"
-          : 'aria-label="Love letter notebook page"';
+          : slug === "forever-and-ever"
+            ? 'aria-label="Love letter notebook page"'
+            : "<title>Introducing Him — Paper Stish</title>";
         if (!sourceHtml.includes(expectedMarkup)) {
           throw new Error(`Generated ${slug} HTML does not match the original template markup.`);
         }

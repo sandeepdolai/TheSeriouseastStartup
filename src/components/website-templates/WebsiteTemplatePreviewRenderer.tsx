@@ -13,7 +13,8 @@ export type WebsiteTemplatePreviewSlug =
   | "birthday-today"
   | "love-of-my-life"
   | "birthday-template"
-  | "photo-album";
+  | "photo-album"
+  | "introducing-him";
 
 /**
  * Renders the real, non-editing template component for thumbnail capture.
@@ -26,7 +27,7 @@ export function WebsiteTemplatePreviewRenderer({
   slug: WebsiteTemplatePreviewSlug;
 }) {
   const [previewReady, setPreviewReady] = useState(false);
-  const usesStaticHtml = slug === "love-heart" || slug === "forever-and-ever";
+  const usesStaticHtml = slug === "love-heart" || slug === "forever-and-ever" || slug === "introducing-him";
 
   useEffect(() => {
     let cancelled = false;
@@ -114,6 +115,9 @@ export function WebsiteTemplatePreviewRenderer({
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
         />
       );
+      break;
+    case "introducing-him":
+      template = <iframe title="Introducing Him website preview" src="/website-templates/introducing-him.html" sandbox="allow-scripts" referrerPolicy="no-referrer" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }} />;
       break;
     case "our-calendar":
       template = <OurCalendarTemplate />;

@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { gunzipSync } from "node:zlib";
 
-const templates = ["love-heart", "forever-and-ever"];
+const templates = ["love-heart", "forever-and-ever", "introducing-him"];
 const directory = path.resolve("public/website-templates");
 
 async function main() {

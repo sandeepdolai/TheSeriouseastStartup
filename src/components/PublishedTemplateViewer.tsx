@@ -14,6 +14,7 @@ import { SmartEditViewer } from "@/components/smartedit/SmartEditViewer";
 import { LoveOfMyLifeTemplate } from "@/components/website-templates/LoveOfMyLifeTemplate";
 import { PhotoAlbumTemplate } from "@/components/website-templates/PhotoAlbumTemplate";
 import { LoveHeartTemplate } from "@/components/website-templates/LoveHeartTemplate";
+import { IntroducingHimTemplate } from "@/components/website-templates/IntroducingHimTemplate";
 import { ForeverAndEverTemplate } from "@/components/website-templates/ForeverAndEverTemplate";
 import { OurCalendarTemplate } from "@/components/website-templates/OurCalendarTemplate";
 import { BirthdayTodayTemplate } from "@/components/website-templates/BirthdayTodayTemplate";
@@ -116,6 +117,10 @@ export function PublishedTemplateViewer({
     // This is especially important for templates that initialize a document
     // or animation in an iframe and must receive a fresh initial snapshot.
     const publicationKey = `${templateId}:${serverPublication.templateSlug}:${serverPublication.publishedAt}`;
+
+    if (serverPublication.templateSlug === "introducing-him" && serverPublication.values) {
+      return <IntroducingHimTemplate key={publicationKey} values={serverPublication.values} />;
+    }
 
     if (serverPublication.templateSlug === "love-heart" && serverPublication.values) {
       return <LoveHeartTemplate key={publicationKey} values={serverPublication.values} />;
