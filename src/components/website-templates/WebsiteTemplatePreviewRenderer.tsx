@@ -2,8 +2,6 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { BirthdayTodayTemplate } from "./BirthdayTodayTemplate";
-import { ForeverAndEverTemplate } from "./ForeverAndEverTemplate";
-import { LoveHeartTemplate } from "./LoveHeartTemplate";
 import { LoveOfMyLifeTemplate } from "./LoveOfMyLifeTemplate";
 import { OurCalendarTemplate } from "./OurCalendarTemplate";
 import { PhotoAlbumTemplate } from "./PhotoAlbumTemplate";
@@ -28,49 +26,20 @@ export function WebsiteTemplatePreviewRenderer({
   slug: WebsiteTemplatePreviewSlug;
 }) {
   const [previewReady, setPreviewReady] = useState(false);
+  const [embeddedTemplateLoaded, setEmbeddedTemplateLoaded] = useState(false);
+  const usesStaticHtml = slug === "love-heart" || slug === "forever-and-ever";
 
   useEffect(() => {
     let cancelled = false;
 
-    const waitForTemplateSource = () => new Promise<void>((resolve, reject) => {
-      const loadedSelector = '[data-template-preview-source-loaded="true"]';
-      const errorSelector = "[data-template-preview-source-error]";
-      let settled = false;
-      let observer: MutationObserver;
-      let timeout = 0;
-
-      const finish = (error?: Error) => {
-        if (settled) return;
-        settled = true;
-        window.clearTimeout(timeout);
-        observer.disconnect();
-        if (error) reject(error);
-        else resolve();
+    // The legacy animated templates are already stored as original HTML.
+    // Their screenshot should load that exact document directly, avoiding the
+    // editor's srcDoc bridge and its intentionally blank loading fallback.
+    if (usesStaticHtml && !embeddedTemplateLoaded) {
+      return () => {
+        cancelled = true;
       };
-
-      const inspect = () => {
-        const failed = document.querySelector<HTMLElement>(errorSelector);
-        if (failed) {
-          finish(new Error(
-            `${slug} source failed to load: ${failed.getAttribute("data-template-preview-source-error") || "unknown error"}`,
-          ));
-          return;
-        }
-        if (document.querySelector(loadedSelector)) finish();
-      };
-
-      observer = new MutationObserver(inspect);
-      timeout = window.setTimeout(() => {
-        finish(new Error(`Timed out waiting for the original ${slug} HTML source to load.`));
-      }, 45_000);
-      observer.observe(document.body, {
-        attributes: true,
-        attributeFilter: ["data-template-preview-source-loaded", "data-template-preview-source-error"],
-        childList: true,
-        subtree: true,
-      });
-      inspect();
-    });
+    }
 
     const waitForImages = async () => {
       const images = Array.from(document.images);
@@ -93,9 +62,6 @@ export function WebsiteTemplatePreviewRenderer({
     };
 
     const finalize = async () => {
-      if (slug === "love-heart" || slug === "forever-and-ever") {
-        await waitForTemplateSource();
-      }
       await Promise.race([
         document.fonts?.ready ?? Promise.resolve(),
         new Promise((resolve) => window.setTimeout(resolve, 5000)),
@@ -116,15 +82,33 @@ export function WebsiteTemplatePreviewRenderer({
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [slug, embeddedTemplateLoaded]);
 
   let template: ReactNode;
   switch (slug) {
     case "love-heart":
-      template = <LoveHeartTemplate />;
+      template = (
+        <iframe
+          title="Love Heart website preview"
+          src="/website-templates/love-heart.html"
+          sandbox="allow-scripts"
+          referrerPolicy="no-referrer"
+          onLoad={() => setEmbeddedTemplateLoaded(true)}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+        />
+      );
       break;
     case "forever-and-ever":
-      template = <ForeverAndEverTemplate />;
+      template = (
+        <iframe
+          title="I love you forever and ever, my baby! website preview"
+          src="/website-templates/forever-and-ever.html"
+          sandbox="allow-scripts"
+          referrerPolicy="no-referrer"
+          onLoad={() => setEmbeddedTemplateLoaded(true)}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+        />
+      );
       break;
     case "our-calendar":
       template = <OurCalendarTemplate />;
