@@ -4,8 +4,8 @@ import path from "node:path";
 import process from "node:process";
 
 const PREVIEWS = [
-  { slug: "love-heart", waitMs: 9000 },
-  { slug: "forever-and-ever", waitMs: 2200 },
+  { slug: "love-heart", waitMs: 30000 },
+  { slug: "forever-and-ever", waitMs: 6000 },
   { slug: "our-calendar", waitMs: 1400 },
   { slug: "birthday-today", waitMs: 1400 },
   { slug: "love-of-my-life", waitMs: 1400 },
@@ -22,6 +22,29 @@ const isCi = process.env.CI === "true" || process.env.VERCEL === "1";
 
 function run(command, args, options = {}) {
   execFileSync(command, args, { stdio: "inherit", ...options });
+}
+
+async function fetchTemplateSource(slug, maxAttempts = 5) {
+  const url = `${origin}/website-templates/${slug}.html`;
+  let lastError = "no response";
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) return await response.text();
+      lastError = `HTTP ${response.status}`;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+    }
+
+    if (attempt < maxAttempts) {
+      const delayMs = attempt * 750;
+      console.warn(`Source preflight ${slug} attempt ${attempt} failed (${lastError}); retrying in ${delayMs}ms.`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+
+  throw new Error(`Could not verify original ${slug} HTML after ${maxAttempts} attempts: ${lastError}`);
 }
 
 async function waitForServer(server, timeoutMs = 180_000) {
@@ -45,6 +68,10 @@ async function waitForServer(server, timeoutMs = 180_000) {
 
 async function main() {
   await mkdir(outputDirectory, { recursive: true });
+
+  // The exact source HTML is decoded before Next starts so the template's
+  // iframe fetches the same static document in preview capture and deployment.
+  run(process.execPath, [path.resolve("scripts/prepare-template-html.mjs")]);
 
   // The screenshot is generated from the actual rendered template component.
   // Pin the CLI/browser version to keep the capture environment reproducible.
@@ -81,6 +108,21 @@ async function main() {
     for (const { slug, waitMs } of PREVIEWS) {
       const url = `${origin}/template-preview/${slug}`;
       const outputPath = path.join(outputDirectory, `${slug}-preview.png`);
+
+      // Validate the original HTML for the two embedded website templates
+      // before screenshotting. A missing/generated fallback must never silently
+      // become a cover image.
+      if (slug === "love-heart" || slug === "forever-and-ever") {
+        const sourceHtml = await fetchTemplateSource(slug);
+        const expectedMarkup = slug === "love-heart"
+          ? "<title>Love Heart</title>"
+          : 'aria-label="Love letter notebook page"';
+        if (!sourceHtml.includes(expectedMarkup)) {
+          throw new Error(`Generated ${slug} HTML does not match the original template markup.`);
+        }
+        console.log(`Verified original ${slug} HTML (${sourceHtml.length} characters).`);
+      }
+
       console.log(`Capturing real ${slug} website render → ${outputPath}`);
       run("npx", [
         "--yes",
@@ -89,6 +131,7 @@ async function main() {
         "--browser=chromium",
         "--viewport-size=900,900",
         "--wait-for-selector=[data-template-preview-ready=true]",
+        "--timeout=60000",
         `--wait-for-timeout=${waitMs}`,
         url,
         outputPath,

@@ -5,7 +5,7 @@ import type { TemplatePublicationValues } from "@/lib/publications";
 import styles from "./ForeverAndEverTemplate.module.css";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-const TEMPLATE_URL = `${BASE_PATH}/website-templates/forever-and-ever.html.gz.b64`;
+const TEMPLATE_URL = `${BASE_PATH}/website-templates/forever-and-ever.html`;
 const EMPTY_DOCUMENT = '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{width:100%;height:100%;margin:0;background:#e9edf5;overflow:hidden}</style></head><body></body></html>';
 export const FOREVER_AND_EVER_TEXT_DEFAULTS = {
   heading: "I love you forever\nand ever, my baby !",
@@ -59,6 +59,9 @@ export function ForeverAndEverTemplate({
   onExit,
 }: Props) {
   const [html, setHtml] = useState(EMPTY_DOCUMENT);
+  const [previewFrameReady, setPreviewFrameReady] = useState(false);
+  const [templateSourceLoaded, setTemplateSourceLoaded] = useState(false);
+  const [templateSourceError, setTemplateSourceError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const iframeReady = useRef(false);
   const latestValues = useRef(values);
@@ -74,19 +77,22 @@ export function ForeverAndEverTemplate({
     fetch(TEMPLATE_URL, { cache: "force-cache" })
       .then(async (response) => {
         if (!response.ok) throw new Error("Could not load the original love-letter template.");
-        const encoded = (await response.text()).trim();
-        const binary = window.atob(encoded);
-        const buffer = new ArrayBuffer(binary.length);
-        const bytes = new Uint8Array(buffer);
-        for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-        const stream = new Blob([buffer]).stream().pipeThrough(new DecompressionStream("gzip"));
-        return new Response(stream).text();
+        return response.text();
       })
       .then((source) => {
-        if (alive) setHtml(source);
+        if (alive) {
+          setHtml(source);
+          setTemplateSourceError(null);
+          setTemplateSourceLoaded(true);
+        }
       })
-      .catch(() => {
-        if (alive) setHtml(EMPTY_DOCUMENT);
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error("[ForeverAndEverTemplate] Failed to load original template HTML.", error);
+        if (alive) {
+          setTemplateSourceError(message);
+          setHtml(EMPTY_DOCUMENT);
+        }
       });
     return () => { alive = false; };
   }, []);
@@ -104,6 +110,7 @@ export function ForeverAndEverTemplate({
 
       if (data.type === "paper-stish:template-ready") {
         iframeReady.current = true;
+        setPreviewFrameReady(true);
         const current = latestValues.current;
         const currentText = resolveForeverAndEverText(current);
         lastFrameText.current = textState(current);
@@ -168,7 +175,12 @@ export function ForeverAndEverTemplate({
   }, [editing]);
 
   return (
-    <main className={styles.screen}>
+    <main
+      className={styles.screen}
+      data-template-preview-frame-ready={previewFrameReady ? "true" : undefined}
+      data-template-preview-source-loaded={templateSourceLoaded ? "true" : undefined}
+      data-template-preview-source-error={templateSourceError ?? undefined}
+    >
       <iframe
         ref={iframeRef}
         title="I love you forever and ever, my baby!"
@@ -176,6 +188,11 @@ export function ForeverAndEverTemplate({
         srcDoc={html}
         sandbox="allow-scripts"
         referrerPolicy="no-referrer"
+        onLoad={() => {
+          // The first load is the deliberately blank fallback document. Only
+          // mark the preview frame ready after the real fetched HTML is applied.
+          if (html !== EMPTY_DOCUMENT) setPreviewFrameReady(true);
+        }}
       />
       {editing && onExit && (
         <button type="button" className={styles.backButton} onClick={onExit} aria-label="Back to website templates">

@@ -5,7 +5,7 @@ import type { TemplatePublicationValues } from "@/lib/publications";
 import styles from "./LoveHeartTemplate.module.css";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-const ANIMATION_URL = `${BASE_PATH}/website-templates/love-heart.html.gz.b64`;
+const ANIMATION_URL = `${BASE_PATH}/website-templates/love-heart.html`;
 const EMPTY_DOCUMENT =
   '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{width:100%;height:100%;margin:0;background:#060208;overflow:hidden}</style></head><body></body></html>';
 const DEFAULT_LOVE_MESSAGE = "I Love You, Your Loved One Name♡";
@@ -34,6 +34,9 @@ export function LoveHeartTemplate({
   onExit,
 }: Props) {
   const [html, setHtml] = useState<string>(EMPTY_DOCUMENT);
+  const [previewFrameReady, setPreviewFrameReady] = useState(false);
+  const [templateSourceLoaded, setTemplateSourceLoaded] = useState(false);
+  const [templateSourceError, setTemplateSourceError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const iframeReady = useRef(false);
   const latestValues = useRef(values);
@@ -48,13 +51,7 @@ export function LoveHeartTemplate({
     fetch(ANIMATION_URL, { cache: "force-cache" })
       .then(async (response) => {
         if (!response.ok) throw new Error("Could not load the Love Heart animation.");
-        const encoded = (await response.text()).trim();
-        const binary = window.atob(encoded);
-        const buffer = new ArrayBuffer(binary.length);
-        const bytes = new Uint8Array(buffer);
-        for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-        const stream = new Blob([buffer]).stream().pipeThrough(new DecompressionStream("gzip"));
-        return new Response(stream).text();
+        return response.text();
       })
       .then((source) => {
         // The iframe is sandboxed without same-origin access. postMessage is
@@ -143,11 +140,19 @@ export function LoveHeartTemplate({
         const bridged = bodyClose >= 0
           ? source.slice(0, bodyClose) + bridgeScript + source.slice(bodyClose)
           : source + bridgeScript;
-        if (alive) setHtml(bridged);
+        if (alive) {
+          setHtml(bridged);
+          setTemplateSourceError(null);
+          setTemplateSourceLoaded(true);
+        }
       })
-      .catch(() => {
-        // Keep the template's dark canvas surface if the static page cannot load.
-        if (alive) setHtml(EMPTY_DOCUMENT);
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error("[LoveHeartTemplate] Failed to load original template HTML.", error);
+        if (alive) {
+          setTemplateSourceError(message);
+          setHtml(EMPTY_DOCUMENT);
+        }
       });
 
     return () => {
@@ -164,6 +169,7 @@ export function LoveHeartTemplate({
 
       if (data.type === "ready") {
         iframeReady.current = true;
+        setPreviewFrameReady(true);
         const current = latestValues.current;
         frame.contentWindow?.postMessage(
           {
@@ -216,7 +222,12 @@ export function LoveHeartTemplate({
   }, [editing, html, values?.photoUrl, values?.loveMessage]);
 
   return (
-    <main className={styles.screen}>
+    <main
+      className={styles.screen}
+      data-template-preview-frame-ready={previewFrameReady ? "true" : undefined}
+      data-template-preview-source-loaded={templateSourceLoaded ? "true" : undefined}
+      data-template-preview-source-error={templateSourceError ?? undefined}
+    >
       <iframe
         ref={iframeRef}
         title="Love Heart — animated website"
@@ -224,6 +235,11 @@ export function LoveHeartTemplate({
         srcDoc={html}
         sandbox="allow-scripts"
         referrerPolicy="no-referrer"
+        onLoad={() => {
+          // The first load is the deliberately blank fallback document. Only
+          // mark the preview frame ready after the real fetched HTML is applied.
+          if (html !== EMPTY_DOCUMENT) setPreviewFrameReady(true);
+        }}
       />
       {editing && onExit && (
         <button

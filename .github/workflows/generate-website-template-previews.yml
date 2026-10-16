@@ -14,6 +14,7 @@ on:
       - "src/components/ProjectSheet.tsx"
       - "src/app/template-preview/**"
       - "scripts/generate-website-template-previews.mjs"
+      - "scripts/prepare-template-html.mjs"
       - "package.json"
       - ".github/workflows/generate-website-template-previews.yml"
 
@@ -23,8 +24,8 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: website-template-previews-${{ github.event.pull_request.number }}
-  cancel-in-progress: false
+  group: website-template-previews-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: true
 
 jobs:
   generate:
@@ -45,11 +46,16 @@ jobs:
         with:
           node-version: "24"
 
-      - name: Install dependencies
-        run: npm install --no-package-lock
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.5"
+
+      - name: Install dependencies from the repository lockfile
+        run: bun install --no-save
 
       - name: Generate Prisma client
-        run: npx prisma generate
+        run: bunx prisma generate
         env:
           DATABASE_URL: "postgresql://ci:ci@127.0.0.1:5432/ci?schema=public"
           DIRECT_URL: "postgresql://ci:ci@127.0.0.1:5432/ci?schema=public"

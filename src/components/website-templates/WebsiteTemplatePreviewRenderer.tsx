@@ -1,9 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { BirthdayTodayTemplate } from "./BirthdayTodayTemplate";
-import { ForeverAndEverTemplate } from "./ForeverAndEverTemplate";
-import { LoveHeartTemplate } from "./LoveHeartTemplate";
 import { LoveOfMyLifeTemplate } from "./LoveOfMyLifeTemplate";
 import { OurCalendarTemplate } from "./OurCalendarTemplate";
 import { PhotoAlbumTemplate } from "./PhotoAlbumTemplate";
@@ -27,13 +25,95 @@ export function WebsiteTemplatePreviewRenderer({
 }: {
   slug: WebsiteTemplatePreviewSlug;
 }) {
+  const [previewReady, setPreviewReady] = useState(false);
+  const usesStaticHtml = slug === "love-heart" || slug === "forever-and-ever";
+
+  useEffect(() => {
+    let cancelled = false;
+
+    // The legacy animated templates use their exact static HTML in the iframe.
+    // The capture script verifies that source before opening this route; mark
+    // the outer shell ready after hydration and wait for the reveal animation.
+    if (usesStaticHtml) {
+      setPreviewReady(true);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const waitForImages = async () => {
+      const images = Array.from(document.images);
+      images.forEach((image) => { image.loading = "eager"; });
+      await Promise.all(images.map(async (image) => {
+        if (!image.complete) {
+          await new Promise<void>((resolve) => {
+            image.addEventListener("load", () => resolve(), { once: true });
+            image.addEventListener("error", () => resolve(), { once: true });
+            window.setTimeout(resolve, 12_000);
+          });
+        }
+        if (image.currentSrc && image.complete && image.naturalWidth === 0) {
+          // A failed optional/remote image should not prevent the rest of the
+          // real template from being captured. Keep its natural fallback state.
+          console.warn(`Preview image could not be loaded: ${image.currentSrc}`);
+          return;
+        }
+        if (image.naturalWidth > 0 && typeof image.decode === "function") {
+          try {
+            await image.decode();
+          } catch {
+            console.warn(`Preview image could not be decoded: ${image.currentSrc}`);
+          }
+        }
+      }));
+    };
+
+    const finalize = async () => {
+      await Promise.race([
+        document.fonts?.ready ?? Promise.resolve(),
+        new Promise((resolve) => window.setTimeout(resolve, 5000)),
+      ]);
+      await waitForImages();
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+      if (!cancelled) setPreviewReady(true);
+    };
+
+    void finalize().catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      document.documentElement.dataset.templatePreviewError = message;
+      console.error(message);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, usesStaticHtml]);
+
   let template: ReactNode;
   switch (slug) {
     case "love-heart":
-      template = <LoveHeartTemplate />;
+      template = (
+        <iframe
+          title="Love Heart website preview"
+          src="/website-templates/love-heart.html"
+          sandbox="allow-scripts"
+          referrerPolicy="no-referrer"
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+        />
+      );
       break;
     case "forever-and-ever":
-      template = <ForeverAndEverTemplate />;
+      template = (
+        <iframe
+          title="I love you forever and ever, my baby! website preview"
+          src="/website-templates/forever-and-ever.html"
+          sandbox="allow-scripts"
+          referrerPolicy="no-referrer"
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+        />
+      );
       break;
     case "our-calendar":
       template = <OurCalendarTemplate />;
@@ -54,7 +134,7 @@ export function WebsiteTemplatePreviewRenderer({
 
   return (
     <div
-      data-template-preview-ready="true"
+      data-template-preview-ready={previewReady ? "true" : undefined}
       data-template-preview-slug={slug}
       style={{
         position: "relative",
