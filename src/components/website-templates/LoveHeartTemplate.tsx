@@ -5,7 +5,7 @@ import type { TemplatePublicationValues } from "@/lib/publications";
 import styles from "./LoveHeartTemplate.module.css";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-const ANIMATION_URL = `${BASE_PATH}/api/template-source/love-heart`;
+const ANIMATION_URL = `${BASE_PATH}/website-templates/love-heart.html`;
 const EMPTY_DOCUMENT =
   '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{width:100%;height:100%;margin:0;background:#060208;overflow:hidden}</style></head><body></body></html>';
 const DEFAULT_LOVE_MESSAGE = "I Love You, Your Loved One Name♡";
