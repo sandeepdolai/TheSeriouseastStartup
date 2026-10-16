@@ -658,7 +658,7 @@ export function WebsiteEditor({
 
       {publishDialogOpen && (
         <div
-          className={`${styles.dialogBackdrop} ${showPublishResult ? styles.successBackdrop : ""}`}
+          className={`${styles.dialogBackdrop} ${showPublishResult ? styles.successBackdrop : styles.linkEditorBackdrop}`}
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget && !publishing) setPublishDialogOpen(false);
@@ -666,7 +666,7 @@ export function WebsiteEditor({
         >
           <form
             id="website-publish-dialog"
-            className={`${styles.dialog} ${showPublishResult ? styles.successDialog : ""}`}
+            className={`${styles.dialog} ${showPublishResult ? styles.successDialog : styles.linkEditorDialog}`}
             role="dialog"
             aria-modal="true"
             aria-labelledby="website-publish-title"
@@ -713,7 +713,6 @@ export function WebsiteEditor({
                     className={styles.publishedLink}
                     value={published!.url}
                     readOnly
-                    onFocus={(event) => event.currentTarget.select()}
                     aria-label="Published website link"
                   />
                 </div>
@@ -801,7 +800,7 @@ export function WebsiteEditor({
                 <h2 id="website-publish-title" className={styles.dialogTitle}>Make it shareable.</h2>
                 <p className={styles.dialogCopy}>Choose an address for your website. Your design and edits will stay exactly as you made them.</p>
 
-                <div className={styles.urlPreview} aria-live="polite">
+                <div className={`${styles.urlPreview} ${styles.urlPreviewEditor}`} aria-live="polite">
                   <svg className={styles.urlLock} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <rect x="5" y="11" width="14" height="9" rx="2.5" />
                     <path d="M8 11V8a4 4 0 0 1 8 0v3" />
