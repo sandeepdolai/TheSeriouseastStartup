@@ -26,16 +26,16 @@ export function WebsiteTemplatePreviewRenderer({
   slug: WebsiteTemplatePreviewSlug;
 }) {
   const [previewReady, setPreviewReady] = useState(false);
-  const [embeddedTemplateLoaded, setEmbeddedTemplateLoaded] = useState(false);
   const usesStaticHtml = slug === "love-heart" || slug === "forever-and-ever";
 
   useEffect(() => {
     let cancelled = false;
 
-    // The legacy animated templates are already stored as original HTML.
-    // Their screenshot should load that exact document directly, avoiding the
-    // editor's srcDoc bridge and its intentionally blank loading fallback.
-    if (usesStaticHtml && !embeddedTemplateLoaded) {
+    // The legacy animated templates use their exact static HTML in the iframe.
+    // The capture script verifies that source before opening this route; mark
+    // the outer shell ready after hydration and wait for the reveal animation.
+    if (usesStaticHtml) {
+      setPreviewReady(true);
       return () => {
         cancelled = true;
       };
@@ -82,7 +82,7 @@ export function WebsiteTemplatePreviewRenderer({
     return () => {
       cancelled = true;
     };
-  }, [slug, embeddedTemplateLoaded]);
+  }, [slug, usesStaticHtml]);
 
   let template: ReactNode;
   switch (slug) {
@@ -93,7 +93,6 @@ export function WebsiteTemplatePreviewRenderer({
           src="/website-templates/love-heart.html"
           sandbox="allow-scripts"
           referrerPolicy="no-referrer"
-          onLoad={() => setEmbeddedTemplateLoaded(true)}
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
         />
       );
@@ -105,7 +104,6 @@ export function WebsiteTemplatePreviewRenderer({
           src="/website-templates/forever-and-ever.html"
           sandbox="allow-scripts"
           referrerPolicy="no-referrer"
-          onLoad={() => setEmbeddedTemplateLoaded(true)}
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
         />
       );
