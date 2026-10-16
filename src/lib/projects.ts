@@ -31,7 +31,7 @@ export const WEBSITE_TEMPLATES: Project[] = [
     tags: [],
     awards: 0,
     aspect: 1,
-    media: [`${BASE_PATH}/website-templates/love-heart-preview.svg`],
+    media: [`${BASE_PATH}/website-templates/love-heart-preview.png`],
   },
   {
     title: "I love you forever and ever, my baby!",
@@ -41,7 +41,7 @@ export const WEBSITE_TEMPLATES: Project[] = [
     tags: [],
     awards: 0,
     aspect: 1,
-    media: [`${BASE_PATH}/website-templates/forever-and-ever-preview.svg`],
+    media: [`${BASE_PATH}/website-templates/forever-and-ever-preview.png`],
   },
   {
     title: "Our Calendar",
@@ -51,7 +51,7 @@ export const WEBSITE_TEMPLATES: Project[] = [
     tags: [],
     awards: 0,
     aspect: 1,
-    media: [`${BASE_PATH}/website-templates/our-calendar-preview.svg`],
+    media: [`${BASE_PATH}/website-templates/our-calendar-preview.png`],
   },
 
   {
@@ -62,7 +62,7 @@ export const WEBSITE_TEMPLATES: Project[] = [
     tags: [],
     awards: 0,
     aspect: 1,
-    media: [`${BASE_PATH}/website-templates/birthday-today-preview.svg`],
+    media: [`${BASE_PATH}/website-templates/birthday-today-preview.png`],
   },
 ];
 

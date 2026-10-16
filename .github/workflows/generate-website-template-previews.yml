@@ -1,0 +1,92 @@
+name: Generate exact website template previews
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "src/components/website-templates/**"
+      - "public/templates/**"
+      - "public/website-templates/love-heart.html.gz.b64"
+      - "public/website-templates/forever-and-ever.html.gz.b64"
+      - "public/website-templates/our-calendar-source.html"
+      - "public/website-templates/our-calendar-cake.png"
+      - "src/lib/projects.ts"
+      - "src/components/ProjectSheet.tsx"
+      - "src/app/template-preview/**"
+      - "scripts/generate-website-template-previews.mjs"
+      - "package.json"
+      - ".github/workflows/generate-website-template-previews.yml"
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: website-template-previews-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    # Do not write a token or generated commits into an external fork.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the PR branch
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install dependencies
+        run: npm install --no-package-lock
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: "postgresql://ci:ci@127.0.0.1:5432/ci?schema=public"
+          DIRECT_URL: "postgresql://ci:ci@127.0.0.1:5432/ci?schema=public"
+
+      - name: Install Chromium and Linux dependencies
+        run: npx --yes playwright@1.52.0 install --with-deps chromium
+
+      - name: Capture the real website templates
+        run: node scripts/generate-website-template-previews.mjs
+        env:
+          CI: "true"
+          PLAYWRIGHT_SKIP_INSTALL: "1"
+          DATABASE_URL: "postgresql://ci:ci@127.0.0.1:5432/ci?schema=public"
+          DIRECT_URL: "postgresql://ci:ci@127.0.0.1:5432/ci?schema=public"
+          NEXTAUTH_SECRET: "ci-placeholder-secret"
+          NEXTAUTH_URL: "http://localhost:3000"
+
+      - name: Commit generated preview assets to the PR branch
+        id: commit
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/website-templates/*-preview.png
+          if git diff --cached --quiet; then
+            echo "No preview changes were generated."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "chore: regenerate exact website template previews"
+            git push origin "HEAD:$HEAD_REF"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run CI on the generated preview commit
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: gh workflow run ci.yml --ref "$HEAD_REF"
