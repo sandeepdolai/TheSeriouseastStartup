@@ -46,11 +46,16 @@ jobs:
         with:
           node-version: "24"
 
-      - name: Install dependencies
-        run: npm install --no-package-lock
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.5"
+
+      - name: Install dependencies from the repository lockfile
+        run: bun install --frozen-lockfile
 
       - name: Generate Prisma client
-        run: npx prisma generate
+        run: bunx prisma generate
         env:
           DATABASE_URL: "postgresql://ci:ci@127.0.0.1:5432/ci?schema=public"
           DIRECT_URL: "postgresql://ci:ci@127.0.0.1:5432/ci?schema=public"
