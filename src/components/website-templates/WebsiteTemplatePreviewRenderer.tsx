@@ -56,7 +56,7 @@ export function WebsiteTemplatePreviewRenderer({
           // A failed optional/remote image should not prevent the rest of the
           // real template from being captured. Keep its natural fallback state.
           console.warn(`Preview image could not be loaded: ${image.currentSrc}`);
-          continue;
+          return;
         }
         if (image.naturalWidth > 0 && typeof image.decode === "function") {
           try {
