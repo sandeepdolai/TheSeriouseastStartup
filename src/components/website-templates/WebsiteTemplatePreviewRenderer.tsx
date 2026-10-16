@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { BirthdayTodayTemplate } from "./BirthdayTodayTemplate";
 import { ForeverAndEverTemplate } from "./ForeverAndEverTemplate";
 import { LoveHeartTemplate } from "./LoveHeartTemplate";
@@ -27,6 +27,85 @@ export function WebsiteTemplatePreviewRenderer({
 }: {
   slug: WebsiteTemplatePreviewSlug;
 }) {
+  const [previewReady, setPreviewReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const waitForFrameReady = () => new Promise<void>((resolve, reject) => {
+      const selector = '[data-template-preview-frame-ready="true"]';
+      const existing = document.querySelector(selector);
+      if (existing) {
+        resolve();
+        return;
+      }
+
+      const observer = new MutationObserver(() => {
+        if (document.querySelector(selector)) {
+          window.clearTimeout(timeout);
+          observer.disconnect();
+          resolve();
+        }
+      });
+      observer.observe(document.body, {
+        attributes: true,
+        attributeFilter: ["data-template-preview-frame-ready"],
+        childList: true,
+        subtree: true,
+      });
+
+      const timeout = window.setTimeout(() => {
+        observer.disconnect();
+        reject(new Error(`The ${slug} template's embedded page did not signal readiness.`));
+      }, 45_000);
+    });
+
+    const waitForImages = async () => {
+      const images = Array.from(document.images);
+      images.forEach((image) => { image.loading = "eager"; });
+      await Promise.all(images.map(async (image) => {
+        if (!image.complete) {
+          await new Promise<void>((resolve) => {
+            image.addEventListener("load", () => resolve(), { once: true });
+            image.addEventListener("error", () => resolve(), { once: true });
+            window.setTimeout(resolve, 12_000);
+          });
+        }
+        if (image.currentSrc && image.complete && image.naturalWidth === 0) {
+          throw new Error(`Preview image failed to load: ${image.currentSrc}`);
+        }
+        if (image.naturalWidth > 0 && typeof image.decode === "function") {
+          await image.decode();
+        }
+      }));
+    };
+
+    const finalize = async () => {
+      if (slug === "love-heart" || slug === "forever-and-ever") {
+        await waitForFrameReady();
+      }
+      await Promise.race([
+        document.fonts?.ready ?? Promise.resolve(),
+        new Promise((resolve) => window.setTimeout(resolve, 5000)),
+      ]);
+      await waitForImages();
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+      if (!cancelled) setPreviewReady(true);
+    };
+
+    void finalize().catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      document.documentElement.dataset.templatePreviewError = message;
+      console.error(message);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
   let template: ReactNode;
   switch (slug) {
     case "love-heart":
@@ -54,7 +133,7 @@ export function WebsiteTemplatePreviewRenderer({
 
   return (
     <div
-      data-template-preview-ready="true"
+      data-template-preview-ready={previewReady ? "true" : undefined}
       data-template-preview-slug={slug}
       style={{
         position: "relative",
