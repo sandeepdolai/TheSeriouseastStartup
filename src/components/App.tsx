@@ -448,7 +448,7 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
               return;
             }
             if (
-              ["love-of-my-life", "birthday-template", "birthday-today", "photo-album", "love-heart", "forever-and-ever", "our-calendar"].includes(templateSlug)
+              ["love-of-my-life", "birthday-template", "birthday-today", "photo-album", "love-heart", "forever-and-ever", "our-calendar", "introducing-him"].includes(templateSlug)
             ) {
               setWebsiteDraftToOpen({ projectId, templateSlug });
               goWebsiteTemplates();
