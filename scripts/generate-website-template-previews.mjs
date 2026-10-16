@@ -56,6 +56,7 @@ async function main() {
     {
       env: {
         ...process.env,
+        NODE_ENV: "development",
         PORT: String(port),
         NEXT_TELEMETRY_DISABLED: "1",
       },
