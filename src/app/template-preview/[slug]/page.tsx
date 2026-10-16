@@ -20,6 +20,7 @@ const PREVIEW_SLUGS: WebsiteTemplatePreviewSlug[] = [
   "love-of-my-life",
   "birthday-template",
   "photo-album",
+  "introducing-him",
 ];
 
 export default async function WebsiteTemplatePreviewPage({

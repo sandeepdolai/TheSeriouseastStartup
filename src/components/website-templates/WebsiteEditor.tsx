@@ -15,6 +15,7 @@ import { isValidCalendarHeartDate } from "@/lib/calendarHeartValue";
 import { PhotoAlbumTemplate, DEFAULT_ALBUM_CAPTIONS, DEFAULT_ALBUM_PHOTOS } from "./PhotoAlbumTemplate";
 import { BirthdayTodayTemplate } from "./BirthdayTodayTemplate";
 import { LoveHeartTemplate } from "./LoveHeartTemplate";
+import { IntroducingHimTemplate, INTRODUCING_HIM_DEFAULTS } from "./IntroducingHimTemplate";
 import {
   FOREVER_AND_EVER_TEXT_DEFAULTS,
   ForeverAndEverTemplate,
@@ -25,7 +26,7 @@ import { LoveOfMyLifeTemplate } from "./LoveOfMyLifeTemplate";
 import { qrCodeMatrix, qrCodeSvgPath } from "@/lib/qrCode";
 import styles from "./WebsiteEditor.module.css";
 
-export type WebsiteEditorTemplateSlug = "love-of-my-life" | "birthday-template" | "birthday-today" | "photo-album" | "love-heart" | "forever-and-ever" | "our-calendar";
+export type WebsiteEditorTemplateSlug = "love-of-my-life" | "birthday-template" | "birthday-today" | "photo-album" | "love-heart" | "forever-and-ever" | "our-calendar" | "introducing-him";
 
 type EditableWebsiteField =
   | "heading"
@@ -103,6 +104,13 @@ const TEXT_DEFAULTS: Record<WebsiteEditorTemplateSlug, TemplatePublicationValues
     captions: [],
     calendarNotes: [...OUR_CALENDAR_DEFAULT_NOTES],
   },
+  "introducing-him": {
+    heading: INTRODUCING_HIM_DEFAULTS.heading,
+    message: INTRODUCING_HIM_DEFAULTS.message,
+    photoUrl: null,
+    images: [],
+    captions: [],
+  },
 };
 
 const TEMPLATE_TITLES: Record<WebsiteEditorTemplateSlug, string> = {
@@ -113,6 +121,7 @@ const TEMPLATE_TITLES: Record<WebsiteEditorTemplateSlug, string> = {
   "love-heart": "Love Heart",
   "forever-and-ever": "I love you forever and ever, my baby!",
   "our-calendar": "Our Calendar",
+  "introducing-him": "Introducing Him",
 };
 
 function defaultValues(templateSlug: WebsiteEditorTemplateSlug): TemplatePublicationValues {
@@ -181,7 +190,7 @@ export function WebsiteEditor({
   const [values, setValues] = useState<TemplatePublicationValues>(() => defaultValues(templateSlug));
   const [username, setUsername] = useState("");
   const [websiteName, setWebsiteName] = useState(
-    templateSlug === "birthday-today" ? "birthday-today" : templateSlug === "photo-album" ? "photo-album" : templateSlug === "birthday-template" ? "birthday" : templateSlug === "love-heart" ? "love-heart" : templateSlug === "forever-and-ever" ? "forever-and-ever" : "our-story",
+    templateSlug === "introducing-him" ? "introducing-him" : templateSlug === "birthday-today" ? "birthday-today" : templateSlug === "photo-album" ? "photo-album" : templateSlug === "birthday-template" ? "birthday" : templateSlug === "love-heart" ? "love-heart" : templateSlug === "forever-and-ever" ? "forever-and-ever" : "our-story",
   );
   const [draftReady, setDraftReady] = useState(false);
   const [draftSaveError, setDraftSaveError] = useState("");
@@ -206,7 +215,9 @@ export function WebsiteEditor({
   const isOurCalendar = templateSlug === "our-calendar";
   const title = TEMPLATE_TITLES[templateSlug];
   const showPublishResult = Boolean(published && !hasUnpublishedChanges && !editingPublishDetails);
-  const linkNameIdeas = templateSlug === "birthday-today"
+  const linkNameIdeas = templateSlug === "introducing-him"
+    ? ["introducing-him", "my-person", "for-someone-special"]
+    : templateSlug === "birthday-today"
     ? ["birthday", "celebrate-you", "today-is-yours"]
     : templateSlug === "photo-album"
       ? ["our-memories", "little-moments", "photo-album"]
@@ -338,7 +349,7 @@ export function WebsiteEditor({
         const captions = Array.isArray(raw.captions)
           ? raw.captions.filter((item): item is string => typeof item === "string").slice(0, MAX_ALBUM_PHOTOS)
           : [];
-        const savedHeading = text("heading", defaults.heading ?? "", 160);
+        const savedHeading = text("heading", defaults.heading ?? "", templateSlug === "introducing-him" ? 200 : 160);
         const savedLetterParagraphs = Array.isArray(raw.letterParagraphs)
           ? raw.letterParagraphs.filter((item): item is string => typeof item === "string").slice(0, 4)
           : defaults.letterParagraphs;
@@ -365,7 +376,7 @@ export function WebsiteEditor({
           years: text("years", defaults.years ?? "", 40),
           yearsLabel: text("yearsLabel", defaults.yearsLabel ?? "", 80),
           sideNote: text("sideNote", defaults.sideNote ?? "", 80),
-          message: text("message", defaults.message ?? "", 1200),
+          message: text("message", defaults.message ?? "", templateSlug === "introducing-him" ? 4000 : 1200),
           photoUrl,
           images,
           captions,
@@ -681,7 +692,9 @@ export function WebsiteEditor({
         onChange={(event) => void choosePhoto(event.currentTarget.files)}
       />
 
-      {templateSlug === "love-heart" ? (
+      {templateSlug === "introducing-him" ? (
+        <IntroducingHimTemplate values={values} editing onTextChange={changeText} onPhotoClick={() => openPhotoChooser(0)} onExit={onClose} />
+      ) : templateSlug === "love-heart" ? (
         <LoveHeartTemplate
           values={values}
           editing
