@@ -35,6 +35,8 @@ export function LoveHeartTemplate({
 }: Props) {
   const [html, setHtml] = useState<string>(EMPTY_DOCUMENT);
   const [previewFrameReady, setPreviewFrameReady] = useState(false);
+  const [templateSourceLoaded, setTemplateSourceLoaded] = useState(false);
+  const [templateSourceError, setTemplateSourceError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const iframeReady = useRef(false);
   const latestValues = useRef(values);
@@ -138,11 +140,19 @@ export function LoveHeartTemplate({
         const bridged = bodyClose >= 0
           ? source.slice(0, bodyClose) + bridgeScript + source.slice(bodyClose)
           : source + bridgeScript;
-        if (alive) setHtml(bridged);
+        if (alive) {
+          setHtml(bridged);
+          setTemplateSourceError(null);
+          setTemplateSourceLoaded(true);
+        }
       })
-      .catch(() => {
-        // Keep the template's dark canvas surface if the static page cannot load.
-        if (alive) setHtml(EMPTY_DOCUMENT);
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error("[LoveHeartTemplate] Failed to load original template HTML.", error);
+        if (alive) {
+          setTemplateSourceError(message);
+          setHtml(EMPTY_DOCUMENT);
+        }
       });
 
     return () => {
@@ -215,6 +225,8 @@ export function LoveHeartTemplate({
     <main
       className={styles.screen}
       data-template-preview-frame-ready={previewFrameReady ? "true" : undefined}
+      data-template-preview-source-loaded={templateSourceLoaded ? "true" : undefined}
+      data-template-preview-source-error={templateSourceError ?? undefined}
     >
       <iframe
         ref={iframeRef}
