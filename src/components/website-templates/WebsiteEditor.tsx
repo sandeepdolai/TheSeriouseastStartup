@@ -10,6 +10,8 @@ import {
   type TemplatePublicationValues,
 } from "@/lib/publications";
 import { isValidCalendarHeartDate } from "@/lib/calendarHeartValue";
+import { getAccountKey } from "@/lib/accountStorage";
+import { getLocalProject, putLocalProject } from "@/lib/localProjects";
 import { PhotoAlbumTemplate, DEFAULT_ALBUM_CAPTIONS, DEFAULT_ALBUM_PHOTOS } from "./PhotoAlbumTemplate";
 import { BirthdayTodayTemplate } from "./BirthdayTodayTemplate";
 import { LoveHeartTemplate } from "./LoveHeartTemplate";
@@ -168,12 +170,15 @@ async function optimizePhoto(file: File): Promise<string> {
  */
 export function WebsiteEditor({
   templateSlug,
+  draftProjectId,
   onClose,
 }: {
   templateSlug: WebsiteEditorTemplateSlug;
+  draftProjectId: string;
   onClose: () => void;
 }) {
   const { data: session, status } = useSession();
+  const accountKey = getAccountKey(session?.user?.email);
   const [values, setValues] = useState<TemplatePublicationValues>(() => defaultValues(templateSlug));
   const [username, setUsername] = useState("");
   const [websiteName, setWebsiteName] = useState(
@@ -184,6 +189,7 @@ export function WebsiteEditor({
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState("");
   const [published, setPublished] = useState<PublishedRecord | null>(null);
+  const [publishedValues, setPublishedValues] = useState<TemplatePublicationValues | null>(null);
   const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(false);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [editingPublishDetails, setEditingPublishDetails] = useState(false);
@@ -192,6 +198,7 @@ export function WebsiteEditor({
   const fileInput = useRef<HTMLInputElement>(null);
   const publishedLinkInput = useRef<HTMLInputElement>(null);
   const targetPhotoIndex = useRef(0);
+  const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
   const isAlbum = templateSlug === "photo-album";
   const isBirthdayToday = templateSlug === "birthday-today";
   const isForeverAndEver = templateSlug === "forever-and-ever";
@@ -249,14 +256,40 @@ export function WebsiteEditor({
   }, [publishDialogOpen, showPublishResult, publishing]);
 
   useEffect(() => {
-    const defaults = defaultValues(templateSlug);
-    try {
-      const draftRaw = window.localStorage.getItem("paper-stish-website-draft:" + templateSlug);
-      const rememberedUsername = window.localStorage.getItem("paper-stish-publish-username");
-      if (rememberedUsername) setUsername(rememberedUsername.slice(0, 60));
-      if (draftRaw) {
-        const draft = JSON.parse(draftRaw) as Record<string, unknown>;
-        if (draft.values && typeof draft.values === "object" && !Array.isArray(draft.values)) {
+    if (status === "loading" || !draftProjectId) return;
+
+    let alive = true;
+    const restoreDraft = async () => {
+      const defaults = defaultValues(templateSlug);
+      try {
+        const project = await getLocalProject(accountKey, draftProjectId);
+        if (!alive) return;
+
+        let draft: Record<string, unknown> | null = null;
+        const storedData = project?.data;
+        if (
+          storedData &&
+          storedData.kind === "website-template" &&
+          storedData.values &&
+          typeof storedData.values === "object" &&
+          !Array.isArray(storedData.values)
+        ) {
+          draft = storedData;
+        } else {
+          // Import drafts made by the older localStorage-only editor. Once
+          // restored, all future saves go to the device's IndexedDB project.
+          const legacyRaw = window.localStorage.getItem("paper-stish-website-draft:" + templateSlug);
+          if (legacyRaw) {
+            const parsed: unknown = JSON.parse(legacyRaw);
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+              draft = parsed as Record<string, unknown>;
+            }
+          }
+        }
+
+        const rememberedUsername = window.localStorage.getItem("paper-stish-publish-username");
+        let restoredValues = defaults;
+        if (draft?.values && typeof draft.values === "object" && !Array.isArray(draft.values)) {
           const raw = draft.values as Record<string, unknown>;
           const text = (key: string, fallback: string, max: number) =>
             typeof raw[key] === "string" ? (raw[key] as string).slice(0, max) : fallback;
@@ -290,7 +323,7 @@ export function WebsiteEditor({
                 ? savedCalendarNotes[index].slice(0, 300)
                 : fallback)
             : savedCalendarNotes;
-          setValues({
+          restoredValues = {
             ...defaults,
             heading: restoredLetterText.heading,
             loveMessage: text("loveMessage", defaults.loveMessage ?? "", 100),
@@ -308,32 +341,108 @@ export function WebsiteEditor({
             letterParagraphs: restoredLetterText.letterParagraphs,
             calendarNotes: restoredCalendarNotes,
             calendarHeart: isValidCalendarHeartDate(raw.calendarHeart) ? { ...raw.calendarHeart } : defaults.calendarHeart,
-          });
+          };
         }
-        if (typeof draft.username === "string") setUsername(draft.username.slice(0, 60));
-        if (typeof draft.websiteName === "string") setWebsiteName(draft.websiteName.slice(0, 60));
+        if (!alive) return;
+        setValues(restoredValues);
+        setUsername(
+          typeof draft?.username === "string"
+            ? draft.username.slice(0, 60)
+            : (rememberedUsername ?? "").slice(0, 60),
+        );
+        if (typeof draft?.websiteName === "string") setWebsiteName(draft.websiteName.slice(0, 60));
+
+        const rawPublished = draft?.published;
+        const restoredPublished =
+          rawPublished &&
+          typeof rawPublished === "object" &&
+          !Array.isArray(rawPublished) &&
+          typeof (rawPublished as Record<string, unknown>).username === "string" &&
+          typeof (rawPublished as Record<string, unknown>).viewerName === "string" &&
+          typeof (rawPublished as Record<string, unknown>).templateId === "string" &&
+          typeof (rawPublished as Record<string, unknown>).url === "string" &&
+          /^https?:\/\//.test(String((rawPublished as Record<string, unknown>).url)) &&
+          typeof (rawPublished as Record<string, unknown>).publishedAt === "string"
+            ? rawPublished as PublishedRecord
+            : null;
+        const rawPublishedValues = draft?.publishedValues;
+        const restoredPublishedValues =
+          rawPublishedValues &&
+          typeof rawPublishedValues === "object" &&
+          !Array.isArray(rawPublishedValues)
+            ? rawPublishedValues as TemplatePublicationValues
+            : null;
+
+        setPublished(restoredPublished);
+        setPublishedValues(
+          restoredPublished
+            ? (restoredPublishedValues ?? restoredValues)
+            : null,
+        );
+        setHasUnpublishedChanges(Boolean(
+          restoredPublished &&
+          restoredPublishedValues &&
+          JSON.stringify(restoredValues) !== JSON.stringify(restoredPublishedValues),
+        ));
+
+        if (window.localStorage.getItem(REOPEN_PUBLISH_KEY) === "1") {
+          window.localStorage.removeItem(REOPEN_PUBLISH_KEY);
+          setPublishDialogOpen(true);
+        }
+      } catch {
+        // A damaged local draft should not stop the editor.
+      } finally {
+        if (alive) setDraftReady(true);
       }
-      if (window.localStorage.getItem(REOPEN_PUBLISH_KEY) === "1") {
-        window.localStorage.removeItem(REOPEN_PUBLISH_KEY);
-        setPublishDialogOpen(true);
-      }
-    } catch {
-      // A damaged local draft should not stop the editor.
-    }
-    setDraftReady(true);
-  }, [templateSlug]);
+    };
+
+    void restoreDraft();
+    return () => {
+      alive = false;
+    };
+  }, [accountKey, draftProjectId, status, templateSlug]);
 
   useEffect(() => {
-    if (!draftReady) return;
-    try {
-      window.localStorage.setItem(
-        "paper-stish-website-draft:" + templateSlug,
-        JSON.stringify({ values, username, websiteName }),
-      );
-    } catch {
-      // Drafts are a convenience; the current edit session still works.
-    }
-  }, [draftReady, templateSlug, values, username, websiteName]);
+    if (!draftReady || status === "loading" || !draftProjectId) return;
+
+    const snapshot = {
+      kind: "website-template",
+      values,
+      username,
+      websiteName,
+      published,
+      publishedValues,
+    };
+    // Serialize writes so quick consecutive text edits cannot finish out of
+    // order and replace a newer draft with an older snapshot.
+    saveQueue.current = saveQueue.current
+      .catch(() => undefined)
+      .then(() => putLocalProject({
+        id: draftProjectId,
+        account: accountKey,
+        title: values.heading?.trim().slice(0, 120) || title,
+        templateSlug,
+        updatedAt: new Date().toISOString(),
+        data: snapshot,
+      }))
+      .then((saved) => {
+        if (!saved) {
+          setError("Paper Stish could not save the latest edit to this device. Check your browser storage settings.");
+        }
+      });
+  }, [
+    accountKey,
+    draftProjectId,
+    draftReady,
+    published,
+    publishedValues,
+    status,
+    templateSlug,
+    title,
+    username,
+    values,
+    websiteName,
+  ]);
 
   const changeText = (field: EditableWebsiteField, value: string) => {
     setValues((current) => ({ ...current, [field]: value }));
@@ -450,6 +559,7 @@ export function WebsiteEditor({
       });
       const record = publishResultToRecord(result);
       setPublished(record);
+      setPublishedValues(values);
       setQrExpanded(false);
       setCopyStatus("");
       setHasUnpublishedChanges(false);
