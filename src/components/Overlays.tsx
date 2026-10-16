@@ -608,7 +608,8 @@ export function ProfileOverlay({
                 </button>
               </div>
             </>
-          )}        </div>
+          )}
+        </div>
 
         <div className="px-16 pb-16 pt-8 text-center">
           <nav aria-label="Legal and support" className="label mb-8 flex flex-wrap items-center justify-center gap-x-7 gap-y-5 text-[9px] text-white/45">
