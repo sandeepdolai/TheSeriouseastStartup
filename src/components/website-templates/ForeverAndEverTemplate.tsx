@@ -60,6 +60,8 @@ export function ForeverAndEverTemplate({
 }: Props) {
   const [html, setHtml] = useState(EMPTY_DOCUMENT);
   const [previewFrameReady, setPreviewFrameReady] = useState(false);
+  const [templateSourceLoaded, setTemplateSourceLoaded] = useState(false);
+  const [templateSourceError, setTemplateSourceError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const iframeReady = useRef(false);
   const latestValues = useRef(values);
@@ -78,10 +80,19 @@ export function ForeverAndEverTemplate({
         return response.text();
       })
       .then((source) => {
-        if (alive) setHtml(source);
+        if (alive) {
+          setHtml(source);
+          setTemplateSourceError(null);
+          setTemplateSourceLoaded(true);
+        }
       })
-      .catch(() => {
-        if (alive) setHtml(EMPTY_DOCUMENT);
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error("[ForeverAndEverTemplate] Failed to load original template HTML.", error);
+        if (alive) {
+          setTemplateSourceError(message);
+          setHtml(EMPTY_DOCUMENT);
+        }
       });
     return () => { alive = false; };
   }, []);
@@ -167,6 +178,8 @@ export function ForeverAndEverTemplate({
     <main
       className={styles.screen}
       data-template-preview-frame-ready={previewFrameReady ? "true" : undefined}
+      data-template-preview-source-loaded={templateSourceLoaded ? "true" : undefined}
+      data-template-preview-source-error={templateSourceError ?? undefined}
     >
       <iframe
         ref={iframeRef}
