@@ -181,6 +181,11 @@ export function ForeverAndEverTemplate({
         srcDoc={html}
         sandbox="allow-scripts"
         referrerPolicy="no-referrer"
+        onLoad={() => {
+          // The first load is the deliberately blank fallback document. Only
+          // mark the preview frame ready after the real fetched HTML is applied.
+          if (html !== EMPTY_DOCUMENT) setPreviewFrameReady(true);
+        }}
       />
       {editing && onExit && (
         <button type="button" className={styles.backButton} onClick={onExit} aria-label="Back to website templates">
