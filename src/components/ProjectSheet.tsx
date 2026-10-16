@@ -62,6 +62,13 @@ function TrophyIcon() {
 }
 
 const MEDIA_ASPECTS: Record<string, number[]> = {
+  "love-heart": [1],
+  "forever-and-ever": [1],
+  "our-calendar": [1],
+  "birthday-today": [1],
+  "love-of-my-life": [1],
+  "birthday-template": [1],
+  "photo-album": [1],
   "nathan-riley": [2048 / 1172, 1787 / 900, 1798 / 905, 1792 / 904],
   "casa-di-solare": [2048 / 1204, 1280 / 596, 1280 / 644],
   "the-lookback": [1250 / 720, 1620 / 1080, 1500 / 1897, 1500 / 1000],
