@@ -156,6 +156,7 @@ export function ProfileOverlay({
   const { ref, visible } = useReveal(open);
   const { data: session, status } = useSession();
   const signedIn = status === "authenticated" && !!session?.user;
+  const [billingView, setBillingView] = useState<"upgrade" | "manage" | null>(null);
   const [billingStatus, setBillingStatus] = useState({
     loaded: false,
     isPremium: false,
@@ -165,6 +166,10 @@ export function ProfileOverlay({
   });
   const [billingAction, setBillingAction] = useState<"checkout" | "portal" | null>(null);
   const [billingError, setBillingError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) setBillingView(null);
+  }, [open]);
 
   // Poll only while the account menu is open so the card switches as soon as
   // the verified Dodo webhook updates the account in the database.
@@ -261,7 +266,7 @@ export function ProfileOverlay({
     >
       <div
         data-reveal
-        className="pointer-events-auto w-full max-w-[30rem] overflow-hidden rounded-[1.6rem] border border-white/10 bg-[#101010]/96 text-white shadow-[0_24px_70px_rgba(0,0,0,0.58)] backdrop-blur-xl"
+        className="pointer-events-auto w-full max-h-[calc(100dvh-1.5rem)] max-w-[30rem] overflow-y-auto overscroll-contain rounded-[1.6rem] border border-white/10 bg-[#101010]/96 text-white shadow-[0_24px_70px_rgba(0,0,0,0.58)] backdrop-blur-xl"
       >
         <div className="flex items-center gap-12 px-18 pb-14 pt-18">
           {signedIn ? (
@@ -342,6 +347,177 @@ export function ProfileOverlay({
                 </ProfileAction>
               </div>
             </>
+          ) : billingView === "upgrade" ? (
+            <div className="space-y-12 pb-4">
+              <button
+                type="button"
+                onClick={() => setBillingView(null)}
+                className="pointer-events-auto inline-flex min-h-32 items-center gap-8 rounded-full px-3 text-10 text-white/55 transition-colors hover:text-white"
+              >
+                <svg viewBox="0 0 24 24" className="size-14" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                  <path d="M19 12H5m0 0 6-6m-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Back to account
+              </button>
+
+              <section className="overflow-hidden rounded-[1.25rem] border border-white/10 bg-[#1a191a]">
+                <div className="relative overflow-hidden border-b border-white/[0.08] px-18 pb-20 pt-20 s:px-22">
+                  <div aria-hidden="true" className="pointer-events-none absolute -right-25 -top-35 size-150 rounded-full bg-[#b77fc7]/[0.10] blur-3xl" />
+                  <div className="relative flex items-center gap-8">
+                    <svg viewBox="0 0 24 24" className="size-17 text-[#d8c7e2]" fill="currentColor" aria-hidden="true">
+                      <path d="M5 19h14l1.4-9-4.4 3-4-7-4 7-4.4-3L5 19Zm2 2h10v1H7v-1Z"/>
+                    </svg>
+                    <span className="text-[9px] font-semibold uppercase tracking-[0.13em] text-[#d8c7e2]">Paper Stish membership</span>
+                  </div>
+                  <h2 className="relative mt-16 text-27 leading-30 tracking-[-0.055em] text-white">Full Experience</h2>
+                  <p className="relative mt-7 max-w-[24rem] text-12 leading-17 tracking-[-0.015em] text-white/55">
+                    A simple monthly membership for your creative work in Paper Stish.
+                  </p>
+                  <div className="relative mt-18 flex items-baseline gap-8">
+                    <span className="text-38 font-medium leading-none tracking-[-0.07em]">$4.99</span>
+                    <span className="text-12 text-white/50">/ month</span>
+                  </div>
+                  <p className="relative mt-7 text-10 leading-14 text-white/40">One monthly price. No annual commitment shown here.</p>
+                </div>
+
+                <div className="px-18 py-16 s:px-22">
+                  <p className="text-[9px] font-medium uppercase tracking-[0.12em] text-white/45">Your Paper Stish workspace</p>
+                  <div className="mt-12 space-y-12">
+                    <div className="flex items-start gap-10">
+                      <span className="mt-1 flex size-19 shrink-0 items-center justify-center rounded-full border border-white/15 text-[#d8c7e2]">
+                        <svg viewBox="0 0 24 24" className="size-11" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </span>
+                      <div>
+                        <p className="text-11 leading-14 text-white/90">Make it personal</p>
+                        <p className="mt-2 text-10 leading-14 text-white/45">Start with a template and make the words and memories yours.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-10">
+                      <span className="mt-1 flex size-19 shrink-0 items-center justify-center rounded-full border border-white/15 text-[#d8c7e2]">
+                        <svg viewBox="0 0 24 24" className="size-11" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </span>
+                      <div>
+                        <p className="text-11 leading-14 text-white/90">Keep your creative work together</p>
+                        <p className="mt-2 text-10 leading-14 text-white/45">Return to drafts and projects from My on this device.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-10">
+                      <span className="mt-1 flex size-19 shrink-0 items-center justify-center rounded-full border border-white/15 text-[#d8c7e2]">
+                        <svg viewBox="0 0 24 24" className="size-11" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </span>
+                      <div>
+                        <p className="text-11 leading-14 text-white/90">Share what you make</p>
+                        <p className="mt-2 text-10 leading-14 text-white/45">Publish personal websites and share them with a link.</p>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="mt-15 border-t border-white/[0.08] pt-12 text-9 leading-13 text-white/35">
+                    You’ll review the payment details with our billing provider before confirming your subscription.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (billingStatus.checkoutEnabled) {
+                        void beginCheckout();
+                      } else {
+                        window.location.href = "mailto:sandeepdolai.info@gmail.com?subject=Paper%20Stish%20Upgrade";
+                      }
+                    }}
+                    disabled={billingAction !== null || !billingStatus.loaded}
+                    className="pointer-events-auto mt-14 flex h-44 w-full items-center justify-center rounded-full bg-[#f2f0e8] px-16 text-12 font-medium text-[#191919] transition-transform duration-200 hover:brightness-105 active:scale-[0.99] disabled:cursor-wait disabled:opacity-55"
+                  >
+                    {!billingStatus.loaded ? "Checking availability…" : billingAction === "checkout" ? "Opening secure checkout…" : billingStatus.checkoutEnabled ? "Continue to secure checkout" : "Contact us to upgrade"}
+                  </button>
+                  {billingError && (
+                    <p role="alert" className="mt-9 text-10 leading-14 text-white/60">{billingError}</p>
+                  )}
+                </div>
+              </section>
+              <p className="px-8 text-center text-9 leading-13 text-white/35">
+                Questions about the plan? <a href="mailto:sandeepdolai.info@gmail.com?subject=Paper%20Stish%20Upgrade" className="underline underline-offset-3 hover:text-white/70">Contact support</a>.
+              </p>
+            </div>
+          ) : billingView === "manage" ? (
+            <div className="space-y-12 pb-4">
+              <button
+                type="button"
+                onClick={() => setBillingView(null)}
+                className="pointer-events-auto inline-flex min-h-32 items-center gap-8 rounded-full px-3 text-10 text-white/55 transition-colors hover:text-white"
+              >
+                <svg viewBox="0 0 24 24" className="size-14" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                  <path d="M19 12H5m0 0 6-6m-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Back to account
+              </button>
+
+              <div>
+                <p className="text-[9px] font-semibold uppercase tracking-[0.13em] text-[#d8c7e2]">Account billing</p>
+                <h2 className="mt-6 text-25 leading-29 tracking-[-0.055em] text-white">Manage subscription</h2>
+                <p className="mt-6 text-11 leading-16 text-white/50">Review your plan here. Payment methods, invoices and cancellation are handled by our secure billing portal.</p>
+              </div>
+
+              {!billingStatus.loaded ? (
+                <div aria-live="polite" className="rounded-[1.1rem] border border-white/10 bg-white/[0.035] p-18">
+                  <div className="flex items-center gap-9">
+                    <span className="size-14 animate-pulse rounded-full bg-white/30" />
+                    <p className="text-11 text-white/55">{billingError ?? "Verifying your subscription…"}</p>
+                  </div>
+                </div>
+              ) : billingStatus.isPremium ? (
+                <section className="rounded-[1.1rem] border border-white/10 bg-[#1c1b1c] p-18">
+                  <div className="flex items-start justify-between gap-12">
+                    <div>
+                      <p className="text-[9px] uppercase tracking-[0.12em] text-white/40">Current plan</p>
+                      <h3 className="mt-7 text-18 tracking-[-0.04em] text-white">Full Experience</h3>
+                      <p className="mt-4 text-11 text-white/55">$4.99 / month</p>
+                    </div>
+                    <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.05] px-9 py-5 text-[8px] font-semibold uppercase tracking-[0.08em] text-[#d8c7e2]">
+                      {billingStatus.cancelAtPeriodEnd ? "Ending" : "Active"}
+                    </span>
+                  </div>
+                  <div className="mt-16 border-t border-white/[0.08] pt-13">
+                    <p className="text-9 uppercase tracking-[0.1em] text-white/40">Subscription status</p>
+                    <p className="mt-5 text-11 leading-15 text-white/85">
+                      {billingStatus.cancelAtPeriodEnd && billingStatus.currentPeriodEnd
+                        ? "Access continues until " + new Date(billingStatus.currentPeriodEnd).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) + "."
+                        : billingStatus.currentPeriodEnd
+                          ? "Next billing date: " + new Date(billingStatus.currentPeriodEnd).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) + "."
+                          : "Your Full Experience subscription is active."}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void openBillingPortal()}
+                    disabled={billingAction !== null}
+                    className="pointer-events-auto mt-18 flex h-44 w-full items-center justify-center rounded-full bg-[#f2f0e8] px-16 text-12 font-medium text-[#191919] transition-transform duration-200 hover:brightness-105 active:scale-[0.99] disabled:cursor-wait disabled:opacity-55"
+                  >
+                    {billingAction === "portal" ? "Opening billing portal…" : "Open billing portal"}
+                  </button>
+                  <p className="mt-9 text-9 leading-13 text-white/35">Your billing provider lets you update payment details, review invoices and manage or cancel your plan.</p>
+                </section>
+              ) : (
+                <section className="rounded-[1.1rem] border border-white/10 bg-[#1c1b1c] p-18">
+                  <p className="text-[9px] uppercase tracking-[0.12em] text-white/40">Current plan</p>
+                  <div className="mt-8 flex items-center justify-between gap-10">
+                    <h3 className="text-18 tracking-[-0.04em] text-white">Free</h3>
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-9 py-5 text-[8px] font-semibold uppercase tracking-[0.08em] text-white/55">No paid plan</span>
+                  </div>
+                  <p className="mt-8 text-11 leading-16 text-white/55">There is no active paid subscription on this account right now.</p>
+                  <button
+                    type="button"
+                    onClick={() => setBillingView("upgrade")}
+                    className="pointer-events-auto mt-16 flex h-44 w-full items-center justify-center rounded-full bg-[#f2f0e8] px-16 text-12 font-medium text-[#191919] transition-transform duration-200 hover:brightness-105 active:scale-[0.99]"
+                  >
+                    Explore Full Experience
+                  </button>
+                </section>
+              )}
+
+              {billingError && billingStatus.loaded && (
+                <p role="alert" className="rounded-10 border border-white/10 bg-white/[0.03] px-12 py-10 text-10 leading-14 text-white/65">{billingError}</p>
+              )}
+              <a href="mailto:sandeepdolai.info@gmail.com?subject=Paper%20Stish%20Subscription" className="pointer-events-auto block text-center text-10 text-white/45 underline decoration-white/15 underline-offset-3 hover:text-white/75">Contact subscription support</a>
+            </div>
           ) : (
             <>
               <div data-reveal aria-live="polite" className="mb-10 rounded-[1.15rem] border border-white/[0.05] bg-[#242424] p-16">
@@ -367,11 +543,11 @@ export function ProfileOverlay({
                     )}
                     <button
                       type="button"
-                      onClick={() => void openBillingPortal()}
-                      disabled={billingAction !== null}
+                      onClick={() => setBillingView("manage")}
+                      disabled={!billingStatus.loaded}
                       className="pointer-events-auto mt-12 flex h-36 w-full items-center justify-center rounded-full bg-[#f2f0e8] px-16 text-11 font-medium text-[#191919] transition-transform duration-200 hover:brightness-105 active:scale-[0.99] disabled:cursor-wait disabled:opacity-60"
                     >
-                      {billingAction === "portal" ? "Opening…" : "Manage subscription"}
+                      Manage subscription
                     </button>
                   </>
                 ) : (
@@ -381,17 +557,10 @@ export function ProfileOverlay({
                     <p className="mt-3 text-10 leading-13 text-white/55">$4.99 / month</p>
                     <button
                       type="button"
-                      onClick={() => {
-                        if (billingStatus.checkoutEnabled) {
-                          void beginCheckout();
-                        } else {
-                          window.location.href = "mailto:sandeepdolai.info@gmail.com?subject=Paper%20Stish%20Upgrade";
-                        }
-                      }}
-                      disabled={billingAction !== null}
-                      className="pointer-events-auto mt-12 flex h-36 w-full items-center justify-center rounded-full bg-[#f2f0e8] px-16 text-11 font-medium text-[#191919] transition-transform duration-200 hover:brightness-105 active:scale-[0.99] disabled:cursor-wait disabled:opacity-55"
+                      onClick={() => setBillingView("upgrade")}
+                      className="pointer-events-auto mt-12 flex h-36 w-full items-center justify-center rounded-full bg-[#f2f0e8] px-16 text-11 font-medium text-[#191919] transition-transform duration-200 hover:brightness-105 active:scale-[0.99]"
                     >
-                      {billingAction === "checkout" ? "Opening checkout…" : "Upgrade"}
+                      Explore Full Experience
                     </button>
                   </>
                 )}
@@ -415,8 +584,9 @@ export function ProfileOverlay({
                 )}
               </nav>
 
-              <a
-                href="mailto:sandeepdolai.info@gmail.com?subject=Paper%20Stish%20Subscription"
+              <button
+                type="button"
+                onClick={() => setBillingView("manage")}
                 className="pointer-events-auto mt-8 flex min-h-38 w-full items-center gap-10 rounded-[0.85rem] px-3 text-left text-white/80 transition-colors hover:bg-white/[0.04]"
               >
                 <span className="flex size-20 shrink-0 items-center justify-center text-white/65">
@@ -424,7 +594,7 @@ export function ProfileOverlay({
                 </span>
                 <span className="flex-1 text-11">Manage subscription</span>
                 <span className="text-white/35">›</span>
-              </a>
+              </button>
 
               <div data-reveal className="mt-8 border-t border-white/[0.08] pt-8">
                 <button
