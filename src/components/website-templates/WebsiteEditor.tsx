@@ -198,8 +198,6 @@ export function WebsiteEditor({
   const isOurCalendar = templateSlug === "our-calendar";
   const title = TEMPLATE_TITLES[templateSlug];
   const showPublishResult = Boolean(published && !hasUnpublishedChanges && !editingPublishDetails);
-  const previewUsername = slugPart(username, "your-name");
-  const previewWebsiteName = slugPart(websiteName, "your-link");
   const linkNameIdeas = templateSlug === "birthday-today"
     ? ["birthday", "celebrate-you", "today-is-yours"]
     : templateSlug === "photo-album"
@@ -800,19 +798,6 @@ export function WebsiteEditor({
                 <h2 id="website-publish-title" className={styles.dialogTitle}>Make it shareable.</h2>
                 <p className={styles.dialogCopy}>Choose an address for your website. Your design and edits will stay exactly as you made them.</p>
 
-                <div className={`${styles.urlPreview} ${styles.urlPreviewEditor}`} aria-live="polite">
-                  <svg className={styles.urlLock} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <rect x="5" y="11" width="14" height="9" rx="2.5" />
-                    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-                  </svg>
-                  <div className={styles.urlPreviewBody}>
-                    <p className={styles.urlPreviewText}>
-                      <span>paperstish.online/</span><strong>{previewUsername}</strong><span>/</span><strong>{previewWebsiteName}</strong><span className={styles.urlPreviewTail}>/…</span>
-                    </p>
-                    <p className={styles.urlPreviewHint}>Your final share link is created when you publish.</p>
-                  </div>
-                </div>
-
                 <div className={styles.publishFields}>
                   <label className={styles.publishField} htmlFor="website-publish-username">
                     <span className={styles.fieldMeta}>Your username <small>{username.length}/48</small></span>
@@ -830,11 +815,9 @@ export function WebsiteEditor({
                         onChange={(event) => setUsername(normalizeLinkInput(event.target.value))}
                         onBlur={() => setUsername(slugPart(username, ""))}
                         placeholder="yourname"
-                        aria-describedby="username-help"
                         required
                       />
                     </span>
-                    <span id="username-help" className={styles.fieldHelp}>Letters, numbers and hyphens.</span>
                   </label>
 
                   <div className={styles.publishField}>
@@ -855,11 +838,9 @@ export function WebsiteEditor({
                         onChange={(event) => setWebsiteName(normalizeLinkInput(event.target.value))}
                         onBlur={() => setWebsiteName(slugPart(websiteName, ""))}
                         placeholder="our-story"
-                        aria-describedby="link-name-help"
                         required
                       />
                     </label>
-                    <span id="link-name-help" className={styles.fieldHelp}>Make it memorable and easy to share.</span>
                     <div className={styles.ideas}>
                       <span className={styles.ideaLabel}>Ideas</span>
                       {linkNameIdeas.map((idea) => (
