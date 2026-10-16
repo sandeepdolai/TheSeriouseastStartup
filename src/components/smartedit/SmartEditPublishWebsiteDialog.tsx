@@ -422,11 +422,11 @@ export function SmartEditPublishWebsiteDialog({
       <p className="mx-auto mt-[16px] max-w-[440px] text-center text-[16px] leading-[1.5] text-white/85 s:text-[17px]">
         {publicationMode === "update"
           ? "Your latest changes are live. Your existing link still works."
-          : "Anyone with this link can view your website. Your design stays editable."}
+          : "Anyone with this link can view it. Your design remains editable."}
       </p>
 
       <label className="mt-[24px] grid gap-8">
-        <span className="text-[12px] font-medium text-white/75">Your website link</span>
+        <span className="text-[12px] font-semibold text-white/75">YOUR WEBSITE LINK</span>
         <input
           readOnly
           value={published.url}
@@ -442,6 +442,10 @@ export function SmartEditPublishWebsiteDialog({
         aria-live="polite"
         className="mt-[12px] flex h-[54px] w-full items-center justify-center rounded-full bg-[#2166f3] px-16 text-[16px] font-semibold text-white transition-colors hover:bg-[#1e5bd8] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
       >
+        <svg viewBox="0 0 24 24" className="mr-10 size-[21px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="8.5" y="8.5" width="11" height="12" rx="2" />
+          <path d="M15.5 8.5V5.75A1.75 1.75 0 0 0 13.75 4h-8A1.75 1.75 0 0 0 4 5.75v8A1.75 1.75 0 0 0 5.75 15.5H8.5" />
+        </svg>
         {copied ? "Copied!" : "Copy link"}
       </button>
 
@@ -467,6 +471,12 @@ export function SmartEditPublishWebsiteDialog({
           onClick={() => void shareLink()}
           className="flex h-[48px] items-center justify-center rounded-full border border-white/20 bg-white/[0.04] px-10 text-[14px] font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         >
+          <svg viewBox="0 0 24 24" className="mr-8 size-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="18" cy="5" r="2.2" />
+            <circle cx="6" cy="12" r="2.2" />
+            <circle cx="18" cy="19" r="2.2" />
+            <path d="m8 11 7.8-4.7M8 13l7.8 4.7" />
+          </svg>
           Share
         </button>
         <a
@@ -475,15 +485,19 @@ export function SmartEditPublishWebsiteDialog({
           rel="noopener noreferrer"
           className="flex h-[48px] items-center justify-center rounded-full border border-white/20 bg-white/[0.04] px-10 text-[14px] font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         >
+          <svg viewBox="0 0 24 24" className="mr-8 size-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M13 5h6v6M19 5l-9 9" />
+            <path d="M18 13.5v4A1.5 1.5 0 0 1 16.5 19h-11A1.5 1.5 0 0 1 4 17.5v-11A1.5 1.5 0 0 1 5.5 5h4" />
+          </svg>
           Open website
         </a>
       </div>
 
-      <div className="mt-[24px] border-t border-white/12 pt-[18px]">
+      <div className="mt-[24px] border-t border-white/12 pt-[18px] pb-[18px]">
         <div className="flex items-center justify-between gap-12">
           <div className="min-w-0">
             <p className="text-[15px] font-medium text-white">QR code</p>
-            <p className="mt-5 text-[12px] leading-[1.4] text-white/65">Scan to open your website</p>
+            <p className="mt-5 text-[12px] leading-[1.4] text-white/65">Let someone scan to visit your website.</p>
           </div>
           <button
             type="button"
