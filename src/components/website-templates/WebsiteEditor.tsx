@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
+import { GUEST_ACCOUNT_KEY, getAccountKey } from "@/lib/accountStorage";
+import { deleteLocalProject, getLocalProject, putLocalProject } from "@/lib/localProjects";
 import {
   publishResultToRecord,
   publishWebsite,
@@ -168,9 +170,11 @@ async function optimizePhoto(file: File): Promise<string> {
  */
 export function WebsiteEditor({
   templateSlug,
+  projectId,
   onClose,
 }: {
   templateSlug: WebsiteEditorTemplateSlug;
+  projectId: string;
   onClose: () => void;
 }) {
   const { data: session, status } = useSession();
@@ -180,6 +184,10 @@ export function WebsiteEditor({
     templateSlug === "birthday-today" ? "birthday-today" : templateSlug === "photo-album" ? "photo-album" : templateSlug === "birthday-template" ? "birthday" : templateSlug === "love-heart" ? "love-heart" : templateSlug === "forever-and-ever" ? "forever-and-ever" : "our-story",
   );
   const [draftReady, setDraftReady] = useState(false);
+  const [draftSaveError, setDraftSaveError] = useState("");
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
+  const migratedLegacyDraft = useRef(false);
+  const mountedRef = useRef(false);
   const [photoLoading, setPhotoLoading] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState("");
@@ -249,91 +257,214 @@ export function WebsiteEditor({
   }, [publishDialogOpen, showPublishResult, publishing]);
 
   useEffect(() => {
-    const defaults = defaultValues(templateSlug);
-    try {
-      const draftRaw = window.localStorage.getItem("paper-stish-website-draft:" + templateSlug);
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (status === "loading") return;
+    let cancelled = false;
+
+    const restoreDraft = async () => {
+      const defaults = defaultValues(templateSlug);
+      const account = getAccountKey(session?.user?.email);
+      let project = await getLocalProject(account, projectId);
+
+      // A draft started before Google sign-in belongs to this device's guest
+      // workspace. Promote that exact record after sign-in so nothing is lost.
+      if (!project && account !== GUEST_ACCOUNT_KEY) {
+        const guestProject = await getLocalProject(GUEST_ACCOUNT_KEY, projectId);
+        if (guestProject) {
+          const promoted = await putLocalProject({
+            ...guestProject,
+            account,
+            updatedAt: guestProject.updatedAt ?? new Date().toISOString(),
+          });
+          if (promoted) {
+            await deleteLocalProject(GUEST_ACCOUNT_KEY, projectId);
+            project = { ...guestProject, account };
+          } else {
+            project = guestProject;
+          }
+        }
+      }
+      if (cancelled) return;
+
+      let draft: Record<string, unknown> = { ...(project?.data ?? {}) };
+      if (!draft.values) {
+        // One-time import of pre-IndexedDB drafts created by older versions.
+        // The old key is removed only after the imported content is saved.
+        try {
+          const legacyRaw = window.localStorage.getItem("paper-stish-website-draft:" + templateSlug);
+          if (legacyRaw) {
+            const legacy = JSON.parse(legacyRaw) as Record<string, unknown>;
+            if (legacy.values && typeof legacy.values === "object" && !Array.isArray(legacy.values)) {
+              draft = {
+                ...legacy,
+                ...draft,
+                values: legacy.values,
+                username: draft.username ?? legacy.username,
+                websiteName: draft.websiteName ?? legacy.websiteName,
+              };
+              migratedLegacyDraft.current = true;
+            }
+          }
+        } catch {
+          // Ignore damaged legacy data and keep the new project editable.
+        }
+      }
+
       const rememberedUsername = window.localStorage.getItem("paper-stish-publish-username");
       if (rememberedUsername) setUsername(rememberedUsername.slice(0, 60));
-      if (draftRaw) {
-        const draft = JSON.parse(draftRaw) as Record<string, unknown>;
-        if (draft.values && typeof draft.values === "object" && !Array.isArray(draft.values)) {
-          const raw = draft.values as Record<string, unknown>;
-          const text = (key: string, fallback: string, max: number) =>
-            typeof raw[key] === "string" ? (raw[key] as string).slice(0, max) : fallback;
-          const photoUrl =
-            typeof raw.photoUrl === "string" &&
-            raw.photoUrl.length <= 1_800_000 &&
-            /^(data:image\/|https?:\/\/)/.test(raw.photoUrl)
-              ? raw.photoUrl
-              : null;
-          const images = Array.isArray(raw.images)
-            ? raw.images.filter((item): item is string =>
-                typeof item === "string" &&
-                item.length <= MAX_PHOTO_DATA_LENGTH &&
-                (item === "" || /^(data:image\/|https?:\/\/)/.test(item))).slice(0, MAX_ALBUM_PHOTOS)
-            : [];
-          const captions = Array.isArray(raw.captions)
-            ? raw.captions.filter((item): item is string => typeof item === "string").slice(0, MAX_ALBUM_PHOTOS)
-            : [];
-          const savedHeading = text("heading", defaults.heading ?? "", 160);
-          const savedLetterParagraphs = Array.isArray(raw.letterParagraphs)
-            ? raw.letterParagraphs.filter((item): item is string => typeof item === "string").slice(0, 4)
-            : defaults.letterParagraphs;
-          const restoredLetterText = templateSlug === "forever-and-ever"
-            ? resolveForeverAndEverText({ heading: savedHeading, letterParagraphs: savedLetterParagraphs })
-            : { heading: savedHeading, letterParagraphs: savedLetterParagraphs };
-          const savedCalendarNotes = Array.isArray(raw.calendarNotes)
-            ? raw.calendarNotes.filter((item): item is string => typeof item === "string").slice(0, 4)
-            : [];
-          const restoredCalendarNotes = templateSlug === "our-calendar"
-            ? OUR_CALENDAR_DEFAULT_NOTES.map((fallback, index) => savedCalendarNotes[index]?.trim()
-                ? savedCalendarNotes[index].slice(0, 300)
-                : fallback)
-            : savedCalendarNotes;
-          setValues({
-            ...defaults,
-            heading: restoredLetterText.heading,
-            loveMessage: text("loveMessage", defaults.loveMessage ?? "", 100),
-            birthdayName: text("birthdayName", defaults.birthdayName ?? "", 40),
-            intro: text("intro", defaults.intro ?? "", 400),
-            noteHeading: text("noteHeading", defaults.noteHeading ?? "", 240),
-            signature: text("signature", defaults.signature ?? "", 160),
-            years: text("years", defaults.years ?? "", 40),
-            yearsLabel: text("yearsLabel", defaults.yearsLabel ?? "", 80),
-            sideNote: text("sideNote", defaults.sideNote ?? "", 80),
-            message: text("message", defaults.message ?? "", 1200),
-            photoUrl,
-            images,
-            captions,
-            letterParagraphs: restoredLetterText.letterParagraphs,
-            calendarNotes: restoredCalendarNotes,
-            calendarHeart: isValidCalendarHeartDate(raw.calendarHeart) ? { ...raw.calendarHeart } : defaults.calendarHeart,
-          });
-        }
-        if (typeof draft.username === "string") setUsername(draft.username.slice(0, 60));
-        if (typeof draft.websiteName === "string") setWebsiteName(draft.websiteName.slice(0, 60));
+
+      if (draft.values && typeof draft.values === "object" && !Array.isArray(draft.values)) {
+        const raw = draft.values as Record<string, unknown>;
+        const text = (key: string, fallback: string, max: number) =>
+          typeof raw[key] === "string" ? (raw[key] as string).slice(0, max) : fallback;
+        const photoUrl =
+          typeof raw.photoUrl === "string" &&
+          raw.photoUrl.length <= 1_800_000 &&
+          /^(data:image\/|https?:\/\/)/.test(raw.photoUrl)
+            ? raw.photoUrl
+            : null;
+        const images = Array.isArray(raw.images)
+          ? raw.images.filter((item): item is string =>
+              typeof item === "string" &&
+              item.length <= MAX_PHOTO_DATA_LENGTH &&
+              (item === "" || /^(data:image\/|https?:\/\/)/.test(item))).slice(0, MAX_ALBUM_PHOTOS)
+          : [];
+        const captions = Array.isArray(raw.captions)
+          ? raw.captions.filter((item): item is string => typeof item === "string").slice(0, MAX_ALBUM_PHOTOS)
+          : [];
+        const savedHeading = text("heading", defaults.heading ?? "", 160);
+        const savedLetterParagraphs = Array.isArray(raw.letterParagraphs)
+          ? raw.letterParagraphs.filter((item): item is string => typeof item === "string").slice(0, 4)
+          : defaults.letterParagraphs;
+        const restoredLetterText = templateSlug === "forever-and-ever"
+          ? resolveForeverAndEverText({ heading: savedHeading, letterParagraphs: savedLetterParagraphs })
+          : { heading: savedHeading, letterParagraphs: savedLetterParagraphs };
+        const savedCalendarNotes = Array.isArray(raw.calendarNotes)
+          ? raw.calendarNotes.filter((item): item is string => typeof item === "string").slice(0, 4)
+          : [];
+        const restoredCalendarNotes = templateSlug === "our-calendar"
+          ? OUR_CALENDAR_DEFAULT_NOTES.map((fallback, index) => savedCalendarNotes[index]?.trim()
+              ? savedCalendarNotes[index].slice(0, 300)
+              : fallback)
+          : savedCalendarNotes;
+
+        setValues({
+          ...defaults,
+          heading: restoredLetterText.heading,
+          loveMessage: text("loveMessage", defaults.loveMessage ?? "", 100),
+          birthdayName: text("birthdayName", defaults.birthdayName ?? "", 40),
+          intro: text("intro", defaults.intro ?? "", 400),
+          noteHeading: text("noteHeading", defaults.noteHeading ?? "", 240),
+          signature: text("signature", defaults.signature ?? "", 160),
+          years: text("years", defaults.years ?? "", 40),
+          yearsLabel: text("yearsLabel", defaults.yearsLabel ?? "", 80),
+          sideNote: text("sideNote", defaults.sideNote ?? "", 80),
+          message: text("message", defaults.message ?? "", 1200),
+          photoUrl,
+          images,
+          captions,
+          letterParagraphs: restoredLetterText.letterParagraphs,
+          calendarNotes: restoredCalendarNotes,
+          calendarHeart: isValidCalendarHeartDate(raw.calendarHeart) ? { ...raw.calendarHeart } : defaults.calendarHeart,
+        });
+      } else {
+        setValues(defaults);
       }
+
+      if (typeof draft.username === "string") setUsername(draft.username.slice(0, 60));
+      if (typeof draft.websiteName === "string") setWebsiteName(draft.websiteName.slice(0, 60));
+
+      const savedPublication = draft.published;
+      if (
+        savedPublication &&
+        typeof savedPublication === "object" &&
+        typeof (savedPublication as Record<string, unknown>).username === "string" &&
+        typeof (savedPublication as Record<string, unknown>).viewerName === "string" &&
+        typeof (savedPublication as Record<string, unknown>).templateId === "string" &&
+        typeof (savedPublication as Record<string, unknown>).url === "string" &&
+        typeof (savedPublication as Record<string, unknown>).publishedAt === "string"
+      ) {
+        setPublished(savedPublication as PublishedRecord);
+      } else {
+        setPublished(null);
+      }
+      setHasUnpublishedChanges(draft.hasUnpublishedChanges === true);
+
       if (window.localStorage.getItem(REOPEN_PUBLISH_KEY) === "1") {
         window.localStorage.removeItem(REOPEN_PUBLISH_KEY);
         setPublishDialogOpen(true);
       }
-    } catch {
-      // A damaged local draft should not stop the editor.
-    }
-    setDraftReady(true);
-  }, [templateSlug]);
+      setDraftReady(true);
+    };
+
+    void restoreDraft().catch(() => {
+      if (!cancelled) setDraftReady(true);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [templateSlug, projectId, session?.user?.email, status]);
 
   useEffect(() => {
-    if (!draftReady) return;
-    try {
-      window.localStorage.setItem(
-        "paper-stish-website-draft:" + templateSlug,
-        JSON.stringify({ values, username, websiteName }),
-      );
-    } catch {
-      // Drafts are a convenience; the current edit session still works.
-    }
-  }, [draftReady, templateSlug, values, username, websiteName]);
+    if (!draftReady || status === "loading") return;
+    const account = getAccountKey(session?.user?.email);
+    const thumbnailTitle = values.heading?.trim().slice(0, 120) || title;
+    const snapshot = {
+      id: projectId,
+      account,
+      title: thumbnailTitle,
+      templateSlug,
+      updatedAt: new Date().toISOString(),
+      data: {
+        kind: "website-template",
+        values,
+        username,
+        websiteName,
+        published,
+        hasUnpublishedChanges,
+      },
+    };
+
+    // Serialize writes so rapid typing cannot let an older snapshot overwrite
+    // a newer one. IndexedDB is the primary store; no draft is sent server-side.
+    saveQueue.current = saveQueue.current
+      .catch(() => undefined)
+      .then(async () => {
+        const saved = await putLocalProject(snapshot);
+        if (saved && migratedLegacyDraft.current) {
+          try {
+            window.localStorage.removeItem("paper-stish-website-draft:" + templateSlug);
+            migratedLegacyDraft.current = false;
+          } catch {
+            // Keeping the one-time legacy key is harmless if cleanup is blocked.
+          }
+        }
+        if (mountedRef.current) {
+          setDraftSaveError(saved
+            ? ""
+            : "Paper Stish couldn't save this draft on your device. Check browser storage before continuing.");
+        }
+      });
+  }, [
+    draftReady,
+    projectId,
+    templateSlug,
+    title,
+    values,
+    username,
+    websiteName,
+    published,
+    hasUnpublishedChanges,
+    session?.user?.email,
+    status,
+  ]);
 
   const changeText = (field: EditableWebsiteField, value: string) => {
     setValues((current) => ({ ...current, [field]: value }));
@@ -432,7 +563,13 @@ export function WebsiteEditor({
       }
       const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
       void signIn("google", {
-        callbackUrl: window.location.origin + basePath + "/website-templates?edit=" + templateSlug,
+        callbackUrl:
+          window.location.origin +
+          basePath +
+          "/website-templates?edit=" +
+          encodeURIComponent(templateSlug) +
+          "&draft=" +
+          encodeURIComponent(projectId),
       });
       return;
     }
@@ -652,6 +789,7 @@ export function WebsiteEditor({
       </button>
 
       {photoLoading && <p className={styles.notice} role="status">Preparing photo…</p>}
+      {draftSaveError && <p className={styles.notice} role="alert">{draftSaveError}</p>}
       {error && !publishDialogOpen && <p className={styles.notice} role="alert">{error}</p>}
 
       {publishDialogOpen && (
