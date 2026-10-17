@@ -517,6 +517,10 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   }, [flushDraft, onClose, status, writeProjectRecord]);
 
   const runExport = useCallback(async () => {
+    if (!billingChecked && status === "authenticated") {
+      setLibraryError("Checking your subscription. Try again in a moment.");
+      return;
+    }
     if (!isProUser && hasProContent) {
       setExportOpen(false);
       setUpgradePromptReason(sourceTemplateIsPro ? "template" : "asset");
@@ -535,7 +539,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
     } finally {
       setExporting(false);
     }
-  }, [exportFormat, exportScale, hasProContent, isProUser, sourceTemplateIsPro]);
+  }, [billingChecked, status, exportFormat, exportScale, hasProContent, isProUser, sourceTemplateIsPro]);
 
   /* ── Tool actions ─────────────────────────────────────────────────── */
 
@@ -1078,6 +1082,12 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
           onClose={() => setExportOpen(false)}
         >
           <div className="grid gap-14">
+            {!isProUser && hasProContent && (
+              <div className="rounded-12 border border-[#a78bfa]/35 bg-[#a78bfa]/10 px-12 py-10 text-11 leading-15 text-white/75">
+                <span className="mr-6 rounded-full bg-[#a78bfa] px-6 py-2 text-9 font-bold text-[#1a1427]">PRO</span>
+                This design uses Pro content. Upgrade to download it.
+              </div>
+            )}
             <div>
               <p className="mb-7 text-10 text-white/45">Format</p>
               <div className="grid grid-cols-2 gap-8">
@@ -1122,7 +1132,48 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
               onClick={runExport}
               className="mt-4 w-full rounded-full bg-white py-12 text-12 text-black disabled:opacity-40"
             >
-              {exporting ? "Exporting…" : "Download"}
+              {exporting ? "Exporting…" : !isProUser && hasProContent ? "Unlock Pro to download" : "Download"}
+            </button>
+          </div>
+        </ModalShell>
+      )}
+
+      {upgradePromptOpen && (
+        <ModalShell
+          title={upgradePromptReason === "photo-limit" ? "Unlock unlimited uploads" : "Unlock this design with Pro"}
+          subtitle={
+            upgradePromptReason === "photo-limit"
+              ? "Free includes up to 10 uploaded photos in one Smart Edit design."
+              : upgradePromptReason === "template"
+                ? "You're editing a Pro template. Keep editing, then upgrade to download your finished design."
+                : "Your design uses a Pro sticker or asset. Keep editing, then upgrade to download it."
+          }
+          onClose={() => setUpgradePromptOpen(false)}
+          width={430}
+        >
+          <div className="grid gap-12">
+            <div className="rounded-12 border border-[#a78bfa]/30 bg-[#a78bfa]/10 p-14">
+              <div className="flex items-center justify-between gap-12">
+                <span className="text-14 font-semibold text-white">Paper Stish Pro</span>
+                <span className="rounded-full bg-[#a78bfa] px-9 py-5 text-9 font-bold tracking-[0.08em] text-[#1a1427]">PRO</span>
+              </div>
+              <p className="mt-7 text-12 leading-16 text-white/65">
+                $4.99/month · All stickers · All templates · Unlimited photo uploads · Website publishing
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.location.assign("/upgrade")}
+              className="w-full rounded-full bg-white py-12 text-12 font-medium text-black transition-colors hover:bg-white/90"
+            >
+              Unlock Pro
+            </button>
+            <button
+              type="button"
+              onClick={() => setUpgradePromptOpen(false)}
+              className="w-full rounded-full border border-white/12 bg-white/5 py-12 text-12 text-white/70 transition-colors hover:bg-white/10"
+            >
+              Keep editing
             </button>
           </div>
         </ModalShell>
@@ -1433,9 +1484,14 @@ function LibraryContent({
               key={record.id}
               type="button"
               onClick={() => onAdd(record)}
-              aria-label={`Add ${record.name}`}
+              aria-label={`Add ${record.name}${record.isPro ? ", Pro asset" : ""}`}
               className="group relative aspect-square overflow-hidden rounded-12 border border-white/8 bg-[#171717] transition-all duration-200 hover:border-white/25 active:scale-[0.96]"
             >
+              {record.isPro && (
+                <span className="absolute right-4 top-4 z-10 rounded-full bg-[#a78bfa] px-6 py-3 text-[8px] font-bold tracking-[0.08em] text-[#1a1427]">
+                  PRO
+                </span>
+              )}
               <img
                 src={
                   record.provider === "bundled"
