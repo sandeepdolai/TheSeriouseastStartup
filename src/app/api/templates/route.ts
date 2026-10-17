@@ -4,6 +4,7 @@ import { requireUser, jsonError, readJsonBody } from "@/lib/publicationServer";
 import { isAdminEmail } from "@/lib/admin";
 import { signedUploadServerConfig } from "@/lib/uploadAuthorization";
 import { validateSmartEditDocument, SMART_EDIT_MAX_DOCUMENT_BYTES } from "@/components/smartedit/publish";
+import { decodeCommunityTemplateDescription, encodeCommunityTemplateDescription } from "@/lib/communityTemplateTier";
 
 /** Total headroom above the document budget: assets + stored preview. */
 const DESCRIPTION_MAX_CHARS = 500;
@@ -88,7 +89,6 @@ function hasOnlyDurableImageReferences(
   return true;
 }
 const PREVIEW_PUBLIC_ID_RE = /^[\w\-./@ ]{1,300}$/;
-const PRO_TEMPLATE_MARKER = "[[PAPER_STISH_PRO]]\\n";
 const ASSET_KEY_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
 function newTemplateSlug(): string {
@@ -153,19 +153,20 @@ export async function GET() {
   });
 
   return Response.json({
-    templates: templates.map((template) => ({
-      id: template.id,
-      slug: template.slug,
-      title: template.title,
-      description: template.description?.startsWith(PRO_TEMPLATE_MARKER)
-        ? template.description.slice(PRO_TEMPLATE_MARKER.length)
-        : template.description ?? "",
-      document: JSON.parse(template.document),
-      assets: JSON.parse(template.assets),
-      isPro: template.description?.startsWith(PRO_TEMPLATE_MARKER) ?? false,
-      previewUrl: template.previewUrl ?? null,
-      publishedAt: template.publishedAt.toISOString(),
-    })),
+    templates: templates.map((template) => {
+      const tier = decodeCommunityTemplateDescription(template.description);
+      return {
+        id: template.id,
+        slug: template.slug,
+        title: template.title,
+        description: tier.description,
+        document: JSON.parse(template.document),
+        assets: JSON.parse(template.assets),
+        isPro: tier.isPro,
+        previewUrl: template.previewUrl ?? null,
+        publishedAt: template.publishedAt.toISOString(),
+      };
+    }),
   });
 }
 
@@ -195,7 +196,7 @@ export async function POST(req: Request) {
     return jsonError(400, "Choose whether this template belongs to Free or Pro.");
   }
   const isPro = body.isPro === true;
-  const storedDescription = isPro ? PRO_TEMPLATE_MARKER + description : description;
+  const storedDescription = encodeCommunityTemplateDescription(description, isPro);
 
   const document = validateSmartEditDocument(body.document);
   if (!document) return jsonError(400, "That Smart Edit document could not be read.");
