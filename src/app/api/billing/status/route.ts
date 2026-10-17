@@ -1,3 +1,4 @@
+import { isDodoPaymentsConfigured } from "@/lib/dodoPayments";
 import { requireUser, jsonError } from "@/lib/publicationServer";
 
 export const dynamic = "force-dynamic";
@@ -6,11 +7,7 @@ export async function GET() {
   // Before Dodo is set up, the account should calmly stay on Free instead of
   // showing a retrying/error card or querying subscription columns that may
   // not yet have been migrated in production.
-  const billingConfigured = Boolean(
-    process.env.DODO_PAYMENTS_API_KEY &&
-    process.env.DODO_PAYMENTS_PRODUCT_ID &&
-    process.env.DODO_PAYMENTS_WEBHOOK_KEY,
-  );
+  const billingConfigured = isDodoPaymentsConfigured();
 
   if (!billingConfigured) {
     return Response.json(
