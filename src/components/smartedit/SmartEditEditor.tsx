@@ -59,6 +59,7 @@ import {
   listUploads,
 } from "./assets";
 import { FREE_SMART_EDIT_PHOTO_LIMIT } from "@/lib/planAccess";
+import { requestUploadGrant, uploadWithGrant } from "@/lib/signedCloudinaryUpload";
 import { makeImageLayer, makeTextLayer, useEditorStore } from "./store";
 import { clearTextLayoutCache, layoutTextLayer, onFontsChanged } from "./textLayout";
 import { SmartEditCanvas } from "./SmartEditCanvas";
@@ -552,12 +553,19 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   }, []);
 
   const addLibraryItem = useCallback((record: AssetRecord) => {
+    // Pro stickers remain visible in the shared library, but Free users must upgrade
+    // before adding them to a design. The export guard remains as a second check.
+    if (record.isPro && !isProUser) {
+      setUpgradePromptReason("asset");
+      setUpgradePromptOpen(true);
+      return;
+    }
     const state = useEditorStore.getState();
     registerAsset(record);
     state.addLayer(
       makeImageLayer(state.document, record, record.type === "sticker" ? "sticker" : "image"),
     );
-  }, []);
+  }, [isProUser]);
 
   const onUploadImages = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -1044,6 +1052,13 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
                 onAdd={addLibraryItem}
                 error={libraryError}
                 uploadsVersion={uploadsVersion}
+                isAdmin={isAdminEmail(session?.user?.email)}
+                isProUser={isProUser}
+                onRequirePro={() => {
+                  setUpgradePromptReason("asset");
+                  setUpgradePromptOpen(true);
+                }}
+                onStickerAdded={async () => setManifest(await loadLibraryManifest(true))}
               />
             </div>
           </div>
@@ -1056,6 +1071,13 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
                 onAdd={addLibraryItem}
                 error={libraryError}
                 uploadsVersion={uploadsVersion}
+                isAdmin={isAdminEmail(session?.user?.email)}
+                isProUser={isProUser}
+                onRequirePro={() => {
+                  setUpgradePromptReason("asset");
+                  setUpgradePromptOpen(true);
+                }}
+                onStickerAdded={async () => setManifest(await loadLibraryManifest(true))}
               />
             </SheetShell>
           </div>
@@ -1437,6 +1459,10 @@ function LibraryContent({
   onAdd,
   error,
   uploadsVersion,
+  isAdmin,
+  isProUser,
+  onRequirePro,
+  onStickerAdded,
 }: {
   manifest: LibraryManifest | null;
   tab: "stickers" | "photos" | "uploads";
@@ -1444,7 +1470,19 @@ function LibraryContent({
   onAdd: (record: AssetRecord) => void;
   error: string;
   uploadsVersion: number;
+  isAdmin: boolean;
+  isProUser: boolean;
+  onRequirePro: () => void;
+  onStickerAdded: () => Promise<void>;
 }) {
+  const [manageStickers, setManageStickers] = useState(false);
+  const [stickerName, setStickerName] = useState("");
+  const [stickerTier, setStickerTier] = useState<"free" | "pro">("free");
+  const [stickerFile, setStickerFile] = useState<File | null>(null);
+  const [stickerUploading, setStickerUploading] = useState(false);
+  const [stickerError, setStickerError] = useState("");
+  const [stickerSuccess, setStickerSuccess] = useState("");
+
   const items: AssetRecord[] =
     tab === "stickers"
       ? (manifest?.stickers ?? []).map(libraryItemToAsset)
@@ -1454,6 +1492,58 @@ function LibraryContent({
             void uploadsVersion;
             return listUploads();
           })();
+
+  const uploadSticker = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!isAdmin) return;
+    if (!stickerFile) {
+      setStickerError("Choose a sticker image first.");
+      return;
+    }
+    if (!["image/png", "image/jpeg", "image/webp", "image/gif"].includes(stickerFile.type)) {
+      setStickerError("Use a PNG, JPG, WebP, or GIF image. SVG files are not accepted.");
+      return;
+    }
+    if (stickerFile.size > 15 * 1024 * 1024) {
+      setStickerError("The sticker image must be 15 MB or smaller.");
+      return;
+    }
+
+    const name = (stickerName.trim() || stickerFile.name.replace(/\\.[^.]+$/, "")).slice(0, 80);
+    if (!name) {
+      setStickerError("Give this sticker a name.");
+      return;
+    }
+
+    setStickerUploading(true);
+    setStickerError("");
+    setStickerSuccess("");
+    try {
+      const grant = await requestUploadGrant("sticker-library");
+      const uploaded = await uploadWithGrant(stickerFile, grant);
+      const response = await fetch("/api/admin/stickers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ publicId: uploaded.publicId, name, tier: stickerTier }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || "The sticker could not be saved to the shared library.");
+      }
+
+      await onStickerAdded();
+      setStickerSuccess(`“${name}” was added to the shared sticker library as ${stickerTier === "pro" ? "Pro" : "Free"}.`);
+      setStickerName("");
+      setStickerFile(null);
+      const fileInput = document.getElementById("paper-stish-sticker-file") as HTMLInputElement | null;
+      if (fileInput) fileInput.value = "";
+      setStickerTier("free");
+    } catch (uploadError) {
+      setStickerError(uploadError instanceof Error ? uploadError.message : "Could not upload the sticker. Try again.");
+    } finally {
+      setStickerUploading(false);
+    }
+  };
 
   return (
     <div>
@@ -1472,11 +1562,122 @@ function LibraryContent({
         ))}
       </div>
 
+      {isAdmin && tab === "stickers" && (
+        <button
+          type="button"
+          onClick={() => {
+            setManageStickers((open) => !open);
+            setStickerError("");
+            setStickerSuccess("");
+          }}
+          aria-expanded={manageStickers}
+          className="mb-12 flex w-full items-center justify-between rounded-12 border border-white/12 bg-white/5 px-12 py-10 text-left text-11 text-white/85 transition-colors hover:bg-white/9"
+        >
+          <span>{manageStickers ? "Close sticker manager" : "Manage shared stickers"}</span>
+          <span className="rounded-full border border-white/15 px-7 py-3 text-[9px] font-semibold tracking-wide text-white/55">ADMIN</span>
+        </button>
+      )}
+
+      {isAdmin && tab === "stickers" && manageStickers && (
+        <section className="mb-14 rounded-14 border border-white/12 bg-[#151515] p-12">
+          <div className="mb-12">
+            <p className="text-12 font-semibold text-white">Add a library sticker</p>
+            <p className="mt-5 text-10 leading-14 text-white/45">
+              Saved to shared Cloudinary storage and shown to every Smart Edit user.
+            </p>
+          </div>
+
+          <form onSubmit={uploadSticker} className="grid gap-11">
+            <label className="grid gap-5">
+              <span className="text-10 text-white/55">Sticker name</span>
+              <input
+                value={stickerName}
+                onChange={(event) => setStickerName(event.target.value.slice(0, 80))}
+                placeholder="e.g. Pink heart outline"
+                maxLength={80}
+                className="w-full rounded-10 border border-white/12 bg-black/25 px-10 py-9 text-11 text-white outline-none focus:border-white/30"
+              />
+            </label>
+
+            <fieldset className="grid gap-6">
+              <legend className="mb-3 text-10 text-white/55">Who can use this sticker?</legend>
+              <div className="grid grid-cols-2 gap-7">
+                {(["free", "pro"] as const).map((tier) => (
+                  <button
+                    key={tier}
+                    type="button"
+                    aria-pressed={stickerTier === tier}
+                    onClick={() => setStickerTier(tier)}
+                    className={`rounded-10 border px-10 py-10 text-left transition-colors ${
+                      stickerTier === tier
+                        ? tier === "pro"
+                          ? "border-[#a78bfa]/70 bg-[#a78bfa]/15 text-white"
+                          : "border-white/45 bg-white/10 text-white"
+                        : "border-white/10 bg-black/15 text-white/55 hover:border-white/25"
+                    }`}
+                  >
+                    <span className="block text-11 font-semibold">{tier === "pro" ? "Pro" : "Free"}</span>
+                    <span className="mt-4 block text-9 leading-12 text-white/45">
+                      {tier === "pro" ? "Locked for Free users" : "Available to everyone"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            <label className="grid gap-6">
+              <span className="text-10 text-white/55">Sticker image</span>
+              <input
+                id="paper-stish-sticker-file"
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                onChange={(event) => setStickerFile(event.target.files?.[0] ?? null)}
+                className="block w-full text-10 text-white/60 file:mr-8 file:rounded-8 file:border-0 file:bg-white/10 file:px-8 file:py-7 file:text-10 file:text-white"
+              />
+              <span className="text-9 leading-13 text-white/35">PNG with transparency recommended · PNG, JPG, WebP, GIF · 15 MB max</span>
+            </label>
+
+            {stickerError && <p role="alert" className="text-10 leading-14 text-[#ff8f93]">{stickerError}</p>}
+            {stickerSuccess && <p role="status" className="text-10 leading-14 text-[#a9d8b7]">{stickerSuccess}</p>}
+
+            <button
+              type="submit"
+              disabled={stickerUploading || !stickerFile}
+              className="rounded-10 bg-white px-12 py-10 text-11 font-semibold text-black transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {stickerUploading ? "Uploading to shared library…" : `Add ${stickerTier === "pro" ? "Pro" : "Free"} sticker`}
+            </button>
+          </form>
+
+          <div className="mt-16 border-t border-white/8 pt-12">
+            <div className="mb-8 flex items-center justify-between gap-8">
+              <p className="text-10 font-medium text-white/70">Stored stickers</p>
+              <span className="text-9 tabular-nums text-white/35">{(manifest?.stickers ?? []).length} total</span>
+            </div>
+            {(manifest?.stickers ?? []).length === 0 ? (
+              <p className="text-10 leading-14 text-white/35">No stickers have been added yet.</p>
+            ) : (
+              <div className="grid gap-7">
+                {(manifest?.stickers ?? []).map((sticker) => (
+                  <div key={sticker.id} className="flex items-center gap-9 rounded-10 bg-white/[0.035] p-7">
+                    <img src={sticker.path} alt="" className="size-34 shrink-0 rounded-7 bg-black/20 object-contain p-3" />
+                    <span className="min-w-0 flex-1 truncate text-10 text-white/75">{sticker.name}</span>
+                    <span className={`rounded-full px-7 py-4 text-[8px] font-bold tracking-wide ${
+                      sticker.isPro ? "bg-[#a78bfa] text-[#1b1428]" : "bg-white/10 text-white/60"
+                    }`}>{sticker.isPro ? "PRO" : "FREE"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       {error && <p className="mb-8 text-11 leading-15 text-[#ff8f93]">{error}</p>}
 
       {items.length === 0 ? (
         <p className="py-20 text-center text-11 text-white/35">
-          {tab === "uploads" ? "Your uploaded photos appear here." : "Loading…"}
+          {tab === "uploads" ? "Your uploaded photos appear here." : "No library assets yet."}
         </p>
       ) : (
         <div className="grid grid-cols-3 gap-7 s:grid-cols-4">
@@ -1484,8 +1685,15 @@ function LibraryContent({
             <button
               key={record.id}
               type="button"
-              onClick={() => onAdd(record)}
+              onClick={() => {
+                if (record.isPro && !isProUser) {
+                  onRequirePro();
+                  return;
+                }
+                onAdd(record);
+              }}
               aria-label={`Add ${record.name}${record.isPro ? ", Pro asset" : ""}`}
+              title={record.isPro && !isProUser ? `${record.name} · Upgrade to Pro to use` : record.name}
               className="group relative aspect-square overflow-hidden rounded-12 border border-white/8 bg-[#171717] transition-all duration-200 hover:border-white/25 active:scale-[0.96]"
             >
               {record.isPro && (
@@ -1502,8 +1710,13 @@ function LibraryContent({
                 alt={record.name}
                 loading="lazy"
                 draggable={false}
-                className="size-full object-contain p-6"
+                className={`size-full object-contain p-6 ${record.isPro && !isProUser ? "opacity-80" : ""}`}
               />
+              {record.isPro && !isProUser && (
+                <span className="absolute inset-0 grid place-items-center bg-black/15 text-[9px] font-semibold tracking-wide text-white/90">
+                  UPGRADE TO USE
+                </span>
+              )}
             </button>
           ))}
         </div>
