@@ -480,6 +480,7 @@ export function libraryItemToAsset(
     name: item.name,
     width: item.width,
     height: item.height,
+    ...(item.isPro === true ? { isPro: true } : {}),
   };
 }
 
