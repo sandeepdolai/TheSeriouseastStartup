@@ -198,6 +198,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
         kind?: string;
         document?: SmartEditDocument;
         assets?: Record<string, AssetRecord>;
+        isProTemplate?: boolean;
       } | null;
 
       if (alive) {
@@ -561,7 +562,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   const onUploadImages = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setLibraryError("");
-    const selectedFiles = Array.from(files).slice(0, 6);
+    const selectedFiles = Array.from(files);
     const state = useEditorStore.getState();
     const currentLocalPhotos = state.document.layers.filter((layer) =>
       layer.type === "image" &&
