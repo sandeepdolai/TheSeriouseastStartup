@@ -226,6 +226,8 @@ export interface AssetRecord {
   /** for fonts */
   family?: string;
   format?: string;
+  /** Pro assets can be used while editing but require Pro to export. */
+  isPro?: boolean;
 }
 
 export interface LibraryManifestItem {
@@ -237,6 +239,8 @@ export interface LibraryManifestItem {
   width: number;
   height: number;
   tags?: string[];
+  /** Premium library items remain visible to Free users with a PRO badge. */
+  isPro?: boolean;
 }
 
 export interface LibraryManifest {

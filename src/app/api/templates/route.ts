@@ -4,6 +4,7 @@ import { requireUser, jsonError, readJsonBody } from "@/lib/publicationServer";
 import { isAdminEmail } from "@/lib/admin";
 import { signedUploadServerConfig } from "@/lib/uploadAuthorization";
 import { validateSmartEditDocument, SMART_EDIT_MAX_DOCUMENT_BYTES } from "@/components/smartedit/publish";
+import { decodeCommunityTemplateDescription, encodeCommunityTemplateDescription } from "@/lib/communityTemplateTier";
 
 /** Total headroom above the document budget: assets + stored preview. */
 const DESCRIPTION_MAX_CHARS = 500;
@@ -139,7 +140,8 @@ function safeAssets(value: unknown): Record<string, unknown> | null {
     if (typeof record.provider !== "string" || record.provider.length > 16) return null;
     if (record.url !== undefined && typeof record.url !== "string") return null;
     if (record.publicId !== undefined && typeof record.publicId !== "string") return null;
-    out[key] = entry;
+    if (record.isPro !== undefined && typeof record.isPro !== "boolean") return null;
+    out[key] = record;
   }
   return out;
 }
@@ -151,16 +153,20 @@ export async function GET() {
   });
 
   return Response.json({
-    templates: templates.map((template) => ({
-      id: template.id,
-      slug: template.slug,
-      title: template.title,
-      description: template.description ?? "",
-      document: JSON.parse(template.document),
-      assets: JSON.parse(template.assets),
-      previewUrl: template.previewUrl ?? null,
-      publishedAt: template.publishedAt.toISOString(),
-    })),
+    templates: templates.map((template) => {
+      const tier = decodeCommunityTemplateDescription(template.description);
+      return {
+        id: template.id,
+        slug: template.slug,
+        title: template.title,
+        description: tier.description,
+        document: JSON.parse(template.document),
+        assets: JSON.parse(template.assets),
+        isPro: tier.isPro,
+        previewUrl: template.previewUrl ?? null,
+        publishedAt: template.publishedAt.toISOString(),
+      };
+    }),
   });
 }
 
@@ -186,6 +192,11 @@ export async function POST(req: Request) {
   if (!title) return jsonError(400, "Give the template a name before publishing.");
 
   const description = validDescription(body.description);
+  if (body.isPro !== undefined && typeof body.isPro !== "boolean") {
+    return jsonError(400, "Choose whether this template belongs to Free or Pro.");
+  }
+  const isPro = body.isPro === true;
+  const storedDescription = encodeCommunityTemplateDescription(description, isPro);
 
   const document = validateSmartEditDocument(body.document);
   if (!document) return jsonError(400, "That Smart Edit document could not be read.");
@@ -228,7 +239,7 @@ export async function POST(req: Request) {
     data: {
       slug: newTemplateSlug(),
       title,
-      description,
+      description: storedDescription,
       document: documentJson,
       assets: assetsJson,
       previewUrl,
@@ -243,6 +254,7 @@ export async function POST(req: Request) {
       id: template.id,
       slug: template.slug,
       title: template.title,
+      isPro,
       publishedAt: template.publishedAt.toISOString(),
     },
     { status: 201 },

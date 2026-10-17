@@ -58,6 +58,7 @@ import {
   snapshotDocumentAssets,
   listUploads,
 } from "./assets";
+import { FREE_SMART_EDIT_PHOTO_LIMIT } from "@/lib/planAccess";
 import { makeImageLayer, makeTextLayer, useEditorStore } from "./store";
 import { clearTextLayoutCache, layoutTextLayer, onFontsChanged } from "./textLayout";
 import { SmartEditCanvas } from "./SmartEditCanvas";
@@ -107,6 +108,11 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   const [exportFormat, setExportFormat] = useState<"png" | "jpg">("png");
   const [exportScale, setExportScale] = useState(2);
   const [exporting, setExporting] = useState(false);
+  const [billingIsPro, setBillingIsPro] = useState(false);
+  const [billingChecked, setBillingChecked] = useState(false);
+  const [sourceTemplateIsPro, setSourceTemplateIsPro] = useState(false);
+  const [upgradePromptOpen, setUpgradePromptOpen] = useState(false);
+  const [upgradePromptReason, setUpgradePromptReason] = useState<"asset" | "template" | "photo-limit">("asset");
   const [authGate, setAuthGate] = useState<"save" | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [libraryTab, setLibraryTab] = useState<"stickers" | "photos" | "uploads">("stickers");
@@ -121,6 +127,34 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   /** id of the image layer currently open in Crop Mode (covers the editor) */
   const [cropTarget, setCropTarget] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (status === "loading") return;
+    if (status !== "authenticated") {
+      setBillingIsPro(false);
+      setBillingChecked(true);
+      return;
+    }
+    let alive = true;
+    setBillingChecked(false);
+    const refreshPlan = async () => {
+      try {
+        const response = await fetch("/api/billing/status", { cache: "no-store" });
+        const result = await response.json() as { isPremium?: boolean };
+        if (alive && response.ok) setBillingIsPro(result.isPremium === true);
+      } catch {
+        if (alive) setBillingIsPro(false);
+      } finally {
+        if (alive) setBillingChecked(true);
+      }
+    };
+    void refreshPlan();
+    window.addEventListener("focus", refreshPlan);
+    return () => {
+      alive = false;
+      window.removeEventListener("focus", refreshPlan);
+    };
+  }, [status, session?.user?.email]);
+
   const title = useEditorStore((s) => s.title);
   const doc = useEditorStore((s) => s.document);
   const selection = useEditorStore((s) => s.selection);
@@ -131,6 +165,10 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   const selectedLayer = useMemo(
     () => doc.layers.find((l) => l.id === selection) ?? null,
     [doc.layers, selection],
+  );
+  const isProUser = billingIsPro || isAdminEmail(session?.user?.email);
+  const hasProContent = sourceTemplateIsPro || doc.layers.some((layer) =>
+    "assetId" in layer && typeof layer.assetId === "string" && getAsset(layer.assetId)?.isPro === true,
   );
 
   const bootedRef = useRef(false);
@@ -160,10 +198,12 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
         kind?: string;
         document?: SmartEditDocument;
         assets?: Record<string, AssetRecord>;
+        isProTemplate?: boolean;
       } | null;
 
       if (alive) {
         setAdminTemplateDraft(isAdminEmail(session?.user?.email));
+        setSourceTemplateIsPro(projectData?.isProTemplate === true);
       }
 
       const draft = await idb.getDraft<{
@@ -295,12 +335,13 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
           kind: "smart-edit",
           document: state.document,
           assets: snapshotDocumentAssets(state.document),
+          isProTemplate: sourceTemplateIsPro,
         },
       });
       if (ok) state.markSaved();
       return ok;
     },
-    [projectId, account, status],
+    [projectId, account, status, sourceTemplateIsPro],
   );
 
   const flushDraft = useCallback(() => {
@@ -477,6 +518,16 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   }, [flushDraft, onClose, status, writeProjectRecord]);
 
   const runExport = useCallback(async () => {
+    if (!billingChecked && status === "authenticated") {
+      setLibraryError("Checking your subscription. Try again in a moment.");
+      return;
+    }
+    if (!isProUser && hasProContent) {
+      setExportOpen(false);
+      setUpgradePromptReason(sourceTemplateIsPro ? "template" : "asset");
+      setUpgradePromptOpen(true);
+      return;
+    }
     try {
       setExporting(true);
       await exportDocument(useEditorStore.getState().document, {
@@ -489,7 +540,7 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
     } finally {
       setExporting(false);
     }
-  }, [exportFormat, exportScale]);
+  }, [billingChecked, status, exportFormat, exportScale, hasProContent, isProUser, sourceTemplateIsPro]);
 
   /* ── Tool actions ─────────────────────────────────────────────────── */
 
@@ -511,17 +562,38 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
   const onUploadImages = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setLibraryError("");
-    for (const file of Array.from(files).slice(0, 6)) {
+    const selectedFiles = Array.from(files);
+    const state = useEditorStore.getState();
+    const currentLocalPhotos = state.document.layers.filter((layer) =>
+      layer.type === "image" &&
+      typeof layer.assetId === "string" &&
+      getAsset(layer.assetId)?.provider === "local",
+    ).length;
+    const remaining = isProUser
+      ? selectedFiles.length
+      : Math.max(0, FREE_SMART_EDIT_PHOTO_LIMIT - currentLocalPhotos);
+    if (remaining <= 0) {
+      setUpgradePromptReason("photo-limit");
+      setUpgradePromptOpen(true);
+      return;
+    }
+    const allowedFiles = selectedFiles.slice(0, remaining);
+    for (const file of allowedFiles) {
       try {
         const { record } = await importImageFile(file);
-        const state = useEditorStore.getState();
-        state.addLayer(makeImageLayer(state.document, record, "image"));
+        const current = useEditorStore.getState();
+        current.addLayer(makeImageLayer(current.document, record, "image"));
       } catch (err) {
         setLibraryError(err instanceof Error ? err.message : "Could not add that image.");
       }
     }
     setUploadsVersion((v) => v + 1);
-  }, []);
+    if (!isProUser && allowedFiles.length < selectedFiles.length) {
+      setLibraryError("Free includes up to 10 uploaded photos in one design. Upgrade for unlimited uploads.");
+      setUpgradePromptReason("photo-limit");
+      setUpgradePromptOpen(true);
+    }
+  }, [isProUser]);
 
   const onImportFont = useCallback(async (file: File | undefined) => {
     if (!file) return;
@@ -1011,6 +1083,12 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
           onClose={() => setExportOpen(false)}
         >
           <div className="grid gap-14">
+            {!isProUser && hasProContent && (
+              <div className="rounded-12 border border-[#a78bfa]/35 bg-[#a78bfa]/10 px-12 py-10 text-11 leading-15 text-white/75">
+                <span className="mr-6 rounded-full bg-[#a78bfa] px-6 py-2 text-9 font-bold text-[#1a1427]">PRO</span>
+                This design uses Pro content. Upgrade to download it.
+              </div>
+            )}
             <div>
               <p className="mb-7 text-10 text-white/45">Format</p>
               <div className="grid grid-cols-2 gap-8">
@@ -1055,7 +1133,48 @@ export function SmartEditEditor({ projectId, onClose }: SmartEditEditorProps) {
               onClick={runExport}
               className="mt-4 w-full rounded-full bg-white py-12 text-12 text-black disabled:opacity-40"
             >
-              {exporting ? "Exporting…" : "Download"}
+              {exporting ? "Exporting…" : !isProUser && hasProContent ? "Unlock Pro to download" : "Download"}
+            </button>
+          </div>
+        </ModalShell>
+      )}
+
+      {upgradePromptOpen && (
+        <ModalShell
+          title={upgradePromptReason === "photo-limit" ? "Unlock unlimited uploads" : "Unlock this design with Pro"}
+          subtitle={
+            upgradePromptReason === "photo-limit"
+              ? "Free includes up to 10 uploaded photos in one Smart Edit design."
+              : upgradePromptReason === "template"
+                ? "You're editing a Pro template. Keep editing, then upgrade to download your finished design."
+                : "Your design uses a Pro sticker or asset. Keep editing, then upgrade to download it."
+          }
+          onClose={() => setUpgradePromptOpen(false)}
+          width={430}
+        >
+          <div className="grid gap-12">
+            <div className="rounded-12 border border-[#a78bfa]/30 bg-[#a78bfa]/10 p-14">
+              <div className="flex items-center justify-between gap-12">
+                <span className="text-14 font-semibold text-white">Paper Stish Pro</span>
+                <span className="rounded-full bg-[#a78bfa] px-9 py-5 text-9 font-bold tracking-[0.08em] text-[#1a1427]">PRO</span>
+              </div>
+              <p className="mt-7 text-12 leading-16 text-white/65">
+                $4.99/month · All stickers · All templates · Unlimited photo uploads · Website publishing
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.location.assign("/upgrade")}
+              className="w-full rounded-full bg-white py-12 text-12 font-medium text-black transition-colors hover:bg-white/90"
+            >
+              Unlock Pro
+            </button>
+            <button
+              type="button"
+              onClick={() => setUpgradePromptOpen(false)}
+              className="w-full rounded-full border border-white/12 bg-white/5 py-12 text-12 text-white/70 transition-colors hover:bg-white/10"
+            >
+              Keep editing
             </button>
           </div>
         </ModalShell>
@@ -1366,9 +1485,14 @@ function LibraryContent({
               key={record.id}
               type="button"
               onClick={() => onAdd(record)}
-              aria-label={`Add ${record.name}`}
+              aria-label={`Add ${record.name}${record.isPro ? ", Pro asset" : ""}`}
               className="group relative aspect-square overflow-hidden rounded-12 border border-white/8 bg-[#171717] transition-all duration-200 hover:border-white/25 active:scale-[0.96]"
             >
+              {record.isPro && (
+                <span className="absolute right-4 top-4 z-10 rounded-full bg-[#a78bfa] px-6 py-3 text-[8px] font-bold tracking-[0.08em] text-[#1a1427]">
+                  PRO
+                </span>
+              )}
               <img
                 src={
                   record.provider === "bundled"

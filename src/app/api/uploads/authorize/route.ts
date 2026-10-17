@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { jsonError, readJsonBody, requireUser } from "@/lib/publicationServer";
+import { hasProOrAdminAccess } from "@/lib/planAccess";
 import { isAdminEmail } from "@/lib/admin";
 import {
   ADMIN_ONLY_PURPOSE,
@@ -50,6 +51,12 @@ export async function POST(req: Request) {
 
   if (purpose === ADMIN_ONLY_PURPOSE && !isAdminEmail(user.email)) {
     return jsonError(403, "Only the Paper Stish administrator can publish template assets.");
+  }
+  if (purpose !== ADMIN_ONLY_PURPOSE && !hasProOrAdminAccess(user, isAdminEmail(user.email))) {
+    return Response.json(
+      { error: "Uploading photos to publish a website requires Pro. Your local draft is unchanged.", upgradeUrl: "/upgrade" },
+      { status: 402 },
+    );
   }
 
   let projectId: string | undefined;

@@ -23,6 +23,7 @@ interface PublishedTemplate {
   document: SmartEditDocument;
   assets: Record<string, AssetRecord>;
   publishedAt: string;
+  isPro?: boolean;
 }
 
 function fallbackTemplatePreview(template: PublishedTemplate): string {
@@ -130,6 +131,7 @@ export function TemplateBrowser({ onOpenEditor }: Props) {
         data: {
           kind: "smart-edit",
           sourceTemplateId: selected.id,
+          isProTemplate: selected.isPro === true,
           document: selected.document,
           assets: selected.assets,
           published: null,
@@ -181,13 +183,14 @@ export function TemplateBrowser({ onOpenEditor }: Props) {
         const width = template.document?.canvas?.width ?? 1;
         const height = template.document?.canvas?.height ?? 1;
         return [{
-          title: template.title,
+          title: template.isPro ? `${template.title} · PRO` : template.title,
           slug: `template-${template.id}`,
           description:
-            template.description?.trim() ||
-            "Duplicate this design to make your own version in Smart Edit.",
+            (template.isPro ? "PRO TEMPLATE · " : "") +
+            (template.description?.trim() ||
+              "Duplicate this design to make your own version in Smart Edit."),
           link: null,
-          tags: [],
+          tags: template.isPro ? [{ title: "PRO", url: null }] : [],
           awards: 0,
           aspect: width / height,
           media: [previewUrl],
@@ -306,7 +309,13 @@ export function TemplateBrowser({ onOpenEditor }: Props) {
           onPrev={selectProjectSlug}
           onNext={selectProjectSlug}
           actionContent={
-            <div className="flex items-center gap-12">
+            <div className="grid gap-12">
+              {selected.isPro && (
+                <span className="inline-flex w-fit items-center gap-7 rounded-full bg-[#eee7ff] px-10 py-6 text-10 font-semibold tracking-[0.08em] text-[#6848a8]">
+                  PRO TEMPLATE
+                </span>
+              )}
+              <div className="flex items-center gap-12">
               <button
                 type="button"
                 disabled={!!working}
@@ -328,6 +337,7 @@ export function TemplateBrowser({ onOpenEditor }: Props) {
               >
                 {working === "save" ? "Saved" : "Save"}
               </button>
+              </div>
             </div>
           }
         />

@@ -480,6 +480,7 @@ export function libraryItemToAsset(
     name: item.name,
     width: item.width,
     height: item.height,
+    ...(item.isPro === true || item.tags?.some((tag) => tag.toLowerCase() === "pro") ? { isPro: true } : {}),
   };
 }
 
