@@ -32,7 +32,12 @@ export const metadata: Metadata = {
     description: siteDescription,
   },
   icons: {
-    icon: "/logo.svg",
+    icon: [
+      { url: "/paper-stish-icon.png", type: "image/png", sizes: "512x512" },
+      { url: "/logo.svg", type: "image/svg+xml", sizes: "any" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/paper-stish-icon.png",
   },
 };
 
