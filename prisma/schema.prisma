@@ -97,6 +97,7 @@ model CommunityTemplate {
   assets          String
   previewUrl      String?
   previewPublicId String?
+  isPro           Boolean  @default(false)
   published       Boolean  @default(true)
   publishedBy     String
   publishedAt     DateTime @default(now())
