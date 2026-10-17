@@ -177,7 +177,7 @@ export async function registerManagedSticker(
   const form = new URLSearchParams();
   form.set("tags", `${STICKER_TAG},plan-${tier}`);
   // Cloudinary uses "|" and "=" as context delimiters; normalize those out of names.
-  const contextName = name.replace(/[|=\\"]/g, " ").replace(/[\\u0000-\\u001f]/g, " ").trim().slice(0, 80) || "Sticker";
+  const contextName = name.split("").map((character) => /[|=\\"]/.test(character) || character.charCodeAt(0) < 32 ? " " : character).join("").trim().slice(0, 80) || "Sticker";
   form.set("context", `name=${contextName}|tier=${tier}`);
 
   await cloudinaryAdminRequest(resourcePath(publicId), {
