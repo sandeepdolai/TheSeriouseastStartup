@@ -1,4 +1,4 @@
-import { getDodoPaymentsClient } from "@/lib/dodoPayments";
+import { getDodoPaymentsClient, isDodoPaymentsConfigured } from "@/lib/dodoPayments";
 import { requireUser, jsonError } from "@/lib/publicationServer";
 
 export const runtime = "nodejs";
@@ -7,9 +7,9 @@ export async function POST(request: Request) {
   const user = await requireUser();
   if (!user) return jsonError(401, "Sign in before upgrading to Pro.");
 
-  const productId = process.env.DODO_PAYMENTS_PRODUCT_ID;
-  if (!process.env.DODO_PAYMENTS_API_KEY || !productId) {
-    return jsonError(503, "Subscription checkout is not configured yet. Please try again later.");
+  const productId = process.env.DODO_PAYMENTS_PRODUCT_ID?.trim();
+  if (!isDodoPaymentsConfigured() || !productId) {
+    return jsonError(503, "Subscription checkout is not fully configured yet. Please try again later.");
   }
 
   const alreadyPremium =
@@ -27,7 +27,8 @@ export async function POST(request: Request) {
         name: user.name ?? undefined,
       },
       metadata: { app_user_id: user.id },
-      return_url: new URL("/?billing=return", origin).toString(),
+      return_url: new URL("/subscription?billing=return", origin).toString(),
+      cancel_url: new URL("/upgrade?billing=cancelled", origin).toString(),
     });
 
     if (!session.checkout_url) {

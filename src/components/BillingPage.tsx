@@ -29,10 +29,15 @@ export function BillingPage({ mode }: { mode: Mode }) {
   const [billing, setBilling] = useState<Billing>(INITIAL);
   const [action, setAction] = useState<Action>(null);
   const [error, setError] = useState<string | null>(null);
+  const [checkoutReturn, setCheckoutReturn] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.add("paper-stish-billing");
     return () => document.documentElement.classList.remove("paper-stish-billing");
+  }, []);
+
+  useEffect(() => {
+    setCheckoutReturn(new URLSearchParams(window.location.search).get("billing") === "return");
   }, []);
 
   useEffect(() => {
@@ -42,12 +47,14 @@ export function BillingPage({ mode }: { mode: Mode }) {
       return;
     }
     let cancelled = false;
-    const refresh = async () => {
+    let pollTimer: number | undefined;
+    let pollAttempts = 0;
+    const refresh = async (): Promise<boolean> => {
       try {
         const response = await fetch("/api/billing/status", { cache: "no-store" });
         const result = await response.json() as { isPremium?: boolean; billingConfigured?: boolean; cancelAtPeriodEnd?: boolean; currentPeriodEnd?: string | null; error?: string };
         if (!response.ok) throw new Error(result.error || "Could not verify your subscription.");
-        if (cancelled) return;
+        if (cancelled) return false;
         setBilling({
           loaded: true,
           isPremium: result.isPremium === true,
@@ -56,14 +63,32 @@ export function BillingPage({ mode }: { mode: Mode }) {
           currentPeriodEnd: typeof result.currentPeriodEnd === "string" ? result.currentPeriodEnd : null,
         });
         setError(null);
+        if (result.isPremium === true && pollTimer !== undefined) window.clearInterval(pollTimer);
+        return result.isPremium === true;
       } catch (cause) {
         if (!cancelled) setError(cause instanceof Error ? cause.message : "Could not verify your subscription.");
+        return false;
       }
     };
     void refresh();
     window.addEventListener("focus", refresh);
-    return () => { cancelled = true; window.removeEventListener("focus", refresh); };
-  }, [sessionStatus, signedIn]);
+    if (checkoutReturn) {
+      pollTimer = window.setInterval(() => {
+        pollAttempts += 1;
+        if (pollAttempts >= 10) {
+          if (pollTimer !== undefined) window.clearInterval(pollTimer);
+          setCheckoutReturn(false);
+          return;
+        }
+        void refresh();
+      }, 3000);
+    }
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", refresh);
+      if (pollTimer !== undefined) window.clearInterval(pollTimer);
+    };
+  }, [sessionStatus, signedIn, checkoutReturn]);
 
   const runCheckout = async () => {
     if (!signedIn) { void signIn("google", { callbackUrl: "/upgrade" }); return; }
@@ -162,7 +187,7 @@ export function BillingPage({ mode }: { mode: Mode }) {
                         ? "Sign in to see your subscription."
                         : billing.isPremium
                           ? billing.cancelAtPeriodEnd && date ? "Access until " + date : date ? "Renews " + date : "Your Pro subscription is active."
-                          : "Unlock Pro features whenever you need them."}
+                          : checkoutReturn ? "Confirming your checkout with Dodo Payments…" : "Unlock Pro features whenever you need them."}
                   </p>
                 </div>
                 {!signedIn ? (

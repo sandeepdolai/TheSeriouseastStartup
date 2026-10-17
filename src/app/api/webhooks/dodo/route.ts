@@ -1,4 +1,4 @@
-import { getDodoPaymentsClient } from "@/lib/dodoPayments";
+import { getDodoPaymentsClient, isDodoPaymentsConfigured } from "@/lib/dodoPayments";
 import { db } from "@/lib/db";
 import { jsonError } from "@/lib/publicationServer";
 
@@ -11,6 +11,7 @@ const SUBSCRIPTION_EVENT_TYPES = new Set([
   "subscription.past_due",
   "subscription.renewed",
   "subscription.plan_changed",
+  "subscription.update_payment_method",
   "subscription.cancelled",
   "subscription.expired",
   "subscription.failed",
@@ -108,10 +109,9 @@ function fallbackStatusForEvent(type: string): string {
 }
 
 export async function POST(request: Request) {
-  const webhookKey = process.env.DODO_PAYMENTS_WEBHOOK_KEY;
-  const productId = process.env.DODO_PAYMENTS_PRODUCT_ID;
-  if (!webhookKey || !process.env.DODO_PAYMENTS_API_KEY || !productId) {
-    return jsonError(503, "Dodo Payments webhooks are not configured.");
+  const productId = process.env.DODO_PAYMENTS_PRODUCT_ID?.trim();
+  if (!isDodoPaymentsConfigured() || !productId) {
+    return jsonError(503, "Dodo Payments webhooks are not fully configured.");
   }
 
   const webhookId = request.headers.get("webhook-id");

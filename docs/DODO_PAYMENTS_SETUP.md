@@ -1,29 +1,42 @@
 # Dodo Payments setup for Paper Stish
 
-The account card switches between Free and Full Experience only from the subscription state stored by verified Dodo webhooks. Browser return URLs never grant access.
+Dodo Payments is wired into the Paper Stish Pro upgrade flow, subscription status, customer portal, and signed webhook handler. **Checkout intentionally stays disabled until the API key, Pro product ID, and webhook signing key are all configured.** Missing or invalid configuration cannot grant Pro access.
 
-## 1. Create the monthly product
+Official references:
+- [Dodo checkout sessions](https://docs.dodopayments.com/api-reference/checkout-sessions/create)
+- [Dodo webhooks and signature verification](https://docs.dodopayments.com/developer-resources/webhooks)
+- [Dodo subscription webhook events](https://docs.dodopayments.com/developer-resources/webhooks/intents/webhook-events-guide)
 
-In the Dodo Payments dashboard, create a **subscription** product priced at **USD $4.99 every month**. Copy its product ID.
+## 1. Create the Pro subscription product
 
-## 2. Configure Vercel environment variables
+In the Dodo Payments dashboard, create a **subscription** product for **Pro — USD $4.99 every month**. Do not create a one-time payment product.
 
-Add these server-only environment variables to the Paper Stish Vercel project:
+Create the test-mode product first. Copy its product ID; the test product ID is different from the live product ID.
 
-- `DODO_PAYMENTS_API_KEY`: API key from Dodo Payments.
-- `DODO_PAYMENTS_PRODUCT_ID`: product ID for the USD $4.99/month subscription.
-- `DODO_PAYMENTS_WEBHOOK_KEY`: signing secret for the webhook below.
-- `DODO_PAYMENTS_ENVIRONMENT`: `test_mode` while testing; `live_mode` only with live credentials and a live product.
+## 2. Add Dodo secrets in Vercel
 
-Do not place these values in `NEXT_PUBLIC_*` variables or commit secrets to Git.
+In the Paper Stish Vercel project, open **Settings → Environment Variables** and add these server-side values:
 
-## 3. Configure the Dodo webhook
+| Variable | Value |
+| --- | --- |
+| `DODO_PAYMENTS_API_KEY` | Dodo API key from the same mode as the product |
+| `DODO_PAYMENTS_PRODUCT_ID` | Pro monthly subscription product ID for that mode |
+| `DODO_PAYMENTS_WEBHOOK_KEY` | Signing secret for the webhook endpoint in that mode |
+| `DODO_PAYMENTS_ENVIRONMENT` | `test_mode` first; `live_mode` only when switching to live credentials |
 
-Create a webhook pointing to:
+Keep the three credentials and product ID in the same Dodo mode. Do not use `NEXT_PUBLIC_*` names, commit real values, or paste secrets into client-side code.
 
-`https://paperstish.online/api/webhooks/dodo`
+The integration defaults to `test_mode` if `DODO_PAYMENTS_ENVIRONMENT` is unset. Any other value except `test_mode` or `live_mode` is treated as misconfiguration. After changing environment variables, redeploy Paper Stish so the running deployment receives them.
 
-Subscribe to these event types:
+## 3. Create the webhook endpoint
+
+In Dodo Payments, go to **Developer → Webhooks → Add endpoint** and use this URL:
+
+```text
+https://www.paperstish.online/api/webhooks/dodo
+```
+
+Subscribe to these events:
 
 - `subscription.active`
 - `subscription.updated`
@@ -31,16 +44,39 @@ Subscribe to these event types:
 - `subscription.past_due`
 - `subscription.renewed`
 - `subscription.plan_changed`
+- `subscription.update_payment_method`
 - `subscription.cancelled`
 - `subscription.expired`
 - `subscription.failed`
 - `subscription.paused`
 - `subscription.unpaused`
 
-Copy the webhook signing secret to `DODO_PAYMENTS_WEBHOOK_KEY`.
+Copy the endpoint's **webhook signing secret** (not its endpoint ID) to `DODO_PAYMENTS_WEBHOOK_KEY`. The handler verifies Dodo's signature against the raw request body, handles duplicate deliveries idempotently, checks the configured product ID, and updates Pro status only from verified webhook events.
 
-## 4. Apply the database migration
+## 4. Database readiness
 
-The subscription fields and webhook idempotency table are additive. Before enabling checkout on production, run `bunx prisma migrate deploy` against the production `DATABASE_URL`. The normal build command generates Prisma Client but does not apply production migrations.
+The subscription columns and webhook idempotency table are already defined in the Prisma schema and migration history. Before enabling checkout on the production database, run:
 
-Test the full flow with Dodo test credentials first: checkout, `subscription.active`, automatic card switch, customer portal, cancellation, and expiry.
+```bash
+bunx prisma migrate deploy
+```
+
+Use the production database's protected environment values for this command. The normal Vercel build generates Prisma Client but does **not** apply production database migrations.
+
+## 5. Test before going live
+
+With matching test-mode credentials:
+
+1. Open `/upgrade`, sign in, and start checkout.
+2. Complete a Dodo test checkout for the Pro monthly product.
+3. In Dodo's webhook delivery log, confirm `subscription.active` was delivered successfully to `/api/webhooks/dodo`.
+4. Check `/subscription`: the account should show Pro and a billing date.
+5. Open the customer portal, then test a scheduled cancellation and the related webhook updates.
+
+If checkout remains unavailable, verify all three required variables are set and the environment is exactly `test_mode` or `live_mode`. If payment succeeds but Pro does not activate, inspect the Dodo webhook delivery log and check that the signing secret, product ID, and environment match.
+
+When testing is complete, switch all three values to their matching **live-mode** credentials/product/signing secret, set `DODO_PAYMENTS_ENVIRONMENT=live_mode`, redeploy, and run one controlled live checkout.
+
+## Current keyless behavior
+
+No keys are included in the repository. Until the required settings are added in Vercel, the plan page stays on Free and checkout, portal actions, and webhook processing return a safe configuration error. A browser return URL by itself never grants Pro access.
