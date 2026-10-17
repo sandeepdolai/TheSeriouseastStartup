@@ -222,7 +222,7 @@ html.paper-stish-billing body {
   touch-action: pan-y;
   width: 100%;
 }
-html.paper-stish-billing body { background: #080808; color: #fff; }
+html.paper-stish-billing body { background: #fff; color: #191919; }
 .billing-page {
   position: fixed;
   z-index: 100;
@@ -231,8 +231,8 @@ html.paper-stish-billing body { background: #080808; color: #fff; }
   overscroll-behavior: contain;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
-  background: #080808;
-  color: #fff;
+  background: #fff;
+  color: #191919;
   padding: max(18px, env(safe-area-inset-top)) clamp(16px, 4.5vw, 64px) max(24px, env(safe-area-inset-bottom));
   font-family: sans, ui-sans-serif, system-ui, sans-serif;
 }
