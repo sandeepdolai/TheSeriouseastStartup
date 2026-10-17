@@ -241,6 +241,10 @@ export interface LibraryManifestItem {
   tags?: string[];
   /** Premium library items remain visible to Free users with a PRO badge. */
   isPro?: boolean;
+  /** Runtime source for remotely managed library items; omitted means bundled. */
+  provider?: "bundled" | "cloudinary";
+  /** Cloudinary public ID, used when saving/publishing a design. */
+  publicId?: string;
 }
 
 export interface LibraryManifest {
