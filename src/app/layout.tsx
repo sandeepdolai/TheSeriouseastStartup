@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/paper-stish-icon.png", type: "image/png", sizes: "512x512" },
+      { url: "/paper-stish-icon.png", type: "image/png", sizes: "192x192" },
       { url: "/logo.svg", type: "image/svg+xml", sizes: "any" },
     ],
     shortcut: "/favicon.ico",
