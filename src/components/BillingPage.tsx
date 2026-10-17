@@ -111,9 +111,9 @@ export function BillingPage({ mode }: { mode: Mode }) {
             <a href="/" className="inline-flex min-h-40 items-center gap-9 rounded-full px-3 text-11 text-white/60 transition-colors hover:bg-white/[0.05] hover:text-white"><ArrowLeft /> Back to Paper Stish</a>
             {mode === "upgrade" ? (
               <>
-                <div className="mt-28 flex items-center gap-8 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#d8c7e2]"><Crown /> The Paper Stish membership</div>
+                <div className="mt-28 flex items-center gap-8 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#d8c7e2]"><Crown /> Paper Stish Pro</div>
                 <h1 className="mt-15 max-w-[12ch] text-40 leading-[0.98] tracking-[-0.065em] s:mt-22 s:text-55">Make more room for the moments that matter.</h1>
-                <p className="mt-16 max-w-[37rem] text-14 leading-21 tracking-[-0.025em] text-white/55 s:text-16 s:leading-24">Full Experience gives your creative work a more complete home in Paper Stish. Review the plan and payment details before confirming.</p>
+                <p className="mt-16 max-w-[37rem] text-14 leading-21 tracking-[-0.025em] text-white/55 s:text-16 s:leading-24">Pro gives your creative work a more complete home in Paper Stish. Review the plan and payment details before confirming.</p>
                 <div className="mt-25 flex flex-wrap items-center gap-10 text-10 text-white/45">
                   <span className="rounded-full border border-white/10 px-11 py-7">Personal websites</span>
                   <span className="rounded-full border border-white/10 px-11 py-7">Creative projects</span>
@@ -146,7 +146,7 @@ export function BillingPage({ mode }: { mode: Mode }) {
               <section className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#141314]">
                 <div className="border-b border-white/[0.09] bg-[radial-gradient(circle_at_100%_0%,rgba(189,130,207,.14),transparent_60%)] p-20 s:p-24">
                   <div className="flex items-center justify-between gap-12">
-                    <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/55">Full Experience</span>
+                    <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/55">Pro</span>
                     <span className="rounded-full border border-[#d8c7e2]/25 bg-[#d8c7e2]/[0.08] px-10 py-5 text-[8px] font-semibold uppercase tracking-[0.08em] text-[#d8c7e2]">Monthly</span>
                   </div>
                   <div className="mt-18 flex items-baseline gap-7"><span className="text-42 font-medium leading-none tracking-[-0.07em]">$4.99</span><span className="text-12 text-white/45">/ month</span></div>
@@ -198,12 +198,12 @@ export function BillingPage({ mode }: { mode: Mode }) {
                   ) : billing.isPremium ? (
                     <>
                       <div className="mt-13 flex items-center justify-between gap-10">
-                        <h2 className="text-25 tracking-[-0.055em]">Full Experience</h2>
+                        <h2 className="text-25 tracking-[-0.055em]">Pro</h2>
                         <span className="rounded-full border border-white/10 bg-white/[0.05] px-10 py-5 text-[8px] font-semibold uppercase tracking-[0.09em] text-[#d8c7e2]">{billing.cancelAtPeriodEnd ? "Ending" : "Active"}</span>
                       </div>
                       <div className="mt-11 flex items-baseline gap-7"><span className="text-21 tracking-[-0.05em]">$4.99</span><span className="text-10 text-white/45">/ month</span></div>
                       <p className="mt-12 border-t border-white/[0.08] pt-12 text-11 leading-17 text-white/65">
-                        {billing.cancelAtPeriodEnd && date ? `Your access continues until ${date}.` : date ? `Your next billing date is ${date}.` : "Your Full Experience subscription is active."}
+                        {billing.cancelAtPeriodEnd && date ? `Your access continues until ${date}.` : date ? `Your next billing date is ${date}.` : "Your Pro subscription is active."}
                       </p>
                     </>
                   ) : (
@@ -225,7 +225,7 @@ export function BillingPage({ mode }: { mode: Mode }) {
                       <p className="mt-10 text-10 leading-15 text-white/40">Update your payment method, review invoices, or manage cancellation in the secure billing portal.</p>
                     </>
                   ) : (
-                    <button type="button" onClick={() => window.location.assign("/upgrade")} className="flex h-46 w-full items-center justify-center rounded-full bg-[#f2f0e8] px-18 text-12 font-medium text-[#191919] hover:brightness-105">Explore Full Experience</button>
+                    <button type="button" onClick={() => window.location.assign("/upgrade")} className="flex h-46 w-full items-center justify-center rounded-full bg-[#f2f0e8] px-18 text-12 font-medium text-[#191919] hover:brightness-105">Explore Pro</button>
                   )}
                   {error && <p role="alert" className="mt-10 rounded-10 border border-white/10 bg-white/[0.04] px-12 py-10 text-10 leading-15 text-white/65">{error}</p>}
                   {billing.loaded && !billing.checkoutEnabled && signedIn && <p className="mt-11 text-9 leading-14 text-white/35">Billing configuration is unavailable. Please contact support for assistance.</p>}
