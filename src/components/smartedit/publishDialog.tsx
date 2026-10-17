@@ -71,6 +71,7 @@ export function PublishTemplateDialog({ projectId, onClose, onPublished }: Props
 
   const [titleValue, setTitleValue] = useState(storeTitle);
   const [description, setDescription] = useState("");
+  const [isPro, setIsPro] = useState(false);
   const [autoPreview, setAutoPreview] = useState<{ url: string; blob: Blob } | null>(null);
   const [customPreview, setCustomPreview] = useState<{
     url: string;
@@ -331,6 +332,7 @@ export function PublishTemplateDialog({ projectId, onClose, onPublished }: Props
         body: JSON.stringify({
           title: templateTitle,
           description: description.trim().slice(0, DESCRIPTION_MAX_CHARS),
+          isPro,
           document,
           assets,
           previewUrl: preview.url,
@@ -358,6 +360,7 @@ export function PublishTemplateDialog({ projectId, onClose, onPublished }: Props
   }, [
     customPreview,
     description,
+    isPro,
     ensureAutoPreviewBlob,
     onPublished,
     publishing,
@@ -402,6 +405,26 @@ export function PublishTemplateDialog({ projectId, onClose, onPublished }: Props
         />
         <span className="text-9 text-white/30">
           {description.length}/{DESCRIPTION_MAX_CHARS} · shown on the template page
+        </span>
+      </label>
+
+      <label className="flex cursor-pointer items-start gap-10 rounded-12 border border-[#8b75ad]/45 bg-[#8b75ad]/10 px-12 py-12">
+        <input
+          type="checkbox"
+          checked={isPro}
+          onChange={(event) => setIsPro(event.target.checked)}
+          disabled={publishing}
+          className="mt-2 size-15 accent-[#a78bfa]"
+          aria-label="Mark this template as Pro"
+        />
+        <span className="grid gap-3">
+          <span className="flex items-center gap-7 text-12 font-medium text-white">
+            <span className="rounded-full bg-[#a78bfa] px-7 py-2 text-9 font-bold text-[#191324]">PRO</span>
+            Pro-only template
+          </span>
+          <span className="text-10 leading-14 text-white/50">
+            Free users can preview, duplicate and edit it, but must upgrade to download.
+          </span>
         </span>
       </label>
 
