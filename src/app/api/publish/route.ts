@@ -2,6 +2,8 @@ import { randomBytes } from "crypto";
 import { db } from "@/lib/db";
 import { slugPart } from "@/lib/slug";
 import { jsonError, readJsonBody, requireUser } from "@/lib/publicationServer";
+import { hasProOrAdminAccess } from "@/lib/planAccess";
+import { isAdminEmail } from "@/lib/admin";
 import {
   PUBLISHABLE_TEMPLATE_SLUGS,
   type PublishableTemplateSlug,
@@ -39,6 +41,12 @@ function newTemplateId(): string {
 export async function POST(req: Request) {
   const user = await requireUser();
   if (!user) return jsonError(401, "Sign in to publish Paper Stish websites.");
+  if (!hasProOrAdminAccess(user, isAdminEmail(user.email))) {
+    return Response.json(
+      { error: "Publishing websites requires Pro. Your draft is still saved on this device.", upgradeUrl: "/upgrade" },
+      { status: 402 },
+    );
+  }
 
   // Accept either a Smart Edit document or bounded code-template values.
   const body = await readJsonBody(
