@@ -176,7 +176,9 @@ export async function registerManagedSticker(
 
   const form = new URLSearchParams();
   form.set("tags", `${STICKER_TAG},plan-${tier}`);
-  form.set("context", `name=${encodeURIComponent(name)}|tier=${tier}`);
+  // Cloudinary uses "|" and "=" as context delimiters; normalize those out of names.
+  const contextName = name.replace(/[|=\\"]/g, " ").replace(/[\\u0000-\\u001f]/g, " ").trim().slice(0, 80) || "Sticker";
+  form.set("context", `name=${contextName}|tier=${tier}`);
 
   await cloudinaryAdminRequest(resourcePath(publicId), {
     method: "POST",
