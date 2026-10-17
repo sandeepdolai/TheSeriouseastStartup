@@ -98,154 +98,198 @@ export function BillingPage({ mode }: { mode: Mode }) {
   };
 
   const date = displayDate(billing.currentPeriodEnd);
+  const freeFeatures = [
+    "Use Smart Edit and its core editing tools.",
+    "Reuse every available Free sticker as often as you like—no sticker usage counter.",
+    "Browse, preview, and edit photo and website templates, including Pro templates.",
+    "Download designs that use only Free assets and features.",
+    "Save drafts and return to your creative projects later.",
+  ];
+  const freeRestrictions = [
+    "Publishing any website requires Pro.",
+    "Exporting a design that contains Pro stickers, effects, or a Pro-only photo template requires Pro.",
+    "Free photo uploads have a plan allowance; there is no per-sticker usage limit.",
+  ];
+  const proFeatures = [
+    "Unlimited photo uploads, subject to reasonable technical and abuse protections.",
+    "Every Free and Pro sticker, with unlimited use and no per-sticker caps.",
+    "All photo and website templates, including Pro-only designs.",
+    "Download designs containing Pro stickers, effects, and Pro-only photo templates.",
+    "Publish websites created in the website-template editor.",
+    "Access every Pro-exclusive editing tool, effect, and premium feature.",
+    "No individual purchases required for included Pro assets.",
+  ];
+
   return (
-    <main className="billing-page">
-      <div className="mx-auto w-full max-w-[1080px]">
-        <header className="flex min-h-46 items-center justify-between gap-12 border-b border-white/[0.10] pb-13">
-          <a href="/" className="text-12 font-semibold tracking-[-0.05em] text-white">PAPER STISH</a>
-          <span className="text-[9px] font-medium uppercase tracking-[0.14em] text-white/35">Account / Billing</span>
+    <main className="billing-page text-[#191919]">
+      <div className="mx-auto w-full max-w-[1100px]">
+        <header className="flex min-h-[4.8rem] items-center justify-between gap-12 border-b border-[#e5e5e5] pb-13">
+          <a href="/" className="text-[1.25rem] font-semibold tracking-[-0.05em] text-[#171717]">PAPER STISH</a>
+          <span className="text-[0.95rem] font-medium uppercase tracking-[0.14em] text-[#737373]">Account / Billing</span>
         </header>
 
-        <div className="mx-auto grid w-full max-w-[900px] gap-24 pb-20 pt-26 s:grid-cols-[minmax(0,1fr)_minmax(300px,390px)] s:items-start s:gap-40 s:pt-50">
-          <section className="min-w-0">
-            <a href="/" className="inline-flex min-h-40 items-center gap-9 rounded-full px-3 text-11 text-white/60 transition-colors hover:bg-white/[0.05] hover:text-white"><ArrowLeft /> Back to Paper Stish</a>
-            {mode === "upgrade" ? (
-              <>
-                <div className="mt-28 flex items-center gap-8 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#d8c7e2]"><Crown /> Paper Stish Pro</div>
-                <h1 className="mt-15 max-w-[12ch] text-40 leading-[0.98] tracking-[-0.065em] s:mt-22 s:text-55">Make more room for the moments that matter.</h1>
-                <p className="mt-16 max-w-[37rem] text-14 leading-21 tracking-[-0.025em] text-white/55 s:text-16 s:leading-24">Pro gives your creative work a more complete home in Paper Stish. Review the plan and payment details before confirming.</p>
-                <div className="mt-25 flex flex-wrap items-center gap-10 text-10 text-white/45">
-                  <span className="rounded-full border border-white/10 px-11 py-7">Personal websites</span>
-                  <span className="rounded-full border border-white/10 px-11 py-7">Creative projects</span>
-                  <span className="rounded-full border border-white/10 px-11 py-7">Shareable memories</span>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="mt-28 flex items-center gap-8 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#d8c7e2]"><Crown /> Account billing</div>
-                <h1 className="mt-15 max-w-[12ch] text-40 leading-[0.98] tracking-[-0.065em] s:mt-22 s:text-55">Manage your subscription.</h1>
-                <p className="mt-16 max-w-[37rem] text-14 leading-21 tracking-[-0.025em] text-white/55 s:text-16 s:leading-24">Your plan, renewal information, and subscription controls—all in one place.</p>
-              </>
-            )}
-            <div className="mt-26 border-t border-white/10 pt-17">
-              <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/35">Paper Stish / Account</p>
-              <div className="mt-16 flex items-start gap-12">
-                <div className="flex size-40 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/[0.04] text-[#d8c7e2]">
-                  {session?.user?.image ? <img src={session.user.image} alt="" className="size-full object-cover" /> : <span>{(session?.user?.name || session?.user?.email || "P").slice(0, 1).toUpperCase()}</span>}
-                </div>
-                <div className="min-w-0 pt-2">
-                  <p className="truncate text-12 text-white/90">{session?.user?.name || "Your account"}</p>
-                  <p className="mt-2 break-all text-10 text-white/40">{session?.user?.email || "Sign in to link your subscription to your account."}</p>
-                </div>
-              </div>
+        <div className="mx-auto w-full max-w-[1020px] pb-30 pt-25 s:pt-42">
+          <a href="/" className="inline-flex min-h-40 items-center gap-9 rounded-full px-3 text-[1.2rem] text-[#606060] transition-colors hover:bg-black/[0.04] hover:text-[#151515]">
+            <ArrowLeft /> Back to Paper Stish
+          </a>
+
+          <section className="mt-24 max-w-[72rem]">
+            <div className="flex items-center gap-9 text-[1rem] font-semibold uppercase tracking-[0.14em] text-[#826394]">
+              <Crown /> {mode === "upgrade" ? "Paper Stish / Plans" : "Paper Stish / Account"}
             </div>
+            <h1 className="mt-14 max-w-[13ch] text-[3.4rem] font-semibold leading-[1.02] tracking-[-0.06em] s:text-[5rem]">
+              {mode === "upgrade" ? "Choose how you create." : "Your plan, clearly laid out."}
+            </h1>
+            <p className="mt-15 max-w-[67rem] text-[1.55rem] leading-[1.65] text-[#626262] s:text-[1.7rem]">
+              {mode === "upgrade"
+                ? "Edit freely with Free, or unlock every Paper Stish creative tool with Pro. Stickers have no usage-count limits—the plan only determines which sticker collection is unlocked."
+                : "Check your current plan, manage billing securely, and compare what is included in Free and Pro."}
+            </p>
           </section>
 
-          <aside className="min-w-0">
-            {mode === "upgrade" ? (
-              <section className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#141314]">
-                <div className="border-b border-white/[0.09] bg-[radial-gradient(circle_at_100%_0%,rgba(189,130,207,.14),transparent_60%)] p-20 s:p-24">
-                  <div className="flex items-center justify-between gap-12">
-                    <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/55">Pro</span>
-                    <span className="rounded-full border border-[#d8c7e2]/25 bg-[#d8c7e2]/[0.08] px-10 py-5 text-[8px] font-semibold uppercase tracking-[0.08em] text-[#d8c7e2]">Monthly</span>
-                  </div>
-                  <div className="mt-18 flex items-baseline gap-7"><span className="text-42 font-medium leading-none tracking-[-0.07em]">$4.99</span><span className="text-12 text-white/45">/ month</span></div>
-                  <p className="mt-9 text-10 leading-15 text-white/40">The total and billing terms are shown again at secure checkout.</p>
-                </div>
-                <div className="p-20 s:p-24">
-                  <p className="text-[9px] font-semibold uppercase tracking-[0.13em] text-white/40">Included in your experience</p>
-                  <div className="mt-15 space-y-13">
-                    {[
-                      ["Create", "Personalize designs around your own words and images."],
-                      ["Keep", "Return to your creative projects from your Paper Stish workspace."],
-                      ["Share", "Publish personal websites and share them with a link."],
-                    ].map(([label, description]) => (
-                      <div key={label} className="flex items-start gap-10">
-                        <span className="mt-1 flex size-19 shrink-0 items-center justify-center rounded-full border border-white/15 text-[#d8c7e2]"><CheckMark /></span>
-                        <div><p className="text-11 text-white/90">{label}</p><p className="mt-3 text-10 leading-15 text-white/45">{description}</p></div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-19 border-t border-white/[0.09] pt-15">
-                    {!billing.loaded && !error ? (
-                      <p className="text-10 leading-15 text-white/45">Checking your account and subscription availability…</p>
-                    ) : !signedIn ? (
-                      <button type="button" onClick={() => void signIn("google", { callbackUrl: "/upgrade" })} className="flex h-46 w-full items-center justify-center rounded-full bg-[#f2f0e8] px-18 text-12 font-medium text-[#191919] hover:brightness-105">Sign in to continue</button>
-                    ) : billing.isPremium ? (
-                      <button type="button" onClick={() => window.location.assign("/subscription")} className="flex h-46 w-full items-center justify-center rounded-full bg-[#f2f0e8] px-18 text-12 font-medium text-[#191919] hover:brightness-105">You’re a member · Manage plan</button>
-                    ) : (
-                      <button type="button" disabled={action !== null || !billing.loaded} onClick={() => void runCheckout()} className="flex h-46 w-full items-center justify-center rounded-full bg-[#f2f0e8] px-18 text-12 font-medium text-[#191919] hover:brightness-105 disabled:cursor-wait disabled:opacity-60">
-                        {action === "checkout" ? "Opening secure checkout…" : billing.checkoutEnabled ? "Continue to secure checkout" : "Contact us to upgrade"}
-                      </button>
-                    )}
-                    {error && <p role="alert" className="mt-10 rounded-10 border border-white/10 bg-white/[0.04] px-12 py-10 text-10 leading-15 text-white/65">{error}</p>}
-                    {billing.loaded && !billing.checkoutEnabled && signedIn && !billing.isPremium && !error && <p className="mt-9 text-9 leading-13 text-white/35">Checkout is not configured yet. Contact support and we’ll help with your upgrade.</p>}
-                  </div>
-                </div>
-              </section>
-            ) : (
-              <section className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#141314]">
-                <div className="border-b border-white/[0.09] p-20 s:p-24">
-                  <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/45">Your current plan</p>
-                  {!billing.loaded && !error ? (
-                    <p className="mt-16 text-12 text-white/50">Verifying your subscription…</p>
-                  ) : !signedIn ? (
-                    <>
-                      <h2 className="mt-13 text-25 tracking-[-0.055em]">Sign in to manage billing.</h2>
-                      <p className="mt-8 text-11 leading-17 text-white/45">Your subscription is connected to your Paper Stish account.</p>
-                      <button type="button" onClick={() => void signIn("google", { callbackUrl: "/subscription" })} className="mt-16 flex h-44 w-full items-center justify-center rounded-full bg-[#f2f0e8] text-12 font-medium text-[#191919]">Sign in with Google</button>
-                    </>
-                  ) : billing.isPremium ? (
-                    <>
-                      <div className="mt-13 flex items-center justify-between gap-10">
-                        <h2 className="text-25 tracking-[-0.055em]">Pro</h2>
-                        <span className="rounded-full border border-white/10 bg-white/[0.05] px-10 py-5 text-[8px] font-semibold uppercase tracking-[0.09em] text-[#d8c7e2]">{billing.cancelAtPeriodEnd ? "Ending" : "Active"}</span>
-                      </div>
-                      <div className="mt-11 flex items-baseline gap-7"><span className="text-21 tracking-[-0.05em]">$4.99</span><span className="text-10 text-white/45">/ month</span></div>
-                      <p className="mt-12 border-t border-white/[0.08] pt-12 text-11 leading-17 text-white/65">
-                        {billing.cancelAtPeriodEnd && date ? `Your access continues until ${date}.` : date ? `Your next billing date is ${date}.` : "Your Pro subscription is active."}
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="mt-13 flex items-center justify-between gap-10">
-                        <h2 className="text-25 tracking-[-0.055em]">Free</h2>
-                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-10 py-5 text-[8px] font-semibold uppercase tracking-[0.09em] text-white/45">No paid plan</span>
-                      </div>
-                      <p className="mt-11 text-11 leading-17 text-white/50">There is no active paid subscription on this account right now.</p>
-                    </>
+          {mode === "manage" && (
+            <section aria-labelledby="current-plan-heading" className="mt-24 rounded-[1.8rem] border border-[#e2e2e2] bg-[#fafafa] p-20 s:p-26">
+              <div className="flex flex-wrap items-start justify-between gap-14">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[1rem] font-semibold uppercase tracking-[0.13em] text-[#777]">Your subscription</p>
+                  <h2 id="current-plan-heading" className="mt-9 text-[2.6rem] font-semibold tracking-[-0.045em]">
+                    {!billing.loaded && !error ? "Checking your plan…" : !signedIn ? "Sign in to view your plan" : billing.isPremium ? "Pro" : "Free"}
+                  </h2>
+                  <p className="mt-8 max-w-[52rem] text-[1.35rem] leading-[1.6] text-[#626262]">
+                    {!billing.loaded && !error
+                      ? "Verifying your account with the billing service."
+                      : !signedIn
+                        ? "Your subscription details are connected to your Paper Stish account."
+                        : billing.isPremium
+                          ? billing.cancelAtPeriodEnd && date
+                            ? "Your Pro access continues until " + date + "."
+                            : date
+                              ? "Your Pro subscription is active. Your next billing date is " + date + "."
+                              : "Your Pro subscription is active."
+                          : "You are on the Free plan. Upgrade whenever you need Pro stickers, premium exports, unlimited photo uploads, or website publishing."}
+                  </p>
+                  {signedIn && session?.user && (
+                    <p className="mt-10 break-all text-[1.1rem] text-[#777]">
+                      {session.user.name || session.user.email || "Paper Stish account"}
+                    </p>
                   )}
                 </div>
-                <div className="p-20 s:p-24">
-                  {billing.isPremium ? (
-                    <>
-                      <button type="button" disabled={action !== null || !billing.loaded} onClick={() => void runPortal()} className="flex h-46 w-full items-center justify-center rounded-full bg-[#f2f0e8] px-18 text-12 font-medium text-[#191919] hover:brightness-105 disabled:cursor-wait disabled:opacity-60">
-                        {action === "portal" ? "Opening secure billing portal…" : "Open billing portal"}
-                      </button>
-                      <p className="mt-10 text-10 leading-15 text-white/40">Update your payment method, review invoices, or manage cancellation in the secure billing portal.</p>
-                    </>
-                  ) : (
-                    <button type="button" onClick={() => window.location.assign("/upgrade")} className="flex h-46 w-full items-center justify-center rounded-full bg-[#f2f0e8] px-18 text-12 font-medium text-[#191919] hover:brightness-105">Explore Pro</button>
-                  )}
-                  {error && <p role="alert" className="mt-10 rounded-10 border border-white/10 bg-white/[0.04] px-12 py-10 text-10 leading-15 text-white/65">{error}</p>}
-                  {billing.loaded && !billing.checkoutEnabled && signedIn && <p className="mt-11 text-9 leading-14 text-white/35">Billing configuration is unavailable. Please contact support for assistance.</p>}
-                </div>
-              </section>
-            )}
-            <p className="mt-14 px-7 text-center text-9 leading-14 text-white/35">
-              Need help? <a href="mailto:sandeepdolai.info@gmail.com?subject=Paper%20Stish%20Subscription" className="underline decoration-white/20 underline-offset-3 hover:text-white/65">Contact support</a>. By subscribing, you agree to our <a href="/terms" className="underline decoration-white/20 underline-offset-3 hover:text-white/65">Terms</a> and <a href="/privacy" className="underline decoration-white/20 underline-offset-3 hover:text-white/65">Privacy Policy</a>.
-            </p>
-          </aside>
-        </div>
+                {billing.loaded && signedIn && (
+                  <span className={"shrink-0 rounded-full px-12 py-7 text-[1rem] font-semibold " + (billing.isPremium ? "bg-[#f0e6f6] text-[#68477c]" : "bg-[#eaeaea] text-[#555]")}>
+                    {billing.isPremium ? billing.cancelAtPeriodEnd ? "Ending at period end" : "Active" : "Free forever"}
+                  </span>
+                )}
+              </div>
+              <div className="mt-18 flex flex-col gap-10 border-t border-[#e6e6e6] pt-17 s:flex-row s:items-center">
+                {billing.isPremium ? (
+                  <button type="button" disabled={action !== null || !billing.loaded || !signedIn} onClick={() => void runPortal()} className="flex min-h-[4.6rem] w-full items-center justify-center rounded-full bg-[#171717] px-20 text-[1.3rem] font-semibold text-white transition-colors hover:bg-[#333] disabled:cursor-wait disabled:opacity-60 s:w-auto s:min-w-[22rem]">
+                    {action === "portal" ? "Opening secure billing portal…" : "Manage billing"}
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => signedIn ? window.location.assign("/upgrade") : void signIn("google", { callbackUrl: "/subscription" })} className="flex min-h-[4.6rem] w-full items-center justify-center rounded-full bg-[#171717] px-20 text-[1.3rem] font-semibold text-white transition-colors hover:bg-[#333] s:w-auto s:min-w-[22rem]">
+                    {signedIn ? "Explore Pro" : "Sign in to continue"}
+                  </button>
+                )}
+                <p className="text-[1.15rem] leading-[1.5] text-[#777]">
+                  {billing.isPremium ? "Manage payment details, invoices, or cancellation in the secure billing portal." : "Your drafts stay available when you upgrade."}
+                </p>
+              </div>
+              {error && <p role="alert" className="mt-12 rounded-xl border border-[#e4caca] bg-[#fff7f7] px-14 py-12 text-[1.2rem] leading-[1.5] text-[#843d3d]">{error}</p>}
+            </section>
+          )}
 
-        <footer className="mx-auto flex w-full max-w-[900px] flex-wrap items-center justify-between gap-12 border-t border-white/[0.08] pt-16 text-9 text-white/35">
-          <span>© {new Date().getFullYear()} Paper Stish</span>
-          <nav className="flex items-center gap-14">
-            <a href="/privacy" className="hover:text-white/70">Privacy</a>
-            <a href="/terms" className="hover:text-white/70">Terms</a>
-            <a href="mailto:sandeepdolai.info@gmail.com" className="hover:text-white/70">Support</a>
-          </nav>
-        </footer>
+          <section aria-labelledby="plans-heading" className="mt-26">
+            <div className="mb-16">
+              <h2 id="plans-heading" className="text-[2.4rem] font-semibold tracking-[-0.045em]">Free vs Pro</h2>
+              <p className="mt-6 max-w-[64rem] text-[1.3rem] leading-[1.6] text-[#696969]">
+                Both plans let you edit. Pro unlocks premium assets and the right to export Pro work or publish a website.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 items-stretch gap-16 s:grid-cols-2 s:gap-20">
+              <section aria-labelledby="free-plan-heading" className="flex min-w-0 flex-col rounded-[1.8rem] border border-[#dedede] bg-white p-20 s:p-26">
+                <div className="flex items-center justify-between gap-10">
+                  <h3 id="free-plan-heading" className="text-[2.5rem] font-semibold tracking-[-0.045em]">Free</h3>
+                  <span className="rounded-full bg-[#ededed] px-12 py-7 text-[1rem] font-semibold text-[#4b4b4b]">Free forever</span>
+                </div>
+                <div className="mt-17 flex items-baseline gap-8">
+                  <span className="text-[4rem] font-semibold leading-none tracking-[-0.07em]">$0</span>
+                </div>
+                <p className="mt-10 text-[1.35rem] leading-[1.55] text-[#656565]">Create, experiment, and edit without paying.</p>
+                <div className="my-19 border-t border-[#e9e9e9]" />
+                <ul className="space-y-15">
+                  {freeFeatures.map((feature) => (
+                    <li key={feature} className="flex items-start gap-12">
+                      <span className="mt-2 shrink-0 text-[#08794c]"><CheckMark /></span>
+                      <span className="text-[1.45rem] leading-[1.55] text-[#242424]">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="my-19 border-t border-[#e9e9e9]" />
+                <h4 className="text-[1.2rem] font-medium text-[#707070]">Restrictions</h4>
+                <ul className="mt-13 space-y-13">
+                  {freeRestrictions.map((restriction) => (
+                    <li key={restriction} className="flex items-start gap-12">
+                      <span className="mt-2 shrink-0 text-[#686868]" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" className="size-16" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="4.5" y="10" width="15" height="11" rx="2.2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v3" strokeLinecap="round"/></svg>
+                      </span>
+                      <span className="text-[1.35rem] leading-[1.55] text-[#323232]">{restriction}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-auto pt-22">
+                  <span className="inline-flex rounded-full border border-[#e4e4e4] px-12 py-8 text-[1.1rem] text-[#606060]">
+                    {signedIn && !billing.isPremium ? "Your current plan" : "Available to everyone"}
+                  </span>
+                </div>
+              </section>
+
+              <section aria-labelledby="pro-plan-heading" className="relative flex min-w-0 flex-col rounded-[1.8rem] border border-[#b89bc8] bg-white p-20 s:p-26">
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-2 rounded-t-[1.8rem] bg-[#b89bc8]" />
+                <div className="flex items-center justify-between gap-10">
+                  <h3 id="pro-plan-heading" className="text-[2.5rem] font-semibold tracking-[-0.045em]">Pro</h3>
+                  <span className="rounded-full bg-[#f0e5f8] px-12 py-7 text-[1rem] font-semibold text-[#714d86]">Full access</span>
+                </div>
+                <div className="mt-17 flex items-baseline gap-8">
+                  <span className="text-[4rem] font-semibold leading-none tracking-[-0.07em]">$4.99</span>
+                  <span className="text-[1.25rem] text-[#666]">/ month</span>
+                </div>
+                <p className="mt-10 text-[1.35rem] leading-[1.55] text-[#656565]">Everything unlocked for the full Paper Stish experience.</p>
+                <div className="my-19 border-t border-[#e9e9e9]" />
+                <ul className="space-y-15">
+                  {proFeatures.map((feature) => (
+                    <li key={feature} className="flex items-start gap-12">
+                      <span className="mt-2 shrink-0 text-[#08794c]"><CheckMark /></span>
+                      <span className="text-[1.45rem] leading-[1.55] text-[#242424]">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-auto pt-24">
+                  <button type="button" disabled={action !== null || !billing.loaded} onClick={() => billing.isPremium ? window.location.assign("/subscription") : void runCheckout()} className="flex min-h-[4.8rem] w-full items-center justify-center rounded-full bg-[#171717] px-18 text-[1.3rem] font-semibold text-white transition-colors hover:bg-[#333] disabled:cursor-wait disabled:opacity-60">
+                    {action === "checkout" ? "Opening secure checkout…" : billing.isPremium ? "Manage your Pro subscription" : !signedIn ? "Sign in to unlock Pro" : billing.checkoutEnabled ? "Unlock Pro" : "Contact us to upgrade"}
+                  </button>
+                  <p className="mt-10 text-center text-[1.1rem] leading-[1.5] text-[#777]">
+                    {billing.isPremium ? "Your Pro access is active." : "Keep editing. Your draft stays saved if you decide not to upgrade."}
+                  </p>
+                </div>
+              </section>
+            </div>
+            {error && mode === "upgrade" && <p role="alert" className="mt-14 rounded-xl border border-[#e4caca] bg-[#fff7f7] px-14 py-12 text-[1.2rem] leading-[1.5] text-[#843d3d]">{error}</p>}
+          </section>
+
+          <p className="mt-20 rounded-xl bg-[#f7f7f7] px-16 py-14 text-[1.2rem] leading-[1.6] text-[#6a6a6a]">
+            Sticker usage is never counted per sticker. Free users can reuse the Free collection without a usage cap; Pro unlocks the Pro collection as well. Website publishing requires Pro, and Free users can continue editing without losing their draft.
+          </p>
+
+          <footer className="mt-25 flex flex-wrap items-center justify-between gap-12 border-t border-[#e5e5e5] pt-16 text-[1rem] text-[#737373]">
+            <span>© {new Date().getFullYear()} Paper Stish</span>
+            <nav className="flex items-center gap-15">
+              <a href="/privacy" className="hover:text-[#191919]">Privacy</a>
+              <a href="/terms" className="hover:text-[#191919]">Terms</a>
+              <a href="mailto:sandeepdolai.info@gmail.com?subject=Paper%20Stish%20Subscription" className="hover:text-[#191919]">Support</a>
+            </nav>
+          </footer>
+        </div>
       </div>
     </main>
   );
