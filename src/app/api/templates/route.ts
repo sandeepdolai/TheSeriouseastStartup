@@ -88,6 +88,7 @@ function hasOnlyDurableImageReferences(
   return true;
 }
 const PREVIEW_PUBLIC_ID_RE = /^[\w\-./@ ]{1,300}$/;
+const PRO_TEMPLATE_MARKER = "[[PAPER_STISH_PRO]]\\n";
 const ASSET_KEY_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
 function newTemplateSlug(): string {
@@ -156,10 +157,12 @@ export async function GET() {
       id: template.id,
       slug: template.slug,
       title: template.title,
-      description: template.description ?? "",
+      description: template.description?.startsWith(PRO_TEMPLATE_MARKER)
+        ? template.description.slice(PRO_TEMPLATE_MARKER.length)
+        : template.description ?? "",
       document: JSON.parse(template.document),
       assets: JSON.parse(template.assets),
-      isPro: template.isPro,
+      isPro: template.description?.startsWith(PRO_TEMPLATE_MARKER) ?? false,
       previewUrl: template.previewUrl ?? null,
       publishedAt: template.publishedAt.toISOString(),
     })),
@@ -192,6 +195,7 @@ export async function POST(req: Request) {
     return jsonError(400, "Choose whether this template belongs to Free or Pro.");
   }
   const isPro = body.isPro === true;
+  const storedDescription = isPro ? PRO_TEMPLATE_MARKER + description : description;
 
   const document = validateSmartEditDocument(body.document);
   if (!document) return jsonError(400, "That Smart Edit document could not be read.");
@@ -234,12 +238,11 @@ export async function POST(req: Request) {
     data: {
       slug: newTemplateSlug(),
       title,
-      description,
+      description: storedDescription,
       document: documentJson,
       assets: assetsJson,
       previewUrl,
       previewPublicId,
-      isPro,
       published: true,
       publishedBy: user.id,
     },
@@ -250,7 +253,7 @@ export async function POST(req: Request) {
       id: template.id,
       slug: template.slug,
       title: template.title,
-      isPro: template.isPro,
+      isPro,
       publishedAt: template.publishedAt.toISOString(),
     },
     { status: 201 },
