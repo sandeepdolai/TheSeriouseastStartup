@@ -321,7 +321,7 @@ export function ProfileOverlay({
                         <path d="M5 19h14l1.4-9-4.4 3-4-7-4 7-4.4-3L5 19Zm2 2h10v1H7v-1Z"/>
                       </svg>
                       <span className="rounded-[4px] bg-white/15 px-5 py-1 text-[8px] font-semibold uppercase tracking-[0.08em] text-white/85">
-                        Full Experience
+                        Pro
                       </span>
                     </div>
                     <p className="mt-7 text-10 leading-13 text-white/60">$4.99 / month</p>
@@ -342,14 +342,14 @@ export function ProfileOverlay({
                 ) : (
                   <>
                     <span className="rounded-[4px] bg-white/15 px-5 py-1 text-[8px] font-semibold uppercase tracking-[0.08em] text-white/75">Free</span>
-                    <p className="mt-7 text-11 leading-14 text-white/85">Upgrade to Full Experience</p>
+                    <p className="mt-7 text-11 leading-14 text-white/85">Upgrade to Pro</p>
                     <p className="mt-3 text-10 leading-13 text-white/55">$4.99 / month</p>
                     <button
                       type="button"
                       onClick={() => window.location.assign("/upgrade")}
                       className="pointer-events-auto mt-12 flex h-36 w-full items-center justify-center rounded-full bg-[#f2f0e8] px-16 text-11 font-medium text-[#191919] transition-transform duration-200 hover:brightness-105 active:scale-[0.99]"
                     >
-                      Explore Full Experience
+                      Explore Pro
                     </button>
                   </>
                 )}

@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const user = await requireUser();
-  if (!user) return jsonError(401, "Sign in before upgrading to Full Experience.");
+  if (!user) return jsonError(401, "Sign in before upgrading to Pro.");
 
   const productId = process.env.DODO_PAYMENTS_PRODUCT_ID;
   if (!process.env.DODO_PAYMENTS_API_KEY || !productId) {
