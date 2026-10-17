@@ -453,20 +453,39 @@ export function blobToDataUrl(blob: Blob): Promise<string> {
 
 let manifestCache: LibraryManifest | null = null;
 
-export async function loadLibraryManifest(): Promise<LibraryManifest> {
-  if (manifestCache) return manifestCache;
+export async function loadLibraryManifest(forceRefresh = false): Promise<LibraryManifest> {
+  if (manifestCache && !forceRefresh) return manifestCache;
+
+  let base: LibraryManifest = { version: 1, stickers: [], photos: [] };
   try {
-    const res = await fetch(libraryManifestUrl());
+    const res = await fetch(libraryManifestUrl(), { cache: "no-store" });
     if (!res.ok) throw new Error("no manifest");
     const data = (await res.json()) as LibraryManifest;
     if (data && data.version === 1 && Array.isArray(data.stickers) && Array.isArray(data.photos)) {
-      manifestCache = data;
-      return data;
+      base = data;
     }
-    throw new Error("bad manifest");
   } catch {
-    return { version: 1, stickers: [], photos: [] };
+    // Continue with the server-managed Cloudinary library if the static manifest is unavailable.
   }
+
+  let managedStickers: LibraryManifest["stickers"] = [];
+  try {
+    const response = await fetch(`${getBasePath()}/api/library/stickers`, { cache: "no-store" });
+    if (response.ok) {
+      const payload = (await response.json()) as { stickers?: LibraryManifest["stickers"] };
+      if (Array.isArray(payload.stickers)) managedStickers = payload.stickers;
+    }
+  } catch {
+    // Static stickers should remain available if the remote library is temporarily offline.
+  }
+
+  const managedIds = new Set(managedStickers.map((item) => item.id));
+  manifestCache = {
+    version: 1,
+    stickers: [...managedStickers, ...base.stickers.filter((item) => !managedIds.has(item.id))],
+    photos: base.photos,
+  };
+  return manifestCache;
 }
 
 export function libraryItemToAsset(
@@ -475,8 +494,9 @@ export function libraryItemToAsset(
   return {
     id: item.id,
     type: item.type as AssetType,
-    provider: "bundled",
+    provider: item.provider === "cloudinary" ? "cloudinary" : "bundled",
     url: item.path,
+    ...(item.publicId ? { publicId: item.publicId } : {}),
     name: item.name,
     width: item.width,
     height: item.height,
