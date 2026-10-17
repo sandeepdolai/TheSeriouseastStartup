@@ -49,10 +49,14 @@ export async function POST(req: Request) {
     return jsonError(400, "Unknown upload purpose.");
   }
 
-  if (purpose === ADMIN_ONLY_PURPOSE && !isAdminEmail(user.email)) {
-    return jsonError(403, "Only the Paper Stish administrator can publish template assets.");
+  if ((purpose === ADMIN_ONLY_PURPOSE || purpose === "sticker-library") && !isAdminEmail(user.email)) {
+    return jsonError(403, "Only the Paper Stish administrator can manage shared library assets.");
   }
-  if (purpose !== ADMIN_ONLY_PURPOSE && !hasProOrAdminAccess(user, isAdminEmail(user.email))) {
+  if (
+    purpose !== ADMIN_ONLY_PURPOSE &&
+    purpose !== "sticker-library" &&
+    !hasProOrAdminAccess(user, isAdminEmail(user.email))
+  ) {
     return Response.json(
       { error: "Uploading photos to publish a website requires Pro. Your local draft is unchanged.", upgradeUrl: "/upgrade" },
       { status: 402 },
