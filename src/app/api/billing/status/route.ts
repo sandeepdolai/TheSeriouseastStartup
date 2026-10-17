@@ -1,4 +1,5 @@
 import { isDodoPaymentsConfigured } from "@/lib/dodoPayments";
+import { hasProAccess } from "@/lib/planAccess";
 import { requireUser, jsonError } from "@/lib/publicationServer";
 
 export const dynamic = "force-dynamic";
@@ -27,9 +28,7 @@ export async function GET() {
     if (!user) return jsonError(401, "Sign in to check your subscription.");
 
     const currentPeriodEnd = user.subscriptionPeriodEnd?.toISOString() ?? null;
-    const isPremium =
-      user.subscriptionStatus === "active" &&
-      (!user.subscriptionPeriodEnd || user.subscriptionPeriodEnd.getTime() > Date.now());
+    const isPremium = hasProAccess(user);
 
     return Response.json(
       {
