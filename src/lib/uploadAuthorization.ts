@@ -27,6 +27,7 @@ export const SIGNED_UPLOAD_PURPOSES = [
   "template-photos",
   "smart-edit",
   "template-assets",
+  "sticker-library",
 ] as const;
 export type SignedUploadPurpose = (typeof SIGNED_UPLOAD_PURPOSES)[number];
 
@@ -78,6 +79,10 @@ export function uploadFolderForPurpose(
   purpose: SignedUploadPurpose,
   projectId?: string,
 ): string {
+  if (purpose === "sticker-library") {
+    // Shared, platform-owned media. Only the admin receives upload grants.
+    return "paper-stish/library/stickers";
+  }
   if (purpose === ADMIN_ONLY_PURPOSE) {
     // Administrator community-template namespace (cleanup-script compatible).
     const segment = sanitizeSegment(projectId ?? "", 64) || randomBytes(6).toString("hex");
