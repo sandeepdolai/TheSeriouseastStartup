@@ -54,7 +54,7 @@ export function BillingPage({ mode }: { mode: Mode }) {
         const response = await fetch("/api/billing/status", { cache: "no-store" });
         const result = await response.json() as { isPremium?: boolean; billingConfigured?: boolean; cancelAtPeriodEnd?: boolean; currentPeriodEnd?: string | null; error?: string };
         if (!response.ok) throw new Error(result.error || "Could not verify your subscription.");
-        if (cancelled) return;
+        if (cancelled) return false;
         setBilling({
           loaded: true,
           isPremium: result.isPremium === true,
