@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
+import { isAdminEmail } from "@/lib/admin";
 import { GUEST_ACCOUNT_KEY, getAccountKey } from "@/lib/accountStorage";
 import { deleteLocalProject, getLocalProject, putLocalProject } from "@/lib/localProjects";
 import {
@@ -585,6 +586,22 @@ export function WebsiteEditor({
       return;
     }
 
+    // Check Pro before the publish helper uploads local photos to Cloudinary.
+    // The /api/publish route independently enforces this on the server as well.
+    if (!isAdminEmail(session.user.email)) {
+      try {
+        const billingResponse = await fetch("/api/billing/status", { cache: "no-store" });
+        const billing = await billingResponse.json() as { isPremium?: boolean };
+        if (!billingResponse.ok || billing.isPremium !== true) {
+          setError("Website publishing requires Pro. Your draft is saved and has not been uploaded.");
+          return;
+        }
+      } catch {
+        setError("Could not verify your Pro subscription. Your draft is unchanged; try again.");
+        return;
+      }
+    }
+
     setPublishing(true);
     setError("");
     try {
@@ -1002,6 +1019,11 @@ export function WebsiteEditor({
                 </div>
 
                 {error && <p className={styles.error} role="alert">{error}</p>}
+                {error.toLowerCase().includes("requires pro") && (
+                  <a href="/upgrade" className={styles.primaryAction}>
+                    Unlock Pro
+                  </a>
+                )}
                 <button
                   type="submit"
                   className={styles.primaryAction}
