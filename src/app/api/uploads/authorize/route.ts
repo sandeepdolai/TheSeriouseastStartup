@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { jsonError, readJsonBody, requireUser } from "@/lib/publicationServer";
+import { hasProOrAdminAccess } from "@/lib/planAccess";
 import { isAdminEmail } from "@/lib/admin";
 import {
   ADMIN_ONLY_PURPOSE,
