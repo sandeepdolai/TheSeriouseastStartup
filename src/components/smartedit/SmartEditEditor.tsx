@@ -1482,6 +1482,7 @@ function LibraryContent({
   const [stickerUploading, setStickerUploading] = useState(false);
   const [stickerError, setStickerError] = useState("");
   const [stickerSuccess, setStickerSuccess] = useState("");
+  const stickerFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const items: AssetRecord[] =
     tab === "stickers"
@@ -1535,8 +1536,7 @@ function LibraryContent({
       setStickerSuccess(`“${name}” was added to the shared sticker library as ${stickerTier === "pro" ? "Pro" : "Free"}.`);
       setStickerName("");
       setStickerFile(null);
-      const fileInput = document.getElementById("paper-stish-sticker-file") as HTMLInputElement | null;
-      if (fileInput) fileInput.value = "";
+      if (stickerFileInputRef.current) stickerFileInputRef.current.value = "";
       setStickerTier("free");
     } catch (uploadError) {
       setStickerError(uploadError instanceof Error ? uploadError.message : "Could not upload the sticker. Try again.");
@@ -1628,7 +1628,7 @@ function LibraryContent({
             <label className="grid gap-6">
               <span className="text-10 text-white/55">Sticker image</span>
               <input
-                id="paper-stish-sticker-file"
+                ref={stickerFileInputRef}
                 type="file"
                 accept="image/png,image/jpeg,image/webp,image/gif"
                 onChange={(event) => setStickerFile(event.target.files?.[0] ?? null)}
