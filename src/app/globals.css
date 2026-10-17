@@ -209,3 +209,32 @@ html.paper-stish-viewer body {
   color: #555;
 }
 
+
+
+/* Standalone billing routes restore native vertical scrolling from the gallery canvas. */
+html.paper-stish-billing,
+html.paper-stish-billing body {
+  height: auto;
+  max-height: none;
+  min-height: 100%;
+  overflow: auto;
+  position: static;
+  touch-action: pan-y;
+  width: 100%;
+}
+html.paper-stish-billing body { background: #080808; color: #fff; }
+.billing-page {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  background: #080808;
+  color: #fff;
+  padding: max(18px, env(safe-area-inset-top)) clamp(16px, 4.5vw, 64px) max(24px, env(safe-area-inset-bottom));
+  font-family: sans, ui-sans-serif, system-ui, sans-serif;
+}
+.billing-page button:focus-visible,
+.billing-page a:focus-visible { outline: 2px solid #d8c7e2; outline-offset: 4px; }
