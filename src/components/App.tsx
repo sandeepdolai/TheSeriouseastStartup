@@ -17,17 +17,44 @@ import { ProfileOverlay } from "./Overlays";
 import { getAccountKey } from "@/lib/accountStorage";
 import { isAdminEmail } from "@/lib/admin";
 import { listLocalProjects, putLocalProject } from "@/lib/localProjects";
+import { navigateToAppPath, resolveAppRoute, safeAppReturnPath } from "@/lib/appRoutes";
 
 type View = "home" | "my" | "saved" | "project" | "smart-edit" | "website-templates";
 type Overlay = "profile" | null;
+type AppProps = {
+  initialView?: View;
+  initialProjectSlug?: string | null;
+  initialSmartEditProjectId?: string | null;
+};
 
-export function App({ initialView = "home" }: { initialView?: View } = {}) {
+export function App({
+  initialView = "home",
+  initialProjectSlug = null,
+  initialSmartEditProjectId = null,
+}: AppProps = {}) {
   const folio = useFolio();
   if (!folio) return null;
-  return <AppContent folio={folio} initialView={initialView} />;
+  return (
+    <AppContent
+      folio={folio}
+      initialView={initialView}
+      initialProjectSlug={initialProjectSlug}
+      initialSmartEditProjectId={initialSmartEditProjectId}
+    />
+  );
 }
 
-function AppContent({ folio, initialView }: { folio: Folio; initialView: View }) {
+function AppContent({
+  folio,
+  initialView,
+  initialProjectSlug,
+  initialSmartEditProjectId,
+}: {
+  folio: Folio;
+  initialView: View;
+  initialProjectSlug: string | null;
+  initialSmartEditProjectId: string | null;
+}) {
   const { data: session, status } = useSession();
   const accountEmail = session?.user?.email ?? null;
   useEffect(() => {
@@ -66,12 +93,13 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
     migrate("paper-stish-username");
   }, [accountEmail]);
   const [view, setView] = useState<View>(initialView);
-  const [projectSlug, setProjectSlug] = useState<string | null>(null);
+  const [projectSlug, setProjectSlug] = useState<string | null>(initialProjectSlug);
+
   const [overlay, setOverlay] = useState<Overlay>(null);
-  const [sheetEntered, setSheetEntered] = useState(false);
-  const [myEntered, setMyEntered] = useState(false);
-  const [savedEntered, setSavedEntered] = useState(false);
-  const [smartEditProjectId, setSmartEditProjectId] = useState<string | null>(null);
+  const [sheetEntered, setSheetEntered] = useState(initialView === "project");
+  const [myEntered, setMyEntered] = useState(initialView === "my");
+  const [savedEntered, setSavedEntered] = useState(initialView === "saved");
+  const [smartEditProjectId, setSmartEditProjectId] = useState<string | null>(initialSmartEditProjectId);
   const [websiteDraftToOpen, setWebsiteDraftToOpen] = useState<{ projectId: string; templateSlug: string } | null>(null);
   const [carouselHidden, setCarouselHidden] = useState(false);
   const [returning, setReturning] = useState<string | null>(null);
@@ -79,6 +107,34 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
   const [pendingAccountAction, setPendingAccountAction] = useState<
     { type: "create-smart-edit"; ratio: CanvasRatio } | null
   >(null);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const route = resolveAppRoute(window.location.pathname);
+      if (!route) {
+        // Routes outside the app (including the marketing homepage) must be
+        // handled by Next.js rather than leaving the previous app view visible.
+        window.location.assign(window.location.href);
+        return;
+      }
+
+      setView(route.view);
+      setProjectSlug(route.projectSlug ?? null);
+      setSmartEditProjectId(route.smartEditProjectId ?? null);
+      setOverlay(null);
+      setSheetEntered(route.view === "project");
+      setMyEntered(route.view === "my");
+      setSavedEntered(route.view === "saved");
+      setReturning(null);
+      setCarouselHidden(false);
+      setSwipe({ active: false, phase: "idle", direction: null, targetSlug: null, x: 0 });
+      folio.closeHole();
+      busy.current = false;
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [folio]);
 
   const busy = useRef(false);
   /** ONE Smart Edit open-or-create flow at a time. Rapid taps on either
@@ -155,6 +211,7 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
     folio.openHole(window.innerWidth / 2, window.innerHeight / 2);
     await wait(500);
     setView(next);
+    navigateToAppPath(next === "my" ? "/create/my" : next === "saved" ? "/create/saved" : "/create");
     setMyEntered(false);
     setSavedEntered(false);
     await wait(120);
@@ -169,6 +226,7 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
   const openProject = useCallback(async (slug: string, fromCard: boolean) => {
     if (busy.current || overlay) return;
     busy.current = true;
+    navigateToAppPath(`/create/project/${encodeURIComponent(slug)}`);
     const entry = folio.cards.find((c) => c.slug === slug);
     if (fromCard && entry) {
       setCarouselHidden(true);
@@ -207,6 +265,7 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
     setSheetEntered(false);
     await wait(260);
     setView("home");
+    navigateToAppPath("/create", true);
     setProjectSlug(null);
     setReturning(slug);
     const entry = slug ? folio.cards.find((c) => c.slug === slug) : null;
@@ -227,6 +286,7 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
   const switchProject = useCallback((slug: string) => {
     if (busy.current || slug === projectSlug) return;
     setProjectSlug(slug);
+    navigateToAppPath(`/create/project/${encodeURIComponent(slug)}`, true);
     setSwipe({ active: false, phase: "idle", direction: null, targetSlug: null, x: 0 });
     setSheetEntered(true);
   }, [projectSlug]);
@@ -258,6 +318,7 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
     setSwipe((s) => ({ ...s, phase: "commit" }));
     window.setTimeout(() => {
       setProjectSlug(targetSlug);
+      navigateToAppPath(`/create/project/${encodeURIComponent(targetSlug)}`, true);
       setSwipe({ active: false, phase: "idle", direction: null, targetSlug: null, x: 0 });
       busy.current = false;
     }, 360);
@@ -267,6 +328,15 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
   const openSmartEdit = useCallback(async (projectId: string) => {
     if (busy.current) return;
     busy.current = true;
+    try {
+      const returnPath = window.location.pathname + window.location.search;
+      if (!window.location.pathname.startsWith("/smart-edit/")) {
+        window.sessionStorage.setItem(`paper-stish:return:${projectId}`, returnPath);
+      }
+    } catch {
+      // Returning to My Projects remains the safe fallback if session storage is blocked.
+    }
+    navigateToAppPath(`/smart-edit/${encodeURIComponent(projectId)}`);
     setSmartEditProjectId(projectId);
     folio.openHole(window.innerWidth / 2, window.innerHeight / 2);
     await wait(500);
@@ -280,8 +350,19 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
   const closeSmartEdit = useCallback(async () => {
     if (busy.current) return;
     busy.current = true;
+    const closingProjectId = smartEditProjectId;
+    let returnPath: string | null = null;
+    try {
+      returnPath = safeAppReturnPath(
+        closingProjectId ? window.sessionStorage.getItem(`paper-stish:return:${closingProjectId}`) : null,
+      );
+      if (closingProjectId) window.sessionStorage.removeItem(`paper-stish:return:${closingProjectId}`);
+    } catch {
+      // The fallback route below does not depend on browser storage.
+    }
     folio.openHole(window.innerWidth / 2, window.innerHeight / 2);
     await wait(420);
+    navigateToAppPath(returnPath ?? "/create/my", true);
     setView("my");
     setSmartEditProjectId(null);
     setMyEntered(false);
@@ -289,7 +370,7 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
     await wait(220);
     setMyEntered(true);
     busy.current = false;
-  }, [folio]);
+  }, [folio, smartEditProjectId]);
 
   const performCreateSmartEdit = useCallback(
     async (ratio: CanvasRatio) => {
@@ -391,6 +472,7 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
     if (busy.current) return;
     if (overlay) closeOverlay();
     if (view === "website-templates") return;
+    navigateToAppPath("/website-templates");
     setView("website-templates");
     setProjectSlug(null);
     setReturning(null);
@@ -404,6 +486,7 @@ function AppContent({ folio, initialView }: { folio: Folio; initialView: View })
 
   const closeWebsiteTemplates = useCallback(() => {
     if (busy.current) return;
+    navigateToAppPath("/create", true);
     setView("home");
     setProjectSlug(null);
     setReturning(null);
