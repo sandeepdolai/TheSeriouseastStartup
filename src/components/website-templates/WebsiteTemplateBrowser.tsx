@@ -15,6 +15,24 @@ function isEditableSlug(slug: string): slug is WebsiteEditorTemplateSlug {
   return slug === "red-letter" || slug === "introducing-him" || slug === "love-of-my-life" || slug === "birthday-template" || slug === "birthday-today" || slug === "photo-album" || slug === "love-heart" || slug === "forever-and-ever" || slug === "our-calendar";
 }
 
+function rememberReturnPath(key: string, path: string): void {
+  try {
+    window.sessionStorage.setItem(key, path);
+  } catch {
+    // Deep links must still work if session storage is unavailable.
+  }
+}
+
+function takeReturnPath(key: string): string | null {
+  try {
+    const value = window.sessionStorage.getItem(key);
+    window.sessionStorage.removeItem(key);
+    return value && value.startsWith("/") && !value.startsWith("//") ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Browse fixed website themes, preview one, then edit only its images and text. */
 export function WebsiteTemplateBrowser({
   draftToOpen = null,
@@ -47,8 +65,12 @@ export function WebsiteTemplateBrowser({
       setSelectedSlug(slug);
       setEditingProjectId(existingProjectId);
       setEditingSlug(slug);
+      const currentUrl = new URL(window.location.href);
+      if (!currentUrl.pathname.endsWith("/edit")) {
+        rememberReturnPath(`paper-stish:return:website-edit:${existingProjectId}`, currentUrl.pathname + currentUrl.search);
+      }
       const editPath = `/website-templates/${encodeURIComponent(slug)}/edit?draft=${encodeURIComponent(existingProjectId)}`;
-      navigateToAppPath(editPath, window.location.pathname === `/website-templates/${slug}/edit` && !new URL(window.location.href).searchParams.has("draft"));
+      navigateToAppPath(editPath, currentUrl.pathname === `/website-templates/${slug}/edit` && !currentUrl.searchParams.has("draft"));
       return;
     }
 
@@ -76,6 +98,9 @@ export function WebsiteTemplateBrowser({
     setEditingProjectId(id);
     setEditingSlug(slug);
     const currentUrl = new URL(window.location.href);
+    if (!currentUrl.pathname.endsWith("/edit")) {
+      rememberReturnPath(`paper-stish:return:website-edit:${id}`, currentUrl.pathname + currentUrl.search);
+    }
     const incompleteEditRoute = currentUrl.pathname === `/website-templates/${slug}/edit` && !currentUrl.searchParams.has("draft");
     navigateToAppPath(
       `/website-templates/${encodeURIComponent(slug)}/edit?draft=${encodeURIComponent(id)}`,
@@ -154,6 +179,10 @@ export function WebsiteTemplateBrowser({
     setSelectedSlug(draftToOpen.templateSlug);
     setEditingProjectId(draftToOpen.projectId);
     setEditingSlug(draftToOpen.templateSlug);
+    rememberReturnPath(
+      `paper-stish:return:website-edit:${draftToOpen.projectId}`,
+      window.location.pathname + window.location.search,
+    );
     navigateToAppPath(
       `/website-templates/${encodeURIComponent(draftToOpen.templateSlug)}/edit?draft=${encodeURIComponent(draftToOpen.projectId)}`,
     );
@@ -227,9 +256,12 @@ export function WebsiteTemplateBrowser({
 
   const selectProject = useCallback((slug: string) => {
     if (!WEBSITE_TEMPLATES.some((project) => project.slug === slug)) return;
+    const nextPath = `/website-templates/${encodeURIComponent(slug)}`;
+    const currentPath = window.location.pathname + window.location.search;
+    if (currentPath !== nextPath) rememberReturnPath("paper-stish:return:website-preview", currentPath);
     setSelectedSlug(slug);
     setSwipe({ phase: "idle", direction: null, x: 0 });
-    navigateToAppPath(`/website-templates/${encodeURIComponent(slug)}`);
+    navigateToAppPath(nextPath);
   }, []);
 
   const beginSwipe = useCallback((direction: -1 | 1) => {
@@ -275,7 +307,10 @@ export function WebsiteTemplateBrowser({
         templateSlug={editingSlug}
         projectId={editingProjectId}
         onClose={() => {
-          if (editingSlug) navigateToAppPath(`/website-templates/${encodeURIComponent(editingSlug)}`, true);
+          const projectId = editingProjectId;
+          const returnPath = projectId ? takeReturnPath(`paper-stish:return:website-edit:${projectId}`) : null;
+          if (returnPath && window.history.length > 1) window.history.back();
+          else if (editingSlug) navigateToAppPath(`/website-templates/${encodeURIComponent(editingSlug)}`, true);
           setEditingProjectId(null);
           setEditingSlug(null);
         }}
@@ -313,7 +348,9 @@ export function WebsiteTemplateBrowser({
           onSwipeCancel={cancelSwipe}
           onSwipeCommit={commitSwipe}
           onClose={() => {
-            navigateToAppPath("/website-templates", true);
+            const returnPath = takeReturnPath("paper-stish:return:website-preview");
+            if (returnPath && window.history.length > 1) window.history.back();
+            else navigateToAppPath("/website-templates", true);
             setSelectedSlug(null);
             setSwipe({ phase: "idle", direction: null, x: 0 });
           }}
