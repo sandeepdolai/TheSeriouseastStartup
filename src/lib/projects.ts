@@ -24,6 +24,16 @@ export const FEATURED: Project[] = [];
 /** Curated website templates available in the website-template browser. */
 export const WEBSITE_TEMPLATES: Project[] = [
   {
+    title: "A Little Red Letter",
+    slug: "red-letter",
+    description: "A dimensional red envelope opens to the same personal letter, which expands into a 2:3 full-screen sheet.",
+    link: null,
+    tags: [],
+    awards: 0,
+    aspect: 1,
+    media: [`${BASE_PATH}/website-templates/red-letter-preview.svg`],
+  },
+  {
     title: "Love Heart",
     slug: "love-heart",
     description: "A glowing heart formed from “I love you” in 20 languages, with a slow reveal and soft recurring shimmer.",
