@@ -98,7 +98,7 @@ export function RedLetterTemplate({
           "  window.parent.postMessage({ source: frameSource, type: 'ready' }, '*');",
           "})();",
           "</script>",
-        ].join("\\n");
+        ].join("\n");
         const bodyClose = source.toLowerCase().lastIndexOf("</body>");
         const bridged = bodyClose >= 0
           ? source.slice(0, bodyClose) + bridgeScript + source.slice(bodyClose)
