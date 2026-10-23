@@ -204,6 +204,7 @@ export function WebsiteEditor({
     templateSlug === "red-letter" ? "a-little-letter" : templateSlug === "introducing-him" ? "introducing-him" : templateSlug === "birthday-today" ? "birthday-today" : templateSlug === "photo-album" ? "photo-album" : templateSlug === "birthday-template" ? "birthday" : templateSlug === "love-heart" ? "love-heart" : templateSlug === "forever-and-ever" ? "forever-and-ever" : "our-story",
   );
   const [draftReady, setDraftReady] = useState(false);
+  const [draftMissing, setDraftMissing] = useState(false);
   const [draftSaveError, setDraftSaveError] = useState("");
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
   const migratedLegacyDraft = useRef(false);
@@ -338,6 +339,17 @@ export function WebsiteEditor({
         }
       }
 
+      // A direct draft URL must never silently become a fresh, blank editor.
+      // Newly-created drafts have a project record, while a truly missing record
+      // may only proceed if a valid legacy payload was recovered above.
+      const hasLegacyValues =
+        draft.values && typeof draft.values === "object" && !Array.isArray(draft.values);
+      if (!project && !hasLegacyValues) {
+        setDraftMissing(true);
+        setDraftReady(true);
+        return;
+      }
+
       const rememberedUsername = window.localStorage.getItem("paper-stish-publish-username");
       if (rememberedUsername) setUsername(rememberedUsername.slice(0, 60));
 
@@ -426,7 +438,10 @@ export function WebsiteEditor({
     };
 
     void restoreDraft().catch(() => {
-      if (!cancelled) setDraftReady(true);
+      if (!cancelled) {
+        setDraftMissing(true);
+        setDraftReady(true);
+      }
     });
 
     return () => {
@@ -435,7 +450,7 @@ export function WebsiteEditor({
   }, [templateSlug, projectId, session?.user?.email, status]);
 
   useEffect(() => {
-    if (!draftReady || status === "loading") return;
+    if (!draftReady || draftMissing || status === "loading") return;
     const account = getAccountKey(session?.user?.email);
     const thumbnailTitle = values.heading?.trim().slice(0, 120) || title;
     const snapshot = {
@@ -476,6 +491,7 @@ export function WebsiteEditor({
       });
   }, [
     draftReady,
+    draftMissing,
     projectId,
     templateSlug,
     title,
@@ -707,6 +723,53 @@ export function WebsiteEditor({
       setCopyStatus("QR code saved as PNG.");
     }, "image/png");
   };
+
+  if (draftMissing) {
+    return (
+      <main
+        className={styles.screen}
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 100,
+          display: "grid",
+          placeItems: "center",
+          padding: "28px",
+          background: "#0a0a0a",
+          color: "#fff",
+          textAlign: "center",
+        }}
+      >
+        <div style={{ width: "min(100%, 420px)" }}>
+          <p style={{ fontSize: 23, letterSpacing: "-0.04em", margin: "0 0 10px" }}>
+            Draft not found on this device
+          </p>
+          <p style={{ color: "rgba(255,255,255,.58)", fontSize: 13, lineHeight: 1.65, margin: "0 auto" }}>
+            This link stores the draft ID, not the draft content. Open it in the same
+            browser and device where you edited it, or return to the template gallery.
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              marginTop: 24,
+              minHeight: 44,
+              padding: "0 20px",
+              borderRadius: 999,
+              border: 0,
+              background: "#fff",
+              color: "#111",
+              fontSize: 13,
+              fontWeight: 650,
+              cursor: "pointer",
+            }}
+          >
+            Back to template
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className={styles.screen}>
