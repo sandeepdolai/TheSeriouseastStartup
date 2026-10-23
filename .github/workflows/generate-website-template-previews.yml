@@ -9,6 +9,7 @@ on:
       - "public/website-templates/love-heart.html.gz.b64"
       - "public/website-templates/forever-and-ever.html.gz.b64"
       - "public/website-templates/introducing-him.html.gz.b64"
+      - "public/website-templates/red-letter.html.gz.b64"
       - "public/website-templates/our-calendar-source.html"
       - "public/website-templates/our-calendar-cake.png"
       - "src/lib/projects.ts"
@@ -32,7 +33,9 @@ jobs:
   generate:
     # Do not write a token or generated commits into an external fork.
     if: github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
+    # Playwright 1.52 supports Ubuntu 24.04; keep the preview runner explicit
+    # so a hosted "latest" image upgrade does not break browser installation.
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out the PR branch
         uses: actions/checkout@v4

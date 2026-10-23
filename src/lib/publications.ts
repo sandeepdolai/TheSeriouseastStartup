@@ -37,6 +37,7 @@ export const PUBLISHABLE_TEMPLATE_SLUGS = [
   "forever-and-ever",
   "our-calendar",
   "introducing-him",
+  "red-letter",
 ] as const;
 
 export type PublishableTemplateSlug = (typeof PUBLISHABLE_TEMPLATE_SLUGS)[number];

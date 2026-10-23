@@ -18,6 +18,7 @@ import { IntroducingHimTemplate } from "@/components/website-templates/Introduci
 import { ForeverAndEverTemplate } from "@/components/website-templates/ForeverAndEverTemplate";
 import { OurCalendarTemplate } from "@/components/website-templates/OurCalendarTemplate";
 import { BirthdayTodayTemplate } from "@/components/website-templates/BirthdayTodayTemplate";
+import { RedLetterTemplate } from "@/components/website-templates/RedLetterTemplate";
 
 interface Props {
   username: string;
@@ -117,6 +118,10 @@ export function PublishedTemplateViewer({
     // This is especially important for templates that initialize a document
     // or animation in an iframe and must receive a fresh initial snapshot.
     const publicationKey = `${templateId}:${serverPublication.templateSlug}:${serverPublication.publishedAt}`;
+
+    if (serverPublication.templateSlug === "red-letter" && serverPublication.values) {
+      return <RedLetterTemplate key={publicationKey} values={serverPublication.values} />;
+    }
 
     if (serverPublication.templateSlug === "introducing-him" && serverPublication.values) {
       return <IntroducingHimTemplate key={publicationKey} values={serverPublication.values} />;

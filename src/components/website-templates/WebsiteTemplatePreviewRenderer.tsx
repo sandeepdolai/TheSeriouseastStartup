@@ -7,6 +7,7 @@ import { OurCalendarTemplate } from "./OurCalendarTemplate";
 import { PhotoAlbumTemplate } from "./PhotoAlbumTemplate";
 
 export type WebsiteTemplatePreviewSlug =
+  | "red-letter"
   | "love-heart"
   | "forever-and-ever"
   | "our-calendar"
@@ -27,7 +28,7 @@ export function WebsiteTemplatePreviewRenderer({
   slug: WebsiteTemplatePreviewSlug;
 }) {
   const [previewReady, setPreviewReady] = useState(false);
-  const usesStaticHtml = slug === "love-heart" || slug === "forever-and-ever" || slug === "introducing-him";
+  const usesStaticHtml = slug === "red-letter" || slug === "love-heart" || slug === "forever-and-ever" || slug === "introducing-him";
 
   useEffect(() => {
     let cancelled = false;
@@ -94,6 +95,17 @@ export function WebsiteTemplatePreviewRenderer({
 
   let template: ReactNode;
   switch (slug) {
+    case "red-letter":
+      template = (
+        <iframe
+          title="A Little Red Letter website preview"
+          src="/website-templates/red-letter.html"
+          sandbox="allow-scripts"
+          referrerPolicy="no-referrer"
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+        />
+      );
+      break;
     case "love-heart":
       template = (
         <iframe
