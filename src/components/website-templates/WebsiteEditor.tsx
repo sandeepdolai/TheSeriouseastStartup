@@ -588,9 +588,9 @@ export function WebsiteEditor({
         callbackUrl:
           window.location.origin +
           basePath +
-          "/website-templates?edit=" +
+          "/website-templates/" +
           encodeURIComponent(templateSlug) +
-          "&draft=" +
+          "/edit?draft=" +
           encodeURIComponent(projectId),
       });
       return;
