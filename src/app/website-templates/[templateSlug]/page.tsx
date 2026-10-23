@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { WEBSITE_TEMPLATES } from "@/lib/projects";
 import { AuthProvider } from "@/components/AuthProvider";
 import { FolioProvider } from "@/gl/react";
 import { App } from "@/components/App";
@@ -9,7 +11,14 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function WebsiteTemplateDetailPage() {
+export default async function WebsiteTemplateDetailPage({
+  params,
+}: {
+  params: Promise<{ templateSlug: string }>;
+}) {
+  const { templateSlug } = await params;
+  if (!WEBSITE_TEMPLATES.some((template) => template.slug === templateSlug)) notFound();
+
   return (
     <AuthProvider>
       <FolioProvider>
