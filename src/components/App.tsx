@@ -228,6 +228,11 @@ function AppContent({
   const openProject = useCallback(async (slug: string, fromCard: boolean) => {
     if (busy.current || overlay) return;
     busy.current = true;
+    try {
+      window.sessionStorage.setItem("paper-stish:return:featured-project", window.location.pathname + window.location.search);
+    } catch {
+      // A deep link still works when session storage is unavailable.
+    }
     navigateToAppPath(`/create/project/${encodeURIComponent(slug)}`);
     const entry = folio.cards.find((c) => c.slug === slug);
     if (fromCard && entry) {
@@ -264,10 +269,18 @@ function AppContent({
     if (busy.current) return;
     busy.current = true;
     const slug = projectSlug;
+    let returnPath: string | null = null;
+    try {
+      returnPath = safeAppReturnPath(window.sessionStorage.getItem("paper-stish:return:featured-project"));
+      window.sessionStorage.removeItem("paper-stish:return:featured-project");
+    } catch {
+      // Fall back to the base app route.
+    }
     setSheetEntered(false);
     await wait(260);
     setView("home");
-    navigateToAppPath("/create", true);
+    if (returnPath && window.history.length > 1) window.history.back();
+    else navigateToAppPath("/create", true);
     setProjectSlug(null);
     setReturning(slug);
     const entry = slug ? folio.cards.find((c) => c.slug === slug) : null;
@@ -362,12 +375,14 @@ function AppContent({
     } catch {
       // The fallback route below does not depend on browser storage.
     }
+    const returnViaHistory = Boolean(returnPath) && window.history.length > 1;
 
     const targetPath = returnPath ?? "/create/my";
     const targetView = resolveAppRoute(new URL(targetPath, window.location.origin).pathname)?.view ?? "my";
     folio.openHole(window.innerWidth / 2, window.innerHeight / 2);
     await wait(420);
-    navigateToAppPath(targetPath, true);
+    if (returnViaHistory) window.history.back();
+    else navigateToAppPath(targetPath, true);
     setView(targetView);
     setSmartEditProjectId(null);
     setProjectSlug(targetView === "project" ? resolveAppRoute(new URL(targetPath, window.location.origin).pathname)?.projectSlug ?? null : null);
