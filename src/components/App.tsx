@@ -108,6 +108,26 @@ function AppContent({
     { type: "create-smart-edit"; ratio: CanvasRatio } | null
   >(null);
 
+
+
+  const busy = useRef(false);
+  /** ONE Smart Edit open-or-create flow at a time. Rapid taps on either
+   *  entry point (Profile → Smart Edit, My Projects → New Smart Edit) can
+   *  never run concurrent flows — so they can never create duplicate
+   *  project records (the project id is generated exactly once, inside
+   *  this gate). */
+  const smartEditAction = useRef(false);
+  const carouselApi = useRef<{ center: (slug: string) => void }>({ center: () => {} });
+
+  const project = FEATURED.find((p) => p.slug === projectSlug) ?? null;
+  const [swipe, setSwipe] = useState<{
+    active: boolean;
+    phase: "idle" | "drag" | "commit" | "cancel";
+    direction: -1 | 1 | null;
+    targetSlug: string | null;
+    x: number;
+  }>({ active: false, phase: "idle", direction: null, targetSlug: null, x: 0 });
+
   useEffect(() => {
     const handlePopState = () => {
       const route = resolveAppRoute(window.location.pathname);
@@ -135,24 +155,6 @@ function AppContent({
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, [folio]);
-
-  const busy = useRef(false);
-  /** ONE Smart Edit open-or-create flow at a time. Rapid taps on either
-   *  entry point (Profile → Smart Edit, My Projects → New Smart Edit) can
-   *  never run concurrent flows — so they can never create duplicate
-   *  project records (the project id is generated exactly once, inside
-   *  this gate). */
-  const smartEditAction = useRef(false);
-  const carouselApi = useRef<{ center: (slug: string) => void }>({ center: () => {} });
-
-  const project = FEATURED.find((p) => p.slug === projectSlug) ?? null;
-  const [swipe, setSwipe] = useState<{
-    active: boolean;
-    phase: "idle" | "drag" | "commit" | "cancel";
-    direction: -1 | 1 | null;
-    targetSlug: string | null;
-    x: number;
-  }>({ active: false, phase: "idle", direction: null, targetSlug: null, x: 0 });
 
   const adjacentSlug = useCallback((slug: string, direction: -1 | 1) => {
     const index = FEATURED.findIndex((item) => item.slug === slug);
@@ -360,15 +362,22 @@ function AppContent({
     } catch {
       // The fallback route below does not depend on browser storage.
     }
+
+    const targetPath = returnPath ?? "/create/my";
+    const targetView = resolveAppRoute(new URL(targetPath, window.location.origin).pathname)?.view ?? "my";
     folio.openHole(window.innerWidth / 2, window.innerHeight / 2);
     await wait(420);
-    navigateToAppPath(returnPath ?? "/create/my", true);
-    setView("my");
+    navigateToAppPath(targetPath, true);
+    setView(targetView);
     setSmartEditProjectId(null);
+    setProjectSlug(targetView === "project" ? resolveAppRoute(new URL(targetPath, window.location.origin).pathname)?.projectSlug ?? null : null);
+    setSheetEntered(targetView === "project");
     setMyEntered(false);
+    setSavedEntered(false);
     folio.closeHole();
     await wait(220);
-    setMyEntered(true);
+    if (targetView === "my") setMyEntered(true);
+    if (targetView === "saved") setSavedEntered(true);
     busy.current = false;
   }, [folio, smartEditProjectId]);
 
