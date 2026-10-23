@@ -16,6 +16,7 @@ import { isValidCalendarHeartDate } from "@/lib/calendarHeartValue";
 import { PhotoAlbumTemplate, DEFAULT_ALBUM_CAPTIONS, DEFAULT_ALBUM_PHOTOS } from "./PhotoAlbumTemplate";
 import { BirthdayTodayTemplate } from "./BirthdayTodayTemplate";
 import { LoveHeartTemplate } from "./LoveHeartTemplate";
+import { RedLetterTemplate } from "./RedLetterTemplate";
 import { IntroducingHimTemplate, INTRODUCING_HIM_DEFAULTS } from "./IntroducingHimTemplate";
 import {
   FOREVER_AND_EVER_TEXT_DEFAULTS,
@@ -27,7 +28,7 @@ import { LoveOfMyLifeTemplate } from "./LoveOfMyLifeTemplate";
 import { qrCodeMatrix, qrCodeSvgPath } from "@/lib/qrCode";
 import styles from "./WebsiteEditor.module.css";
 
-export type WebsiteEditorTemplateSlug = "love-of-my-life" | "birthday-template" | "birthday-today" | "photo-album" | "love-heart" | "forever-and-ever" | "our-calendar" | "introducing-him";
+export type WebsiteEditorTemplateSlug = "love-of-my-life" | "birthday-template" | "birthday-today" | "photo-album" | "love-heart" | "forever-and-ever" | "our-calendar" | "introducing-him" | "red-letter";
 
 type EditableWebsiteField =
   | "heading"
@@ -89,6 +90,14 @@ const TEXT_DEFAULTS: Record<WebsiteEditorTemplateSlug, TemplatePublicationValues
     images: [],
     captions: [],
   },
+  "red-letter": {
+    heading: "A little letter for you",
+    message: "I wanted to leave you a little reminder that you mean more to me than I always know how to say.",
+    signature: "With love,",
+    photoUrl: null,
+    images: [],
+    captions: [],
+  },
   "forever-and-ever": {
     heading: FOREVER_AND_EVER_TEXT_DEFAULTS.heading,
     message: "",
@@ -120,6 +129,7 @@ const TEMPLATE_TITLES: Record<WebsiteEditorTemplateSlug, string> = {
   "birthday-today": "who’s birthday is it today?",
   "photo-album": "Photo Album",
   "love-heart": "Love Heart",
+  "red-letter": "A Little Red Letter",
   "forever-and-ever": "I love you forever and ever, my baby!",
   "our-calendar": "Our Calendar",
   "introducing-him": "Introducing Him",
@@ -191,7 +201,7 @@ export function WebsiteEditor({
   const [values, setValues] = useState<TemplatePublicationValues>(() => defaultValues(templateSlug));
   const [username, setUsername] = useState("");
   const [websiteName, setWebsiteName] = useState(
-    templateSlug === "introducing-him" ? "introducing-him" : templateSlug === "birthday-today" ? "birthday-today" : templateSlug === "photo-album" ? "photo-album" : templateSlug === "birthday-template" ? "birthday" : templateSlug === "love-heart" ? "love-heart" : templateSlug === "forever-and-ever" ? "forever-and-ever" : "our-story",
+    templateSlug === "red-letter" ? "a-little-letter" : templateSlug === "introducing-him" ? "introducing-him" : templateSlug === "birthday-today" ? "birthday-today" : templateSlug === "photo-album" ? "photo-album" : templateSlug === "birthday-template" ? "birthday" : templateSlug === "love-heart" ? "love-heart" : templateSlug === "forever-and-ever" ? "forever-and-ever" : "our-story",
   );
   const [draftReady, setDraftReady] = useState(false);
   const [draftSaveError, setDraftSaveError] = useState("");
@@ -709,7 +719,9 @@ export function WebsiteEditor({
         onChange={(event) => void choosePhoto(event.currentTarget.files)}
       />
 
-      {templateSlug === "introducing-him" ? (
+      {templateSlug === "red-letter" ? (
+        <RedLetterTemplate values={values} editing onTextChange={changeText} onExit={onClose} />
+      ) : templateSlug === "introducing-him" ? (
         <IntroducingHimTemplate values={values} editing onTextChange={changeText} onPhotoClick={() => openPhotoChooser(0)} onExit={onClose} />
       ) : templateSlug === "love-heart" ? (
         <LoveHeartTemplate
