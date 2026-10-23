@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { getAccountKey } from "@/lib/accountStorage";
 import { listLocalProjects } from "@/lib/localProjects";
@@ -29,9 +29,43 @@ interface LocalProject {
 }
 
 export function MyProjects({ entered, onOpenProject, onCreateSmartEdit }: Props) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [projects, setProjects] = useState<LocalProject[]>([]);
   const [ratioPanelOpen, setRatioPanelOpen] = useState(false);
   const { data: session, status } = useSession();
+
+  useEffect(() => {
+    const element = scrollContainerRef.current;
+    if (!element) return;
+    const key = "paper-stish:scroll:/create/my";
+    try {
+      const raw = window.sessionStorage.getItem(key);
+      const position = raw === null ? 0 : Number(raw);
+      if (Number.isFinite(position) && position >= 0) element.scrollTop = position;
+    } catch {
+      // Scroll restoration is a convenience; navigation must still work without storage.
+    }
+
+    let timer: number | null = null;
+    const persist = () => {
+      try {
+        window.sessionStorage.setItem(key, String(element.scrollTop));
+      } catch {
+        // Ignore storage restrictions.
+      }
+      timer = null;
+    };
+    const onScroll = () => {
+      if (timer !== null) window.clearTimeout(timer);
+      timer = window.setTimeout(persist, 100);
+    };
+    element.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      element.removeEventListener("scroll", onScroll);
+      if (timer !== null) window.clearTimeout(timer);
+      persist();
+    };
+  }, []);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -53,6 +87,7 @@ export function MyProjects({ entered, onOpenProject, onCreateSmartEdit }: Props)
   return (
     <main className="fixed inset-0 z-20 overflow-hidden" data-gl-shield="">
       <div
+        ref={scrollContainerRef}
         className="absolute inset-0 overflow-y-auto px-20 py-28 s:px-0 s:py-32"
         style={{ opacity: entered ? 1 : 0, transition: "opacity 0.3s" }}
       >
