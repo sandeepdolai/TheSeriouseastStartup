@@ -15,6 +15,15 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   poweredByHeader: false,
+  async rewrites() {
+    // Keep the reference landing page as the public homepage while preserving
+    // the existing interactive app at /create and /website-templates.
+    return {
+      beforeFiles: [
+        { source: "/", destination: "/landing/index.html" },
+      ],
+    };
+  },
   async headers() {
     return [
       {
