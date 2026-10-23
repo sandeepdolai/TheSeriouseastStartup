@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { FEATURED } from "@/lib/projects";
 import { AuthProvider } from "@/components/AuthProvider";
 import { FolioProvider } from "@/gl/react";
 import { App } from "@/components/App";
@@ -14,6 +16,7 @@ export default async function FeaturedProjectPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  if (!FEATURED.some((project) => project.slug === slug)) notFound();
 
   return (
     <AuthProvider>
