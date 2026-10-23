@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useFolio } from "@/gl/react";
 import { getAccountKey } from "@/lib/accountStorage";
 import { putLocalProject } from "@/lib/localProjects";
+import { navigateToAppPath } from "@/lib/appRoutes";
 import { WEBSITE_TEMPLATES } from "@/lib/projects";
 import { HomeCarousel } from "../HomeCarousel";
 import { ProjectSheet } from "../ProjectSheet";
@@ -12,6 +13,24 @@ import { WebsiteEditor, type WebsiteEditorTemplateSlug } from "./WebsiteEditor";
 
 function isEditableSlug(slug: string): slug is WebsiteEditorTemplateSlug {
   return slug === "red-letter" || slug === "introducing-him" || slug === "love-of-my-life" || slug === "birthday-template" || slug === "birthday-today" || slug === "photo-album" || slug === "love-heart" || slug === "forever-and-ever" || slug === "our-calendar";
+}
+
+function rememberReturnPath(key: string, path: string): void {
+  try {
+    window.sessionStorage.setItem(key, path);
+  } catch {
+    // Deep links must still work if session storage is unavailable.
+  }
+}
+
+function takeReturnPath(key: string): string | null {
+  try {
+    const value = window.sessionStorage.getItem(key);
+    window.sessionStorage.removeItem(key);
+    return value && value.startsWith("/") && !value.startsWith("//") ? value : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Browse fixed website themes, preview one, then edit only its images and text. */
@@ -26,6 +45,7 @@ export function WebsiteTemplateBrowser({
   const { data: session } = useSession();
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [editingSlug, setEditingSlug] = useState<WebsiteEditorTemplateSlug | null>(null);
+  const appliedRouteRef = useRef("");
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [draftError, setDraftError] = useState("");
   const [selectedIsSaved, setSelectedIsSaved] = useState(false);
@@ -42,8 +62,15 @@ export function WebsiteTemplateBrowser({
 
     if (existingProjectId) {
       setDraftError("");
+      setSelectedSlug(slug);
       setEditingProjectId(existingProjectId);
       setEditingSlug(slug);
+      const currentUrl = new URL(window.location.href);
+      if (!currentUrl.pathname.endsWith("/edit")) {
+        rememberReturnPath(`paper-stish:return:website-edit:${existingProjectId}`, currentUrl.pathname + currentUrl.search);
+      }
+      const editPath = `/website-templates/${encodeURIComponent(slug)}/edit?draft=${encodeURIComponent(existingProjectId)}`;
+      navigateToAppPath(editPath, currentUrl.pathname === `/website-templates/${slug}/edit` && !currentUrl.searchParams.has("draft"));
       return;
     }
 
@@ -67,32 +94,98 @@ export function WebsiteTemplateBrowser({
     }
 
     setDraftError("");
+    setSelectedSlug(slug);
     setEditingProjectId(id);
     setEditingSlug(slug);
+    const currentUrl = new URL(window.location.href);
+    if (!currentUrl.pathname.endsWith("/edit")) {
+      rememberReturnPath(`paper-stish:return:website-edit:${id}`, currentUrl.pathname + currentUrl.search);
+    }
+    const incompleteEditRoute = currentUrl.pathname === `/website-templates/${slug}/edit` && !currentUrl.searchParams.has("draft");
+    navigateToAppPath(
+      `/website-templates/${encodeURIComponent(slug)}/edit?draft=${encodeURIComponent(id)}`,
+      incompleteEditRoute || currentUrl.searchParams.has("edit"),
+    );
   }, [session?.user?.email]);
 
-  // After Google sign-in, resume the same local project and open its publish
-  // dialog, rather than creating a second draft.
+  // Direct URLs and browser Back/Forward restore the selected template or exact
+  // device-local draft. The URL contains only the draft id, never draft content.
   useEffect(() => {
-    const url = new URL(window.location.href);
-    const requestedSlug = url.searchParams.get("edit");
-    const requestedDraftId = url.searchParams.get("draft");
-    if (requestedSlug && isEditableSlug(requestedSlug)) {
-      void beginEditing(requestedSlug, requestedDraftId ?? undefined);
-    }
-    if (url.searchParams.has("edit") || url.searchParams.has("draft")) {
-      url.searchParams.delete("edit");
-      url.searchParams.delete("draft");
-      window.history.replaceState(window.history.state, "", url.toString());
-    }
+    const applyRoute = () => {
+      let url = new URL(window.location.href);
+      const legacySlug = url.pathname === "/website-templates" ? url.searchParams.get("edit") : null;
+      const legacyDraftId = url.searchParams.get("draft");
+      if (legacySlug && isEditableSlug(legacySlug)) {
+        const canonical = `/website-templates/${encodeURIComponent(legacySlug)}/edit${legacyDraftId ? `?draft=${encodeURIComponent(legacyDraftId)}` : ""}`;
+        navigateToAppPath(canonical, true);
+        url = new URL(window.location.href);
+      }
+
+      const key = url.pathname + url.search;
+      if (appliedRouteRef.current === key) return;
+      appliedRouteRef.current = key;
+
+      const match = url.pathname.match(/^\/website-templates\/([^/]+)(\/edit)?\/?$/);
+      let pathSlug: string | null = null;
+      if (match?.[1]) {
+        try {
+          pathSlug = decodeURIComponent(match[1]);
+        } catch {
+          pathSlug = null;
+        }
+      }
+
+      const requestedSlug = match?.[2] ? pathSlug : legacySlug;
+      const requestedDraftId = url.searchParams.get("draft");
+      if (requestedSlug && isEditableSlug(requestedSlug) && (match?.[2] || legacySlug)) {
+        setSelectedSlug(requestedSlug);
+        void beginEditing(requestedSlug, requestedDraftId ?? undefined);
+        return;
+      }
+
+      const knownTemplate = pathSlug && WEBSITE_TEMPLATES.some((item) => item.slug === pathSlug);
+      if (pathSlug && knownTemplate && !match?.[2]) {
+        setEditingProjectId(null);
+        setEditingSlug(null);
+        setSelectedSlug(pathSlug);
+        return;
+      }
+
+      if (
+        url.pathname === "/website-templates" ||
+        url.pathname === "/website-templates/" ||
+        url.pathname === "/create/website-templates"
+      ) {
+        setEditingProjectId(null);
+        setEditingSlug(null);
+        setSelectedSlug(null);
+      }
+    };
+
+    const handlePopState = () => {
+      appliedRouteRef.current = "";
+      applyRoute();
+    };
+
+    applyRoute();
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
   }, [beginEditing]);
 
   // Opening a website project from My should resume that exact draft.
   useEffect(() => {
     if (!draftToOpen || !isEditableSlug(draftToOpen.templateSlug)) return;
     setDraftError("");
+    setSelectedSlug(draftToOpen.templateSlug);
     setEditingProjectId(draftToOpen.projectId);
     setEditingSlug(draftToOpen.templateSlug);
+    rememberReturnPath(
+      `paper-stish:return:website-edit:${draftToOpen.projectId}`,
+      window.location.pathname + window.location.search,
+    );
+    navigateToAppPath(
+      `/website-templates/${encodeURIComponent(draftToOpen.templateSlug)}/edit?draft=${encodeURIComponent(draftToOpen.projectId)}`,
+    );
     onDraftOpened?.();
   }, [draftToOpen, onDraftOpened]);
 
@@ -163,8 +256,12 @@ export function WebsiteTemplateBrowser({
 
   const selectProject = useCallback((slug: string) => {
     if (!WEBSITE_TEMPLATES.some((project) => project.slug === slug)) return;
+    const nextPath = `/website-templates/${encodeURIComponent(slug)}`;
+    const currentPath = window.location.pathname + window.location.search;
+    if (currentPath !== nextPath) rememberReturnPath("paper-stish:return:website-preview", currentPath);
     setSelectedSlug(slug);
     setSwipe({ phase: "idle", direction: null, x: 0 });
+    navigateToAppPath(nextPath);
   }, []);
 
   const beginSwipe = useCallback((direction: -1 | 1) => {
@@ -197,6 +294,7 @@ export function WebsiteTemplateBrowser({
           (selectedIndex + (direction < 0 ? 1 : -1) + WEBSITE_TEMPLATES.length) %
           WEBSITE_TEMPLATES.length;
         setSelectedSlug(WEBSITE_TEMPLATES[targetIndex].slug);
+        navigateToAppPath(`/website-templates/${encodeURIComponent(WEBSITE_TEMPLATES[targetIndex].slug)}`, true);
         setSwipe({ phase: "idle", direction: null, x: 0 });
       }, 360);
     },
@@ -209,6 +307,10 @@ export function WebsiteTemplateBrowser({
         templateSlug={editingSlug}
         projectId={editingProjectId}
         onClose={() => {
+          const projectId = editingProjectId;
+          const returnPath = projectId ? takeReturnPath(`paper-stish:return:website-edit:${projectId}`) : null;
+          if (returnPath && window.history.length > 1) window.history.back();
+          else if (editingSlug) navigateToAppPath(`/website-templates/${encodeURIComponent(editingSlug)}`, true);
           setEditingProjectId(null);
           setEditingSlug(null);
         }}
@@ -246,6 +348,9 @@ export function WebsiteTemplateBrowser({
           onSwipeCancel={cancelSwipe}
           onSwipeCommit={commitSwipe}
           onClose={() => {
+            const returnPath = takeReturnPath("paper-stish:return:website-preview");
+            if (returnPath && window.history.length > 1) window.history.back();
+            else navigateToAppPath("/website-templates", true);
             setSelectedSlug(null);
             setSwipe({ phase: "idle", direction: null, x: 0 });
           }}
