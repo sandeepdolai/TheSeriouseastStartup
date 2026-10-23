@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900" role="img" aria-labelledby="title desc">
+<title id="title">A Little Red Letter website template</title><desc id="desc">A dimensional red envelope with a personal letter on cream paper.</desc>
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fffdfb"/><stop offset="1" stop-color="#f8eeea"/></linearGradient>
+ <linearGradient id="red" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f01913"/><stop offset=".52" stop-color="#d50905"/><stop offset="1" stop-color="#aa0502"/></linearGradient>
+ <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fffefb"/><stop offset="1" stop-color="#f1e5df"/></linearGradient>
+ <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#4c0d0a" flood-opacity=".19"/></filter>
+ <filter id="pshadow" x="-25%" y="-25%" width="150%" height="160%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#46221d" flood-opacity=".2"/></filter>
+</defs>
+<rect width="900" height="900" rx="36" fill="url(#bg)"/>
+<ellipse cx="450" cy="685" rx="280" ry="35" fill="#6d1913" opacity=".10"/>
+<g filter="url(#shadow)">
+ <rect x="142" y="265" width="616" height="400" rx="12" fill="url(#red)"/>
+ <path d="M143 277L450 525 757 277V653H143Z" fill="#d80805"/>
+ <path d="M143 665L361 450 450 525 540 450 757 665Z" fill="#ee130d"/>
+ <path d="M143 277L450 525 757 277" fill="none" stroke="#ff493e" stroke-opacity=".46" stroke-width="4"/>
+ <g filter="url(#pshadow)"><rect x="274" y="116" width="352" height="530" rx="5" fill="url(#paper)" stroke="#d9c8c1" stroke-width="1.5"/></g>
+ <path d="M300 146H600" stroke="#fff" stroke-opacity=".8" stroke-width="3"/>
+ <text x="310" y="194" font-family="Georgia,serif" font-size="25" fill="#2b2522">A little letter for you</text>
+ <rect x="310" y="213" width="48" height="3" rx="1.5" fill="#c51a16"/>
+ <g fill="#49413c" font-family="Georgia,serif" font-size="17">
+  <text x="310" y="258">I wanted to leave you a little</text><text x="310" y="285">reminder that you mean more</text><text x="310" y="312">to me than I always know how</text><text x="310" y="339">to say.</text>
+ </g>
+ <text x="310" y="585" font-family="Georgia,serif" font-size="20" fill="#8f211d">With love,</text>
+</g>
+<text x="450" y="800" text-anchor="middle" fill="#8a7772" font-family="Arial,sans-serif" font-size="20" letter-spacing="2">A LITTLE RED LETTER</text>
+</svg>
