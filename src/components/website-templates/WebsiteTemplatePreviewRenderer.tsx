@@ -15,7 +15,10 @@ export type WebsiteTemplatePreviewSlug =
   | "love-of-my-life"
   | "birthday-template"
   | "photo-album"
-  | "introducing-him";
+  | "introducing-him"
+  | "rose"
+  | "rose-blush"
+  | "rose-noir";
 
 /**
  * Renders the real, non-editing template component for thumbnail capture.
@@ -28,7 +31,7 @@ export function WebsiteTemplatePreviewRenderer({
   slug: WebsiteTemplatePreviewSlug;
 }) {
   const [previewReady, setPreviewReady] = useState(false);
-  const usesStaticHtml = slug === "red-letter" || slug === "love-heart" || slug === "forever-and-ever" || slug === "introducing-him";
+  const usesStaticHtml = slug === "red-letter" || slug === "love-heart" || slug === "forever-and-ever" || slug === "introducing-him" || slug === "rose" || slug === "rose-blush" || slug === "rose-noir";
 
   useEffect(() => {
     let cancelled = false;
@@ -131,6 +134,13 @@ export function WebsiteTemplatePreviewRenderer({
     case "introducing-him":
       template = <iframe title="Introducing Him website preview" src="/website-templates/introducing-him.html" sandbox="allow-scripts" referrerPolicy="no-referrer" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }} />;
       break;
+    case "rose":
+    case "rose-blush":
+    case "rose-noir": {
+      const variant = slug === "rose-blush" ? "blush" : slug === "rose-noir" ? "noir" : "classic";
+      template = <iframe title={`${variant} Rose website preview`} src={`/website-templates/rose.html?variant=${variant}`} sandbox="allow-scripts" referrerPolicy="no-referrer" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }} />;
+      break;
+    }
     case "our-calendar":
       template = <OurCalendarTemplate />;
       break;
