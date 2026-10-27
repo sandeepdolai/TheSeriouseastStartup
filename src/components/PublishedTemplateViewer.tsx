@@ -132,8 +132,9 @@ export function PublishedTemplateViewer({
       return <LoveHeartTemplate key={publicationKey} values={serverPublication.values} />;
     }
 
-    if (serverPublication.templateSlug === "rose" && serverPublication.values) {
-      return <RoseTemplate key={publicationKey} values={serverPublication.values} />;
+    if (["rose", "rose-blush", "rose-noir"].includes(serverPublication.templateSlug) && serverPublication.values) {
+      const variant = serverPublication.templateSlug === "rose-blush" ? "blush" : serverPublication.templateSlug === "rose-noir" ? "noir" : "classic";
+      return <RoseTemplate key={publicationKey} values={serverPublication.values} variant={variant} />;
     }
 
     if (serverPublication.templateSlug === "forever-and-ever" && serverPublication.values) {
