@@ -19,6 +19,7 @@ import { ForeverAndEverTemplate } from "@/components/website-templates/ForeverAn
 import { OurCalendarTemplate } from "@/components/website-templates/OurCalendarTemplate";
 import { BirthdayTodayTemplate } from "@/components/website-templates/BirthdayTodayTemplate";
 import { RedLetterTemplate } from "@/components/website-templates/RedLetterTemplate";
+import { RoseTemplate } from "@/components/website-templates/RoseTemplate";
 
 interface Props {
   username: string;
@@ -129,6 +130,10 @@ export function PublishedTemplateViewer({
 
     if (serverPublication.templateSlug === "love-heart" && serverPublication.values) {
       return <LoveHeartTemplate key={publicationKey} values={serverPublication.values} />;
+    }
+
+    if (serverPublication.templateSlug === "rose" && serverPublication.values) {
+      return <RoseTemplate key={publicationKey} values={serverPublication.values} />;
     }
 
     if (serverPublication.templateSlug === "forever-and-ever" && serverPublication.values) {
