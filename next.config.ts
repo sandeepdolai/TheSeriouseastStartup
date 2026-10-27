@@ -27,6 +27,14 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // The Rose GLB is a public static asset. Permit the script-only,
+        // sandboxed srcDoc editor iframe (opaque origin) to fetch it.
+        source: "/models/rose.glb",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+        ],
+      },
+      {
         source: "/:path*",
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
