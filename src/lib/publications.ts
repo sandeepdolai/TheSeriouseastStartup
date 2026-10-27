@@ -39,6 +39,8 @@ export const PUBLISHABLE_TEMPLATE_SLUGS = [
   "introducing-him",
   "red-letter",
   "rose",
+  "rose-blush",
+  "rose-noir",
 ] as const;
 
 export type PublishableTemplateSlug = (typeof PUBLISHABLE_TEMPLATE_SLUGS)[number];
