@@ -32,9 +32,11 @@ export function RoseTemplate({ values, editing = false, variant = "classic", onT
   const iframeReady = useRef(false);
   const latestValues = useRef(values);
   const latestEditing = useRef(editing);
+  const latestVariant = useRef(variant);
 
   latestValues.current = values;
   latestEditing.current = editing;
+  latestVariant.current = variant;
 
   useEffect(() => {
     let alive = true;
@@ -83,7 +85,7 @@ export function RoseTemplate({ values, editing = false, variant = "classic", onT
           editing: latestEditing.current,
           heading: current?.heading ?? DEFAULT_HEADING,
           message: current?.message ?? DEFAULT_MESSAGE,
-          variant,
+          variant: latestVariant.current,
         }, "*");
         return;
       }
