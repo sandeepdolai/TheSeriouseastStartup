@@ -15,9 +15,7 @@ const FRAME_SOURCE = "paper-stish-rose";
 const PARENT_SOURCE = "paper-stish-rose-parent";
 
 function getSharedRoseModelUrl(): string | undefined {
-  if (typeof window === "undefined") return undefined;
-  const basePath = BASE_PATH.replace(/\/$/, "");
-  return new URL(`${basePath}/models/rose.glb` || "/models/rose.glb", window.location.origin).toString();
+  return "https://res.cloudinary.com/cmtfrr9s/image/upload/v1793144811/rose_2.glb";
 }
 
 interface Props {
