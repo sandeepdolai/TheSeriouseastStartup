@@ -12,7 +12,7 @@ import { ProjectSheet } from "../ProjectSheet";
 import { WebsiteEditor, type WebsiteEditorTemplateSlug } from "./WebsiteEditor";
 
 function isEditableSlug(slug: string): slug is WebsiteEditorTemplateSlug {
-  return slug === "red-letter" || slug === "introducing-him" || slug === "love-of-my-life" || slug === "birthday-template" || slug === "birthday-today" || slug === "photo-album" || slug === "love-heart" || slug === "forever-and-ever" || slug === "our-calendar" || slug === "rose";
+  return slug === "red-letter" || slug === "introducing-him" || slug === "love-of-my-life" || slug === "birthday-template" || slug === "birthday-today" || slug === "photo-album" || slug === "love-heart" || slug === "forever-and-ever" || slug === "our-calendar" || slug === "rose" || slug === "rose-blush" || slug === "rose-noir";
 }
 
 function rememberReturnPath(key: string, path: string): void {

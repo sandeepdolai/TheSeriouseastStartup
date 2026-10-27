@@ -10,18 +10,26 @@ const EMPTY_DOCUMENT =
   '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{width:100%;height:100%;margin:0;background:#1c0303;overflow:hidden}</style></head><body></body></html>';
 const DEFAULT_HEADING = "Rose";
 const DEFAULT_MESSAGE = "A little reminder that you make my world bloom.";
+export type RoseTemplateVariant = "classic" | "blush" | "noir";
 const FRAME_SOURCE = "paper-stish-rose";
 const PARENT_SOURCE = "paper-stish-rose-parent";
+
+function getSharedRoseModelUrl(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const basePath = BASE_PATH.replace(/\/$/, "");
+  return new URL(`${basePath}/models/rose.glb` || "/models/rose.glb", window.location.origin).toString();
+}
 
 interface Props {
   values?: TemplatePublicationValues;
   editing?: boolean;
+  variant?: RoseTemplateVariant;
   onTextChange?: (field: "heading" | "message", value: string) => void;
   onExit?: () => void;
 }
 
 /** Keeps the original interactive 3D rose inside an isolated, script-only iframe. */
-export function RoseTemplate({ values, editing = false, onTextChange, onExit }: Props) {
+export function RoseTemplate({ values, editing = false, variant = "classic", onTextChange, onExit }: Props) {
   const [html, setHtml] = useState(EMPTY_DOCUMENT);
   const [previewFrameReady, setPreviewFrameReady] = useState(false);
   const [templateSourceLoaded, setTemplateSourceLoaded] = useState(false);
@@ -30,9 +38,11 @@ export function RoseTemplate({ values, editing = false, onTextChange, onExit }: 
   const iframeReady = useRef(false);
   const latestValues = useRef(values);
   const latestEditing = useRef(editing);
+  const latestVariant = useRef(variant);
 
   latestValues.current = values;
   latestEditing.current = editing;
+  latestVariant.current = variant;
 
   useEffect(() => {
     let alive = true;
@@ -81,6 +91,8 @@ export function RoseTemplate({ values, editing = false, onTextChange, onExit }: 
           editing: latestEditing.current,
           heading: current?.heading ?? DEFAULT_HEADING,
           message: current?.message ?? DEFAULT_MESSAGE,
+          variant: latestVariant.current,
+          modelUrl: getSharedRoseModelUrl(),
         }, "*");
         return;
       }
@@ -104,8 +116,10 @@ export function RoseTemplate({ values, editing = false, onTextChange, onExit }: 
       editing,
       heading: current?.heading ?? DEFAULT_HEADING,
       message: current?.message ?? DEFAULT_MESSAGE,
+      variant,
+      modelUrl: getSharedRoseModelUrl(),
     }, "*");
-  }, [editing, html, values?.heading, values?.message]);
+  }, [editing, html, variant, values?.heading, values?.message]);
 
   return (
     <main

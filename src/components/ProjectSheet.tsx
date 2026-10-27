@@ -442,10 +442,10 @@ export function ProjectSheet({
           <div ref={mediaRef} className="flex w-full flex-col items-center gap-y-30 s:gap-y-60 s:w-700 s:shrink-0 pb-80 has-hover:pb-0 will-change-transform">
             {project.media.map((m, i) => (
               <div key={`${project.slug}-${i}`} className="w-full flex-none overflow-hidden rounded-10 s:rounded-15" style={{ aspectRatio: `${aspects[i] ?? 16 / 9}` }}>
-                {project.slug === "rose" ? (
+                {["rose", "rose-blush", "rose-noir"].includes(project.slug) ? (
                   <iframe
-                    src={m.replace(/rose-preview\.svg$/i, "rose.html")}
-                    title="Interactive 3D rose website template preview"
+                    src={m.replace(/rose-preview\.svg$/i, `rose.html?variant=${project.slug === "rose-blush" ? "blush" : project.slug === "rose-noir" ? "noir" : "classic"}`)}
+                    title={`${project.title} interactive 3D rose website template preview`}
                     className="h-full w-full border-0"
                     sandbox="allow-scripts"
                     loading="eager"

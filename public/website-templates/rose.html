@@ -9,11 +9,17 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&display=swap" rel="stylesheet">
 <style>
-:root{color-scheme:dark;--base:#200505;--text:#f5e8e4;--muted:#d1a7a1}
+:root{color-scheme:dark;--base:#200505;--text:#f5e8e4;--muted:#d1a7a1;--rose-glow:#79130f;--rose-mid:#470a08;--rose-dark:#250505;--rose-deep:#160202;--rose-accent:#ffd0c8;--rose-muted:#d1a7a1}
+:root[data-rose-variant="blush"]{color-scheme:light;--text:#3b2430;--muted:#87586b;--rose-glow:#fff0f2;--rose-mid:#f8dce4;--rose-dark:#f1c8d6;--rose-deep:#e8b8ca;--rose-accent:#6f344d;--rose-muted:#87586b}
+:root[data-rose-variant="noir"]{color-scheme:dark;--text:#f4eee7;--muted:#b7a99a;--rose-glow:#433a35;--rose-mid:#241f1e;--rose-dark:#11100f;--rose-deep:#070707;--rose-accent:#d6b785;--rose-muted:#b7a99a}
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0;overflow:hidden}
-body{font-family:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;color:var(--text);background:radial-gradient(ellipse at 50% 42%,#79130f 0,#470a08 30%,#250505 63%,#160202 100%)}
-.scene-wash{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 40%,transparent 20%,rgba(10,0,0,.22) 72%,rgba(0,0,0,.44) 100%)}
+body{font-family:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;color:var(--text);background:radial-gradient(ellipse at 50% 42%,var(--rose-glow) 0,var(--rose-mid) 30%,var(--rose-dark) 63%,var(--rose-deep) 100%)}
+.scene-wash{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 40%,transparent 20%,rgba(10,0,0,.12) 72%,rgba(0,0,0,.28) 100%)}
+:root[data-rose-variant="blush"] .scene-wash{background:radial-gradient(ellipse at 50% 40%,transparent 20%,rgba(105,55,75,.08) 72%,rgba(105,55,75,.18) 100%)}
+:root[data-rose-variant="blush"] .hint{color:rgba(73,39,55,.64)}
+:root[data-rose-variant="blush"] .footer{color:rgba(73,39,55,.45)}
+:root[data-rose-variant="blush"] .kicker{color:rgba(104,55,75,.72)}
 .grain{position:fixed;inset:0;pointer-events:none;opacity:.16;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.28'/%3E%3C/svg%3E");mix-blend-mode:soft-light}
 .layout{position:relative;display:grid;grid-template-rows:1fr auto;align-items:center;justify-items:center;width:100%;height:100%;padding:max(24px,env(safe-area-inset-top)) 20px max(26px,env(safe-area-inset-bottom))}
 .viewer{position:absolute;inset:0;width:100%;height:100%;touch-action:pan-y;cursor:grab}
@@ -45,6 +51,8 @@ h1{margin:0;font-size:clamp(30px,5vw,48px);font-weight:500;letter-spacing:.26em;
   <div class="footer">Made with Paper Stish</div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
 <script>
 (() => {
   const FRAME_SOURCE = "paper-stish-rose";
@@ -53,7 +61,34 @@ h1{margin:0;font-size:clamp(30px,5vw,48px);font-weight:500;letter-spacing:.26em;
   const message = document.getElementById("roseMessage");
   const hint = document.getElementById("hint");
   let editing = false;
-  const state = { heading: "Rose", message: "A little reminder that you make my world bloom." };
+  const state = { heading: "Rose", message: "A little reminder that you make my world bloom.", variant: "classic" };
+  const VARIANT_THEMES = {
+    classic: { background: "radial-gradient(ellipse at 50% 42%,#79130f 0,#470a08 30%,#250505 63%,#160202 100%)", glow:"#79130f", mid:"#470a08", dark:"#250505", deep:"#160202", text:"#f5e8e4", muted:"#d1a7a1", accent:"#ffd0c8", fog:0x310707, sky:0xffd9d3, ground:0x160b08, key:0xffd2c8, rim:0xff3e31, fill:0x6b0b14 },
+    blush: { background: "radial-gradient(ellipse at 50% 42%,#fff0f2 0,#f8dce4 30%,#f1c8d6 63%,#e8b8ca 100%)", glow:"#fff0f2", mid:"#f8dce4", dark:"#f1c8d6", deep:"#e8b8ca", text:"#3b2430", muted:"#87586b", accent:"#6f344d", fog:0xf6dfe6, sky:0xfff4f0, ground:0x8a6273, key:0xffe7e9, rim:0xe8a1b7, fill:0xb47e9b },
+    noir: { background: "radial-gradient(ellipse at 50% 42%,#433a35 0,#241f1e 30%,#11100f 63%,#070707 100%)", glow:"#433a35", mid:"#241f1e", dark:"#11100f", deep:"#070707", text:"#f4eee7", muted:"#b7a99a", accent:"#d6b785", fog:0x171312, sky:0xd4c7b6, ground:0x090909, key:0xffe2bf, rim:0xd6a45d, fill:0x62423b }
+  };
+  let sceneRef = null, keyLightRef = null, rimLightRef = null, fillLightRef = null, hemiLightRef = null;
+  function applyVariant(value) {
+    const name = Object.prototype.hasOwnProperty.call(VARIANT_THEMES, value) ? value : "classic";
+    const theme = VARIANT_THEMES[name];
+    state.variant = name;
+    document.documentElement.dataset.roseVariant = name;
+    document.documentElement.style.setProperty("--rose-glow", theme.glow);
+    document.documentElement.style.setProperty("--rose-mid", theme.mid);
+    document.documentElement.style.setProperty("--rose-dark", theme.dark);
+    document.documentElement.style.setProperty("--rose-deep", theme.deep);
+    document.documentElement.style.setProperty("--text", theme.text);
+    document.documentElement.style.setProperty("--muted", theme.muted);
+    document.documentElement.style.setProperty("--rose-muted", theme.muted);
+    document.documentElement.style.setProperty("--rose-accent", theme.accent);
+    document.body.style.background = theme.background;
+    if (sceneRef && sceneRef.fog) sceneRef.fog.color.setHex(theme.fog);
+    if (hemiLightRef) { hemiLightRef.color.setHex(theme.sky); hemiLightRef.groundColor.setHex(theme.ground); }
+    if (keyLightRef) keyLightRef.color.setHex(theme.key);
+    if (rimLightRef) rimLightRef.color.setHex(theme.rim);
+    if (fillLightRef) fillLightRef.color.setHex(theme.fill);
+  }
+  applyVariant(new URLSearchParams(window.location.search).get("variant") || "classic");
 
   function setEditing(value) {
     editing = value === true;
@@ -79,6 +114,8 @@ h1{margin:0;font-size:clamp(30px,5vw,48px);font-weight:500;letter-spacing:.26em;
     if (event.data.type !== "set-state") return;
     state.heading = typeof event.data.heading === "string" ? event.data.heading.slice(0,120) : "Rose";
     state.message = typeof event.data.message === "string" ? event.data.message.slice(0,400) : "A little reminder that you make my world bloom.";
+    if (typeof event.data.variant === "string") applyVariant(event.data.variant);
+    if (typeof event.data.modelUrl === "string") loadSharedRoseModel(event.data.modelUrl);
     if (document.activeElement !== heading) heading.textContent = state.heading;
     if (document.activeElement !== message) message.textContent = state.message;
     setEditing(event.data.editing);
@@ -101,18 +138,22 @@ h1{margin:0;font-size:clamp(30px,5vw,48px);font-weight:500;letter-spacing:.26em;
   renderer.toneMappingExposure = 1.12;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x310707, 0.052);
+  sceneRef = scene;
+  scene.fog = new THREE.FogExp2(VARIANT_THEMES[state.variant].fog, 0.052);
   const camera = new THREE.PerspectiveCamera(33, window.innerWidth / window.innerHeight, 0.1, 100);
   camera.position.set(0, 1.0, 7.8);
   camera.lookAt(0, 0.45, 0);
 
-  scene.add(new THREE.HemisphereLight(0xffd9d3, 0x160b08, 1.35));
-  const key = new THREE.DirectionalLight(0xffd2c8, 2.2); key.position.set(-3, 5, 5); scene.add(key);
-  const rim = new THREE.PointLight(0xff3e31, 1.65, 12); rim.position.set(3, 2.4, -2); scene.add(rim);
-  const fill = new THREE.PointLight(0x6b0b14, 1.1, 10); fill.position.set(-4, -0.6, 3); scene.add(fill);
+  const theme = VARIANT_THEMES[state.variant];
+  const hemisphere = new THREE.HemisphereLight(theme.sky, theme.ground, 1.35); scene.add(hemisphere); hemiLightRef = hemisphere;
+  const key = new THREE.DirectionalLight(theme.key, 2.2); key.position.set(-3, 5, 5); scene.add(key); keyLightRef = key;
+  const rim = new THREE.PointLight(theme.rim, 1.65, 12); rim.position.set(3, 2.4, -2); scene.add(rim); rimLightRef = rim;
+  const fill = new THREE.PointLight(theme.fill, 1.1, 10); fill.position.set(-4, -0.6, 3); scene.add(fill); fillLightRef = fill;
 
   const rose = new THREE.Group();
   scene.add(rose);
+  const fallbackRose = new THREE.Group();
+  rose.add(fallbackRose);
 
   function petalGeometry(length, halfWidth, cup, twist) {
     const segU = 24, segV = 16;
@@ -155,7 +196,7 @@ h1{margin:0;font-size:clamp(30px,5vw,48px);font-weight:500;letter-spacing:.26em;
     mesh.rotation.y = -angle;
     mesh.rotation.z = options.tilt ?? 0;
     mesh.rotation.x = options.roll ?? 0;
-    rose.add(mesh);
+    fallbackRose.add(mesh);
   }
 
   // Layered, individually curved petals make a slowly turning sculptural rose.
@@ -169,7 +210,7 @@ h1{margin:0;font-size:clamp(30px,5vw,48px);font-weight:500;letter-spacing:.26em;
 
   // Stem and leaves.
   const stem = new THREE.Mesh(new THREE.CylinderGeometry(.045,.075,2.65,16),new THREE.MeshStandardMaterial({color:0x34583b,roughness:.78}));
-  stem.position.set(0,-.98,0); stem.rotation.z=-.025; rose.add(stem);
+  stem.position.set(0,-.98,0); stem.rotation.z=-.025; fallbackRose.add(stem);
   function makeLeaf(length,width) {
     const g = new THREE.BufferGeometry(),p=[],c=[],ix=[];
     const base=new THREE.Color(0x416a42),light=new THREE.Color(0x7c985b);
@@ -186,18 +227,88 @@ h1{margin:0;font-size:clamp(30px,5vw,48px);font-weight:500;letter-spacing:.26em;
   function addLeaf(angle,y,length,width,tilt) {
     const leaf=new THREE.Mesh(makeLeaf(length,width),new THREE.MeshStandardMaterial({vertexColors:true,side:THREE.DoubleSide,roughness:.68}));
     leaf.position.set(Math.cos(angle)*.06,y,Math.sin(angle)*.06);
-    leaf.rotation.y=-angle;leaf.rotation.z=tilt;rose.add(leaf);
+    leaf.rotation.y=-angle;leaf.rotation.z=tilt;fallbackRose.add(leaf);
     const vein=new THREE.Mesh(new THREE.CylinderGeometry(.006,.012,length*.78,5),new THREE.MeshStandardMaterial({color:0x9ba66a,roughness:.7}));
     vein.position.set(leaf.position.x+Math.cos(angle)*length*.39,y+.1,leaf.position.z+Math.sin(angle)*length*.39);
-    vein.rotation.z=tilt+.1;vein.rotation.y=-angle;rose.add(vein);
+    vein.rotation.z=tilt+.1;vein.rotation.y=-angle;fallbackRose.add(vein);
   }
   addLeaf(-.68,-.98,1.1,.24,-.35); addLeaf(2.52,-1.45,.95,.22,.42);
   const calyx = new THREE.Mesh(new THREE.ConeGeometry(.25,.42,7),new THREE.MeshStandardMaterial({color:0x315236,roughness:.72}));
-  calyx.position.set(0,-.37,0);calyx.rotation.x=Math.PI;rose.add(calyx);
-  rose.position.y=.4;
-  rose.rotation.x=-.07;
+  calyx.position.set(0,-.37,0);calyx.rotation.x=Math.PI;fallbackRose.add(calyx);
+  fallbackRose.position.y=0;
+  fallbackRose.rotation.x=-.07;
 
   let down=false, moved=false, startX=0,startY=0,lastX=0,lastY=0,rotateX=-.07,rotateY=0,velocityY=0;
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let modelMixer = null;
+  let sharedModelLoader = null;
+  let modelLoadAttempted = false;
+
+  // The sandboxed editor iframe has an opaque origin. Its parent passes the
+  // site's /models/rose.glb URL; a directly opened template resolves the same
+  // asset from its own deployment origin. Every variant reuses this single file.
+  function loadSharedRoseModel(modelUrl) {
+    if (!sharedModelLoader || modelLoadAttempted || typeof modelUrl !== "string") return;
+    let resolvedUrl;
+    try {
+      const parsed = new URL(modelUrl, document.baseURI);
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return;
+      resolvedUrl = parsed.href;
+    } catch {
+      return;
+    }
+    modelLoadAttempted = true;
+    sharedModelLoader.load(resolvedUrl, (gltf) => {
+      const model = gltf.scene;
+      model.traverse((object) => {
+        if (!object.isMesh) return;
+        object.castShadow = false;
+        object.receiveShadow = false;
+        if (object.material) {
+          const materials = Array.isArray(object.material) ? object.material : [object.material];
+          for (const material of materials) {
+            material.side = THREE.DoubleSide;
+            material.needsUpdate = true;
+          }
+        }
+      });
+      const bounds = new THREE.Box3().setFromObject(model);
+      const size = bounds.getSize(new THREE.Vector3());
+      if (!Number.isFinite(size.y) || size.y <= 0) {
+        console.warn("[Paper Stish Rose] Model has invalid bounds; keeping fallback rose.");
+        return;
+      }
+      model.scale.setScalar(3.35 / size.y);
+      model.updateMatrixWorld(true);
+      const centeredBounds = new THREE.Box3().setFromObject(model);
+      const center = centeredBounds.getCenter(new THREE.Vector3());
+      model.position.sub(center);
+      model.position.y += .08;
+      rose.add(model);
+      fallbackRose.visible = false;
+      if (!prefersReducedMotion && gltf.animations?.length) {
+        modelMixer = new THREE.AnimationMixer(model);
+        modelMixer.clipAction(gltf.animations[0]).play();
+      }
+    }, undefined, (error) => {
+      fallbackRose.visible = true;
+      console.warn("[Paper Stish Rose] Shared GLB could not load; using fallback rose.", error);
+    });
+  }
+
+  if (THREE.GLTFLoader && THREE.DRACOLoader) {
+    const dracoLoader = new THREE.DRACOLoader();
+    dracoLoader.setDecoderPath("https://www.gstatic.com/draco/versioned/decoders/1.5.6/");
+    dracoLoader.setWorkerLimit(2);
+    dracoLoader.preload();
+    sharedModelLoader = new THREE.GLTFLoader();
+    sharedModelLoader.setDRACOLoader(dracoLoader);
+    if (window.location.origin !== "null") {
+      loadSharedRoseModel(new URL("/models/rose.glb", window.location.origin).href);
+    }
+  } else {
+    console.warn("[Paper Stish Rose] GLTFLoader/DRACOLoader unavailable; using fallback rose.");
+  }
   viewer.addEventListener("pointerdown",(e)=>{if(editing && e.target.closest(".box"))return;down=true;moved=false;startX=lastX=e.clientX;startY=lastY=e.clientY;viewer.classList.add("dragging");viewer.setPointerCapture?.(e.pointerId)});
   viewer.addEventListener("pointermove",(e)=>{if(!down)return;const dx=e.clientX-lastX,dy=e.clientY-lastY;if(Math.abs(e.clientX-startX)+Math.abs(e.clientY-startY)>3)moved=true;rotateY+=dx*.009;rotateX=Math.max(-.52,Math.min(.42,rotateX+dy*.004));velocityY=dx*.0015;lastX=e.clientX;lastY=e.clientY});
   function endDrag(){down=false;viewer.classList.remove("dragging")}
@@ -209,11 +320,13 @@ h1{margin:0;font-size:clamp(30px,5vw,48px);font-weight:500;letter-spacing:.26em;
   const clock=new THREE.Clock();
   function render(){
     raf=requestAnimationFrame(render);
-    const t=clock.getElapsedTime();
-    if(!down) { rotateY+=.0021+velocityY;velocityY*=.94; }
+    const dt=clock.getDelta();
+    const t=clock.elapsedTime;
+    if(!down && !prefersReducedMotion) { rotateY+=.0021+velocityY;velocityY*=.94; }
     rose.rotation.y=rotateY;
-    rose.rotation.x=rotateX+Math.sin(t*.32)*.018;
-    rose.position.y=.32+Math.sin(t*.68)*.035;
+    rose.rotation.x=rotateX+(prefersReducedMotion ? 0 : Math.sin(t*.32)*.018);
+    rose.position.y=.32+(prefersReducedMotion ? 0 : Math.sin(t*.68)*.035);
+    if(modelMixer) modelMixer.update(dt);
     renderer.render(scene,camera);
   }
   render();
