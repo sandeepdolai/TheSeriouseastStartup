@@ -14,6 +14,12 @@ export type RoseTemplateVariant = "classic" | "blush" | "noir";
 const FRAME_SOURCE = "paper-stish-rose";
 const PARENT_SOURCE = "paper-stish-rose-parent";
 
+function getSharedRoseModelUrl(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const basePath = BASE_PATH.replace(/\/$/, "");
+  return new URL(`${basePath}/models/rose.glb` || "/models/rose.glb", window.location.origin).toString();
+}
+
 interface Props {
   values?: TemplatePublicationValues;
   editing?: boolean;
@@ -86,6 +92,7 @@ export function RoseTemplate({ values, editing = false, variant = "classic", onT
           heading: current?.heading ?? DEFAULT_HEADING,
           message: current?.message ?? DEFAULT_MESSAGE,
           variant: latestVariant.current,
+          modelUrl: getSharedRoseModelUrl(),
         }, "*");
         return;
       }
@@ -110,6 +117,7 @@ export function RoseTemplate({ values, editing = false, variant = "classic", onT
       heading: current?.heading ?? DEFAULT_HEADING,
       message: current?.message ?? DEFAULT_MESSAGE,
       variant,
+      modelUrl: getSharedRoseModelUrl(),
     }, "*");
   }, [editing, html, variant, values?.heading, values?.message]);
 

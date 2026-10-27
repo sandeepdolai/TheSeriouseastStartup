@@ -115,6 +115,7 @@ h1{margin:0;font-size:clamp(30px,5vw,48px);font-weight:500;letter-spacing:.26em;
     state.heading = typeof event.data.heading === "string" ? event.data.heading.slice(0,120) : "Rose";
     state.message = typeof event.data.message === "string" ? event.data.message.slice(0,400) : "A little reminder that you make my world bloom.";
     if (typeof event.data.variant === "string") applyVariant(event.data.variant);
+    if (typeof event.data.modelUrl === "string") loadSharedRoseModel(event.data.modelUrl);
     if (document.activeElement !== heading) heading.textContent = state.heading;
     if (document.activeElement !== message) message.textContent = state.message;
     setEditing(event.data.editing);
@@ -240,17 +241,24 @@ h1{margin:0;font-size:clamp(30px,5vw,48px);font-weight:500;letter-spacing:.26em;
   let down=false, moved=false, startX=0,startY=0,lastX=0,lastY=0,rotateX=-.07,rotateY=0,velocityY=0;
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let modelMixer = null;
-  // One model file is shared by every Rose design. If it cannot be fetched or
-  // parsed, the bundled procedural rose remains visible rather than a blank canvas.
-  if (THREE.GLTFLoader && THREE.DRACOLoader) {
-    const dracoLoader = new THREE.DRACOLoader();
-    dracoLoader.setDecoderPath("https://www.gstatic.com/draco/versioned/decoders/1.5.6/");
-    dracoLoader.setWorkerLimit(2);
-    dracoLoader.preload();
-    const loader = new THREE.GLTFLoader();
-    loader.setDRACOLoader(dracoLoader);
-    const modelUrl = "https://raw.githubusercontent.com/sandeepdolai/TheSeriouseastStartup/main/public/models/rose.glb";
-    loader.load(modelUrl, (gltf) => {
+  let sharedModelLoader = null;
+  let modelLoadAttempted = false;
+
+  // The sandboxed editor iframe has an opaque origin. Its parent passes the
+  // site's /models/rose.glb URL; a directly opened template resolves the same
+  // asset from its own deployment origin. Every variant reuses this single file.
+  function loadSharedRoseModel(modelUrl) {
+    if (!sharedModelLoader || modelLoadAttempted || typeof modelUrl !== "string") return;
+    let resolvedUrl;
+    try {
+      const parsed = new URL(modelUrl, document.baseURI);
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return;
+      resolvedUrl = parsed.href;
+    } catch {
+      return;
+    }
+    modelLoadAttempted = true;
+    sharedModelLoader.load(resolvedUrl, (gltf) => {
       const model = gltf.scene;
       model.traverse((object) => {
         if (!object.isMesh) return;
@@ -286,6 +294,18 @@ h1{margin:0;font-size:clamp(30px,5vw,48px);font-weight:500;letter-spacing:.26em;
       fallbackRose.visible = true;
       console.warn("[Paper Stish Rose] Shared GLB could not load; using fallback rose.", error);
     });
+  }
+
+  if (THREE.GLTFLoader && THREE.DRACOLoader) {
+    const dracoLoader = new THREE.DRACOLoader();
+    dracoLoader.setDecoderPath("https://www.gstatic.com/draco/versioned/decoders/1.5.6/");
+    dracoLoader.setWorkerLimit(2);
+    dracoLoader.preload();
+    sharedModelLoader = new THREE.GLTFLoader();
+    sharedModelLoader.setDRACOLoader(dracoLoader);
+    if (window.location.origin !== "null") {
+      loadSharedRoseModel(new URL("/models/rose.glb", window.location.origin).href);
+    }
   } else {
     console.warn("[Paper Stish Rose] GLTFLoader/DRACOLoader unavailable; using fallback rose.");
   }
