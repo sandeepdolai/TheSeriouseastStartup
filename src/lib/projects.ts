@@ -24,6 +24,16 @@ export const FEATURED: Project[] = [];
 /** Curated website templates available in the website-template browser. */
 export const WEBSITE_TEMPLATES: Project[] = [
   {
+    title: "Rose",
+    slug: "rose",
+    description: "A deep-red romantic page featuring an interactive 3D rose you can rotate by dragging, with a personal heading and message.",
+    link: null,
+    tags: [],
+    awards: 0,
+    aspect: 1,
+    media: [`${BASE_PATH}/website-templates/rose-preview.svg`],
+  },
+  {
     title: "A Little Red Letter",
     slug: "red-letter",
     description: "A dimensional red envelope opens to the same personal letter, which expands into a 2:3 full-screen sheet.",
