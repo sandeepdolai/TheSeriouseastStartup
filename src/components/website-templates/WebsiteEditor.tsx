@@ -17,6 +17,7 @@ import { PhotoAlbumTemplate, DEFAULT_ALBUM_CAPTIONS, DEFAULT_ALBUM_PHOTOS } from
 import { BirthdayTodayTemplate } from "./BirthdayTodayTemplate";
 import { LoveHeartTemplate } from "./LoveHeartTemplate";
 import { RedLetterTemplate } from "./RedLetterTemplate";
+import { RoseTemplate } from "./RoseTemplate";
 import { IntroducingHimTemplate, INTRODUCING_HIM_DEFAULTS } from "./IntroducingHimTemplate";
 import {
   FOREVER_AND_EVER_TEXT_DEFAULTS,
@@ -28,7 +29,7 @@ import { LoveOfMyLifeTemplate } from "./LoveOfMyLifeTemplate";
 import { qrCodeMatrix, qrCodeSvgPath } from "@/lib/qrCode";
 import styles from "./WebsiteEditor.module.css";
 
-export type WebsiteEditorTemplateSlug = "love-of-my-life" | "birthday-template" | "birthday-today" | "photo-album" | "love-heart" | "forever-and-ever" | "our-calendar" | "introducing-him" | "red-letter";
+export type WebsiteEditorTemplateSlug = "love-of-my-life" | "birthday-template" | "birthday-today" | "photo-album" | "love-heart" | "forever-and-ever" | "our-calendar" | "introducing-him" | "red-letter" | "rose";
 
 type EditableWebsiteField =
   | "heading"
@@ -98,6 +99,13 @@ const TEXT_DEFAULTS: Record<WebsiteEditorTemplateSlug, TemplatePublicationValues
     images: [],
     captions: [],
   },
+  "rose": {
+    heading: "Rose",
+    message: "A little reminder that you make my world bloom.",
+    photoUrl: null,
+    images: [],
+    captions: [],
+  },
   "forever-and-ever": {
     heading: FOREVER_AND_EVER_TEXT_DEFAULTS.heading,
     message: "",
@@ -130,6 +138,7 @@ const TEMPLATE_TITLES: Record<WebsiteEditorTemplateSlug, string> = {
   "photo-album": "Photo Album",
   "love-heart": "Love Heart",
   "red-letter": "A Little Red Letter",
+  "rose": "Rose",
   "forever-and-ever": "I love you forever and ever, my baby!",
   "our-calendar": "Our Calendar",
   "introducing-him": "Introducing Him",
@@ -201,7 +210,7 @@ export function WebsiteEditor({
   const [values, setValues] = useState<TemplatePublicationValues>(() => defaultValues(templateSlug));
   const [username, setUsername] = useState("");
   const [websiteName, setWebsiteName] = useState(
-    templateSlug === "red-letter" ? "a-little-letter" : templateSlug === "introducing-him" ? "introducing-him" : templateSlug === "birthday-today" ? "birthday-today" : templateSlug === "photo-album" ? "photo-album" : templateSlug === "birthday-template" ? "birthday" : templateSlug === "love-heart" ? "love-heart" : templateSlug === "forever-and-ever" ? "forever-and-ever" : "our-story",
+    templateSlug === "red-letter" ? "a-little-letter" : templateSlug === "introducing-him" ? "introducing-him" : templateSlug === "birthday-today" ? "birthday-today" : templateSlug === "photo-album" ? "photo-album" : templateSlug === "birthday-template" ? "birthday" : templateSlug === "love-heart" ? "love-heart" : templateSlug === "forever-and-ever" ? "forever-and-ever" : templateSlug === "rose" ? "rose" : "our-story",
   );
   const [draftReady, setDraftReady] = useState(false);
   const [draftMissing, setDraftMissing] = useState(false);
@@ -794,6 +803,8 @@ export function WebsiteEditor({
           onPhotoSelected={choosePhotoFile}
           onExit={onClose}
         />
+      ) : templateSlug === "rose" ? (
+        <RoseTemplate values={values} editing onTextChange={changeText} onExit={onClose} />
       ) : templateSlug === "birthday-today" ? (
         <BirthdayTodayTemplate
           values={values}
