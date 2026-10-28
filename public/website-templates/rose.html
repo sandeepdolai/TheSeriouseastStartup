@@ -22,10 +22,10 @@ body{font-family:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;color:
 :root[data-rose-variant="blush"] .kicker{color:rgba(104,55,75,.72)}
 .grain{position:fixed;inset:0;pointer-events:none;opacity:.16;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.28'/%3E%3C/svg%3E");mix-blend-mode:soft-light}
 .layout{position:relative;display:block;width:100%;height:100%;min-height:100svh;padding:max(24px,env(safe-area-inset-top)) 20px max(26px,env(safe-area-inset-bottom))}
-.viewer{position:absolute;z-index:1;inset:0;width:100%;height:100%;touch-action:pan-y;cursor:grab;pointer-events:auto}
+.viewer{position:absolute;z-index:1;top:12%;left:50%;transform:translateX(-50%);width:min(92vw,500px);height:min(64vh,720px);touch-action:pan-y;cursor:grab;pointer-events:auto}
 .viewer.dragging{cursor:grabbing}
 canvas{display:block;width:100%;height:100%}
-.box{position:absolute;z-index:2;left:50%;bottom:clamp(94px,11vh,170px);transform:translateX(-50%);width:min(340px,86vw);min-height:0;padding:24px 22px;border-radius:28px;text-align:center;background:rgba(20,3,3,.38);border:1px solid rgba(255,150,130,.2);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 24px 60px rgba(0,0,0,.3);pointer-events:none;text-shadow:0 2px 24px rgba(10,0,0,.35);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.box{position:absolute;z-index:2;left:50%;bottom:clamp(94px,10vh,160px);transform:translateX(-50%);width:min(340px,86vw);min-height:0;padding:24px 22px;border-radius:28px;text-align:center;background:rgba(20,3,3,.38);border:1px solid rgba(255,150,130,.2);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 24px 60px rgba(0,0,0,.3);pointer-events:none;text-shadow:0 2px 24px rgba(10,0,0,.35);display:flex;flex-direction:column;align-items:center;justify-content:center}
 .box h1{margin:0;font-size:clamp(20px,5.2vw,25px);font-weight:600;letter-spacing:.025em;text-transform:none;padding:0;line-height:1.35;overflow-wrap:anywhere;outline:none!important;border:0}
 .rose-message{max-width:30ch;margin:12px auto 0;color:var(--muted);font-size:clamp(13px,1.5vw,16px);font-weight:400;line-height:1.6;letter-spacing:.005em;outline:none!important;border:0}
 .rose-card-layout .box{margin:0}
@@ -33,7 +33,7 @@ canvas{display:block;width:100%;height:100%}
 [contenteditable="false"]{outline:none;border:0;cursor:default}
 .hint{position:absolute;z-index:3;top:max(24px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 36px);color:rgba(255,224,217,.55);font-size:9px;font-weight:500;letter-spacing:.18em;text-align:center;text-transform:uppercase;pointer-events:none}
 .footer{position:absolute;z-index:3;left:0;right:0;bottom:max(12px,env(safe-area-inset-bottom));display:flex;justify-content:center;color:rgba(255,218,210,.33);font-size:8px;letter-spacing:.2em;text-transform:uppercase;pointer-events:none}
-@media(max-height:600px){.box{bottom:clamp(76px,8vh,110px);padding:18px 18px}.hint{top:14px}.footer{bottom:6px}}
+@media(max-height:600px){.viewer{top:9%;height:52vh;width:min(90vw,420px)}.box{bottom:clamp(76px,8vh,110px);padding:18px 18px}.hint{top:14px}.footer{bottom:6px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
 </style>
 </head>
@@ -131,7 +131,7 @@ canvas{display:block;width:100%;height:100%}
   const viewer = document.getElementById("viewer");
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.7));
-  renderer.setSize(window.innerWidth, window.innerHeight, false);
+  renderer.setSize(Math.max(1, viewer.clientWidth), Math.max(1, viewer.clientHeight), false);
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.12;
@@ -139,7 +139,7 @@ canvas{display:block;width:100%;height:100%}
   const scene = new THREE.Scene();
   sceneRef = scene;
   scene.fog = new THREE.FogExp2(VARIANT_THEMES[state.variant].fog, 0.052);
-  const camera = new THREE.PerspectiveCamera(33, window.innerWidth / window.innerHeight, 0.1, 100);
+  const camera = new THREE.PerspectiveCamera(33, Math.max(1, viewer.clientWidth) / Math.max(1, viewer.clientHeight), 0.1, 100);
   camera.position.set(0, 1.0, 7.8);
   camera.lookAt(0, 0.45, 0);
 
@@ -314,7 +314,7 @@ canvas{display:block;width:100%;height:100%}
   viewer.addEventListener("pointerup",endDrag);viewer.addEventListener("pointercancel",endDrag);viewer.addEventListener("lostpointercapture",endDrag);
 
   let raf=0;
-  function resize(){const w=window.innerWidth,h=window.innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.position.z=h<560?8.6:7.8;camera.updateProjectionMatrix()}
+  function resize(){const w=Math.max(1,viewer.clientWidth),h=Math.max(1,viewer.clientHeight);renderer.setSize(w,h,false);camera.aspect=w/h;camera.position.z=7.8;camera.updateProjectionMatrix()}
   window.addEventListener("resize",resize);
   const clock=new THREE.Clock();
   function render(){
