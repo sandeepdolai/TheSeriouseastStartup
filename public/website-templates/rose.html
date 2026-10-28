@@ -18,8 +18,7 @@ body{min-height:100svh;overflow-x:hidden;overflow-y:auto;font-family:"Bricolage 
 .layout{position:relative;display:grid;place-items:center;width:100%;min-height:100svh;padding:max(34px,env(safe-area-inset-top)) 18px max(42px,env(safe-area-inset-bottom))}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .content-stack{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;width:min(100%,440px);margin:auto}
-.viewer{position:relative;z-index:1;inset:auto;left:auto;top:auto;transform:none;width:100%;height:420px;flex:none;touch-action:pan-y;cursor:grab;pointer-events:auto}
-.viewer.dragging{cursor:grabbing}
+.viewer{position:relative;z-index:1;inset:auto;left:auto;top:auto;transform:none;width:100%;height:420px;flex:none;touch-action:pan-y;cursor:default;pointer-events:none}
 canvas{display:block;width:100%;height:100%}
 .box{position:relative;z-index:2;inset:auto;left:auto;bottom:auto;transform:none;width:100%;max-width:440px;min-height:0;margin:0;padding:24px 22px;border-radius:28px;text-align:center;background:rgba(20,3,3,.38);border:1px solid rgba(255,150,130,.2);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 24px 60px rgba(0,0,0,.3);pointer-events:none;text-shadow:0 2px 24px rgba(10,0,0,.35);display:flex;flex-direction:column;align-items:center;justify-content:center}
 .box h1{margin:0;font-size:24px;font-weight:600;letter-spacing:.025em;text-transform:none;padding:0;line-height:1.35;overflow-wrap:anywhere;outline:none!important;border:0}
@@ -35,7 +34,7 @@ canvas{display:block;width:100%;height:100%}
 <div class="layout rose-card-layout">
   <div class="sr-only" id="modelStatus" role="status" aria-live="polite"></div>
   <div class="content-stack">
-    <div class="viewer" id="viewer" aria-label="Interactive three-dimensional rose. Drag to rotate."><canvas id="roseCanvas"></canvas></div>
+    <div class="viewer" id="viewer" aria-label="Three-dimensional rose rotating automatically"><canvas id="roseCanvas"></canvas></div>
     <main class="box">
       <h1 id="roseHeading">We’re sorry, sir. Your order will be delivered shortly.</h1>
       <p class="rose-message" id="roseMessage" hidden></p>
@@ -63,9 +62,8 @@ canvas{display:block;width:100%;height:100%}
   let modelLoadAttempted = false;
   let modelLoaded = false;
   let entranceStart = 0;
-  let down = false;
-  let startX = 0, startY = 0, lastX = 0, lastY = 0;
-  let rotateX = -0.08, rotateY = 0, velocityY = 0;
+  // Hold the reference-facing angle through the entrance; rotation begins only after it settles.
+  let rotateX = -0.08, rotateY = 0;
   let raf = 0, renderer = null, camera = null, scene = null, rose = null, entrance = null;
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -210,30 +208,7 @@ canvas{display:block;width:100%;height:100%}
     // There is intentionally NO procedural/fallback rose if this request fails.
     loadRoseModel(MODEL_URL);
 
-    viewer.addEventListener("pointerdown", (event) => {
-      if (event.button !== undefined && event.button !== 0) return;
-      down = true;
-      startX = lastX = event.clientX;
-      startY = lastY = event.clientY;
-      viewer.classList.add("dragging");
-      if (viewer.setPointerCapture) viewer.setPointerCapture(event.pointerId);
-    });
-    viewer.addEventListener("pointermove", (event) => {
-      if (!down) return;
-      const dx = event.clientX - lastX;
-      const dy = event.clientY - lastY;
-      if (Math.abs(event.clientX - startX) + Math.abs(event.clientY - startY) > 3) {
-        rotateY += dx * 0.009;
-        rotateX = Math.max(-0.5, Math.min(0.4, rotateX + dy * 0.004));
-        velocityY = dx * 0.0015;
-      }
-      lastX = event.clientX;
-      lastY = event.clientY;
-    });
-    function endDrag() { down = false; viewer.classList.remove("dragging"); }
-    viewer.addEventListener("pointerup", endDrag);
-    viewer.addEventListener("pointercancel", endDrag);
-    viewer.addEventListener("lostpointercapture", endDrag);
+    // The rose is intentionally not user-draggable; it rotates on its own after the entrance.
 
     const clock = new THREE.Clock();
     function render() {
@@ -241,10 +216,8 @@ canvas{display:block;width:100%;height:100%}
       const delta = Math.min(clock.getDelta(), 0.05);
       const elapsed = clock.elapsedTime;
       if (modelLoaded) {
-        if (!down && !prefersReducedMotion) {
-          rotateY += delta * 0.33 + velocityY;
-          velocityY *= 0.94;
-        }
+        // Hold the reference angle until the entrance animation ends, then spin automatically.
+        if (!entranceStart && !prefersReducedMotion) rotateY += delta * 0.33;
         rose.rotation.y = rotateY;
         rose.rotation.x = rotateX + (prefersReducedMotion ? 0 : Math.sin(elapsed * 0.32) * 0.012);
         if (entranceStart) {
