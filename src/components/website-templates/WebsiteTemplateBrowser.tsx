@@ -15,6 +15,11 @@ function isEditableSlug(slug: string): slug is WebsiteEditorTemplateSlug {
   return slug === "red-letter" || slug === "introducing-him" || slug === "love-of-my-life" || slug === "birthday-template" || slug === "birthday-today" || slug === "photo-album" || slug === "love-heart" || slug === "forever-and-ever" || slug === "our-calendar" || slug === "rose";
 }
 
+function normalizeEditableSlug(slug: string): WebsiteEditorTemplateSlug | null {
+  if (slug === "rose-blush" || slug === "rose-noir") return "rose";
+  return isEditableSlug(slug) ? slug : null;
+}
+
 function rememberReturnPath(key: string, path: string): void {
   try {
     window.sessionStorage.setItem(key, path);
@@ -58,7 +63,9 @@ export function WebsiteTemplateBrowser({
   // Every edit starts with a device-local project record before the editor
   // opens, so it is visible in My even if the user closes the tab immediately.
   const beginEditing = useCallback(async (slug: string, existingProjectId?: string) => {
-    if (!isEditableSlug(slug)) return;
+    const canonicalSlug = normalizeEditableSlug(slug);
+    if (!canonicalSlug) return;
+    slug = canonicalSlug;
 
     if (existingProjectId) {
       setDraftError("");
@@ -184,17 +191,19 @@ export function WebsiteTemplateBrowser({
 
   // Opening a website project from My should resume that exact draft.
   useEffect(() => {
-    if (!draftToOpen || !isEditableSlug(draftToOpen.templateSlug)) return;
+    if (!draftToOpen) return;
+    const canonicalSlug = normalizeEditableSlug(draftToOpen.templateSlug);
+    if (!canonicalSlug) return;
     setDraftError("");
-    setSelectedSlug(draftToOpen.templateSlug);
+    setSelectedSlug(canonicalSlug);
     setEditingProjectId(draftToOpen.projectId);
-    setEditingSlug(draftToOpen.templateSlug);
+    setEditingSlug(canonicalSlug);
     rememberReturnPath(
       `paper-stish:return:website-edit:${draftToOpen.projectId}`,
       window.location.pathname + window.location.search,
     );
     navigateToAppPath(
-      `/website-templates/${encodeURIComponent(draftToOpen.templateSlug)}/edit?draft=${encodeURIComponent(draftToOpen.projectId)}`,
+      `/website-templates/${encodeURIComponent(canonicalSlug)}/edit?draft=${encodeURIComponent(draftToOpen.projectId)}`,
     );
     onDraftOpened?.();
   }, [draftToOpen, onDraftOpened]);
