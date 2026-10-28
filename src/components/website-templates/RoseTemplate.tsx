@@ -5,7 +5,7 @@ import type { TemplatePublicationValues } from "@/lib/publications";
 import styles from "./RoseTemplate.module.css";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-const TEMPLATE_URL = `${BASE_PATH}/website-templates/rose.html?v=rose-card-v3`;
+const TEMPLATE_URL = `${BASE_PATH}/website-templates/rose.html?v=rose-single-v4`;
 const EMPTY_DOCUMENT =
   '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{width:100%;height:100%;margin:0;background:#1c0303;overflow:hidden}</style></head><body></body></html>';
 const DEFAULT_HEADING = "We’re sorry, sir. Your order will be delivered shortly.";
@@ -18,7 +18,6 @@ function getInitialText(current: TemplatePublicationValues | undefined) {
   const isLegacyDefault = (!heading || /^(rose|ROSE)$/i.test(heading)) && (!message || message === LEGACY_MESSAGE);
   return { heading: isLegacyDefault ? DEFAULT_HEADING : (heading || DEFAULT_HEADING), message: isLegacyDefault ? DEFAULT_MESSAGE : message };
 }
-export type RoseTemplateVariant = "classic" | "blush" | "noir";
 const FRAME_SOURCE = "paper-stish-rose";
 const PARENT_SOURCE = "paper-stish-rose-parent";
 
@@ -29,13 +28,12 @@ function getSharedRoseModelUrl(): string | undefined {
 interface Props {
   values?: TemplatePublicationValues;
   editing?: boolean;
-  variant?: RoseTemplateVariant;
   onTextChange?: (field: "heading" | "message", value: string) => void;
   onExit?: () => void;
 }
 
 /** Keeps the original interactive 3D rose inside an isolated, script-only iframe. */
-export function RoseTemplate({ values, editing = false, variant = "classic", onTextChange, onExit }: Props) {
+export function RoseTemplate({ values, editing = false, onTextChange, onExit }: Props) {
   const [html, setHtml] = useState(EMPTY_DOCUMENT);
   const [previewFrameReady, setPreviewFrameReady] = useState(false);
   const [templateSourceLoaded, setTemplateSourceLoaded] = useState(false);
@@ -44,11 +42,9 @@ export function RoseTemplate({ values, editing = false, variant = "classic", onT
   const iframeReady = useRef(false);
   const latestValues = useRef(values);
   const latestEditing = useRef(editing);
-  const latestVariant = useRef(variant);
 
   latestValues.current = values;
   latestEditing.current = editing;
-  latestVariant.current = variant;
 
   useEffect(() => {
     let alive = true;
@@ -97,7 +93,6 @@ export function RoseTemplate({ values, editing = false, variant = "classic", onT
           editing: latestEditing.current,
           heading: current.heading,
           message: current.message,
-          variant: latestVariant.current,
           modelUrl: getSharedRoseModelUrl(),
         }, "*");
         return;
@@ -122,10 +117,9 @@ export function RoseTemplate({ values, editing = false, variant = "classic", onT
       editing,
       heading: current?.heading ?? DEFAULT_HEADING,
       message: current?.message ?? DEFAULT_MESSAGE,
-      variant,
       modelUrl: getSharedRoseModelUrl(),
     }, "*");
-  }, [editing, html, variant, values?.heading, values?.message]);
+  }, [editing, html, values?.heading, values?.message]);
 
   return (
     <main
