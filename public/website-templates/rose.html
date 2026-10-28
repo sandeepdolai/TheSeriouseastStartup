@@ -10,16 +10,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&display=swap" rel="stylesheet">
 <style>
 :root{color-scheme:dark;--base:#200505;--text:#f5e8e4;--muted:#d1a7a1;--rose-glow:#79130f;--rose-mid:#470a08;--rose-dark:#250505;--rose-deep:#160202;--rose-accent:#ffd0c8;--rose-muted:#d1a7a1}
-:root[data-rose-variant="blush"]{color-scheme:light;--text:#3b2430;--muted:#87586b;--rose-glow:#fff0f2;--rose-mid:#f8dce4;--rose-dark:#f1c8d6;--rose-deep:#e8b8ca;--rose-accent:#6f344d;--rose-muted:#87586b}
-:root[data-rose-variant="noir"]{color-scheme:dark;--text:#f4eee7;--muted:#b7a99a;--rose-glow:#433a35;--rose-mid:#241f1e;--rose-dark:#11100f;--rose-deep:#070707;--rose-accent:#d6b785;--rose-muted:#b7a99a}
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0;overflow:hidden}
 body{font-family:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;color:var(--text);background:radial-gradient(ellipse at 50% 42%,var(--rose-glow) 0,var(--rose-mid) 30%,var(--rose-dark) 63%,var(--rose-deep) 100%)}
 .scene-wash{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 40%,transparent 20%,rgba(10,0,0,.12) 72%,rgba(0,0,0,.28) 100%)}
-:root[data-rose-variant="blush"] .scene-wash{background:radial-gradient(ellipse at 50% 40%,transparent 20%,rgba(105,55,75,.08) 72%,rgba(105,55,75,.18) 100%)}
-:root[data-rose-variant="blush"] .hint{color:rgba(73,39,55,.64)}
-:root[data-rose-variant="blush"] .footer{color:rgba(73,39,55,.45)}
-:root[data-rose-variant="blush"] .kicker{color:rgba(104,55,75,.72)}
 .grain{position:fixed;inset:0;pointer-events:none;opacity:.16;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.28'/%3E%3C/svg%3E");mix-blend-mode:soft-light}
 .layout{position:relative;display:block;width:100%;height:100%;min-height:100svh;padding:max(24px,env(safe-area-inset-top)) 20px max(26px,env(safe-area-inset-bottom))}
 .viewer{position:absolute;z-index:1;top:12%;left:50%;transform:translateX(-50%);width:min(92vw,500px);height:min(64vh,720px);touch-action:pan-y;cursor:grab;pointer-events:auto}
@@ -53,40 +47,27 @@ canvas{display:block;width:100%;height:100%}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
 <script>
 (() => {
+  "use strict";
   const FRAME_SOURCE = "paper-stish-rose";
   const PARENT_SOURCE = "paper-stish-rose-parent";
+  const MODEL_URL = "https://res.cloudinary.com/cmtfrr9s/image/upload/v1793144811/rose_2.glb";
+  const DEFAULT_HEADING = "We’re sorry, sir. Your order will be delivered shortly.";
   const heading = document.getElementById("roseHeading");
   const message = document.getElementById("roseMessage");
   const hint = document.getElementById("hint");
+  const viewer = document.getElementById("viewer");
+  const canvas = document.getElementById("roseCanvas");
   let editing = false;
-  const state = { heading: "We’re sorry, sir. Your order will be delivered shortly.", message: "", variant: "classic" };
-  const VARIANT_THEMES = {
-    classic: { background: "radial-gradient(ellipse at 50% 42%,#79130f 0,#470a08 30%,#250505 63%,#160202 100%)", glow:"#79130f", mid:"#470a08", dark:"#250505", deep:"#160202", text:"#f5e8e4", muted:"#d1a7a1", accent:"#ffd0c8", fog:0x310707, sky:0xffd9d3, ground:0x160b08, key:0xffd2c8, rim:0xff3e31, fill:0x6b0b14 },
-    blush: { background: "radial-gradient(ellipse at 50% 42%,#fff0f2 0,#f8dce4 30%,#f1c8d6 63%,#e8b8ca 100%)", glow:"#fff0f2", mid:"#f8dce4", dark:"#f1c8d6", deep:"#e8b8ca", text:"#3b2430", muted:"#87586b", accent:"#6f344d", fog:0xf6dfe6, sky:0xfff4f0, ground:0x8a6273, key:0xffe7e9, rim:0xe8a1b7, fill:0xb47e9b },
-    noir: { background: "radial-gradient(ellipse at 50% 42%,#433a35 0,#241f1e 30%,#11100f 63%,#070707 100%)", glow:"#433a35", mid:"#241f1e", dark:"#11100f", deep:"#070707", text:"#f4eee7", muted:"#b7a99a", accent:"#d6b785", fog:0x171312, sky:0xd4c7b6, ground:0x090909, key:0xffe2bf, rim:0xd6a45d, fill:0x62423b }
-  };
-  let sceneRef = null, keyLightRef = null, rimLightRef = null, fillLightRef = null, hemiLightRef = null;
-  function applyVariant(value) {
-    const name = Object.prototype.hasOwnProperty.call(VARIANT_THEMES, value) ? value : "classic";
-    const theme = VARIANT_THEMES[name];
-    state.variant = name;
-    document.documentElement.dataset.roseVariant = name;
-    document.documentElement.style.setProperty("--rose-glow", theme.glow);
-    document.documentElement.style.setProperty("--rose-mid", theme.mid);
-    document.documentElement.style.setProperty("--rose-dark", theme.dark);
-    document.documentElement.style.setProperty("--rose-deep", theme.deep);
-    document.documentElement.style.setProperty("--text", theme.text);
-    document.documentElement.style.setProperty("--muted", theme.muted);
-    document.documentElement.style.setProperty("--rose-muted", theme.muted);
-    document.documentElement.style.setProperty("--rose-accent", theme.accent);
-    document.body.style.background = theme.background;
-    if (sceneRef && sceneRef.fog) sceneRef.fog.color.setHex(theme.fog);
-    if (hemiLightRef) { hemiLightRef.color.setHex(theme.sky); hemiLightRef.groundColor.setHex(theme.ground); }
-    if (keyLightRef) keyLightRef.color.setHex(theme.key);
-    if (rimLightRef) rimLightRef.color.setHex(theme.rim);
-    if (fillLightRef) fillLightRef.color.setHex(theme.fill);
-  }
-  applyVariant(new URLSearchParams(window.location.search).get("variant") || "classic");
+  let state = { heading: DEFAULT_HEADING, message: "" };
+  let loader = null;
+  let modelLoadAttempted = false;
+  let modelLoaded = false;
+  let entranceStart = 0;
+  let down = false;
+  let startX = 0, startY = 0, lastX = 0, lastY = 0;
+  let rotateX = -0.08, rotateY = 0, velocityY = 0;
+  let raf = 0, renderer = null, camera = null, scene = null, rose = null, entrance = null;
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function setEditing(value) {
     editing = value === true;
@@ -95,243 +76,208 @@ canvas{display:block;width:100%;height:100%}
       element.setAttribute("aria-readonly", editing ? "false" : "true");
       element.setAttribute("spellcheck", editing ? "true" : "false");
     });
-    hint.textContent = editing ? "Tap a text line to personalize it" : "A rose, just for you · drag to turn";
+    if (modelLoaded) hint.textContent = editing ? "Tap a text line to personalize it" : "A rose, just for you · drag to turn";
   }
 
   function reportChange() {
     if (!editing) return;
-    state.heading = (heading.textContent || "We’re sorry, sir. Your order will be delivered shortly.").replace(/[\r\n]+/g, " ").trim().slice(0, 120);
+    state.heading = (heading.textContent || DEFAULT_HEADING).replace(/[\r\n]+/g, " ").trim().slice(0, 120);
     state.message = (message.textContent || "").replace(/[\r\n]+/g, " ").trim().slice(0, 400);
     window.parent.postMessage({ source: FRAME_SOURCE, type: "change", heading: state.heading, message: state.message }, "*");
   }
-
   heading.addEventListener("input", reportChange);
   message.addEventListener("input", reportChange);
+
   window.addEventListener("message", (event) => {
-    if (event.source !== window.parent || !event.data || event.data.source !== PARENT_SOURCE) return;
-    if (event.data.type !== "set-state") return;
-    state.heading = typeof event.data.heading === "string" ? event.data.heading.slice(0,120) : "We’re sorry, sir. Your order will be delivered shortly.";
-    state.message = typeof event.data.message === "string" ? event.data.message.slice(0,400) : "";
-    if (typeof event.data.variant === "string") applyVariant(event.data.variant);
-    if (typeof event.data.modelUrl === "string") loadSharedRoseModel(event.data.modelUrl);
-    if (document.activeElement !== heading) heading.textContent = state.heading;
+    if (event.source !== window.parent || !event.data || event.data.source !== PARENT_SOURCE || event.data.type !== "set-state") return;
+    state.heading = typeof event.data.heading === "string" ? event.data.heading.slice(0, 120) : DEFAULT_HEADING;
+    state.message = typeof event.data.message === "string" ? event.data.message.slice(0, 400) : "";
+    if (document.activeElement !== heading) heading.textContent = state.heading || DEFAULT_HEADING;
     if (document.activeElement !== message) message.textContent = state.message;
     message.hidden = !state.message;
     setEditing(event.data.editing);
   });
 
+  function showModelError(error) {
+    modelLoaded = false;
+    hint.textContent = "The 3D rose could not load. Check your connection and refresh.";
+    hint.setAttribute("role", "status");
+    console.error("[Paper Stish Rose] Uploaded GLB failed to load.", error);
+  }
+
   if (!window.THREE) {
-    hint.textContent = "This template needs an internet connection to load its 3D rose";
+    hint.textContent = "The 3D model library is unavailable. Refresh while connected to the internet.";
+    hint.setAttribute("role", "status");
     window.parent.postMessage({ source: FRAME_SOURCE, type: "ready" }, "*");
     return;
   }
 
   const THREE = window.THREE;
-  const canvas = document.getElementById("roseCanvas");
-  const viewer = document.getElementById("viewer");
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.7));
-  renderer.setSize(Math.max(1, viewer.clientWidth), Math.max(1, viewer.clientHeight), false);
-  renderer.outputEncoding = THREE.sRGBEncoding;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.12;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.7));
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
 
-  const scene = new THREE.Scene();
-  sceneRef = scene;
-  scene.fog = new THREE.FogExp2(VARIANT_THEMES[state.variant].fog, 0.052);
-  const camera = new THREE.PerspectiveCamera(33, Math.max(1, viewer.clientWidth) / Math.max(1, viewer.clientHeight), 0.1, 100);
-  camera.position.set(0, 1.0, 7.8);
-  camera.lookAt(0, 0.45, 0);
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
+    camera.position.set(0, 0, 7.3);
+    camera.lookAt(0, 0, 0);
+    scene.add(new THREE.HemisphereLight(0xffe8e2, 0x25100d, 1.7));
+    const keyLight = new THREE.DirectionalLight(0xffeee8, 2.3);
+    keyLight.position.set(-3, 4, 5);
+    scene.add(keyLight);
+    const rimLight = new THREE.DirectionalLight(0xff4450, 1.1);
+    rimLight.position.set(3, 1.5, -3);
+    scene.add(rimLight);
 
-  const theme = VARIANT_THEMES[state.variant];
-  const hemisphere = new THREE.HemisphereLight(theme.sky, theme.ground, 1.35); scene.add(hemisphere); hemiLightRef = hemisphere;
-  const key = new THREE.DirectionalLight(theme.key, 2.2); key.position.set(-3, 5, 5); scene.add(key); keyLightRef = key;
-  const rim = new THREE.PointLight(theme.rim, 1.65, 12); rim.position.set(3, 2.4, -2); scene.add(rim); rimLightRef = rim;
-  const fill = new THREE.PointLight(theme.fill, 1.1, 10); fill.position.set(-4, -0.6, 3); scene.add(fill); fillLightRef = fill;
+    // This group is only a transform for the real GLB model, never generated rose geometry.
+    rose = new THREE.Group();
+    entrance = new THREE.Group();
+    rose.add(entrance);
+    scene.add(rose);
 
-  const rose = new THREE.Group();
-  scene.add(rose);
-  const fallbackRose = new THREE.Group();
-  rose.add(fallbackRose);
-
-  function petalGeometry(length, halfWidth, cup, twist) {
-    const segU = 24, segV = 16;
-    const positions = [], colors = [], indices = [];
-    const colorBase = new THREE.Color();
-    for (let i = 0; i <= segU; i++) {
-      const u = i / segU;
-      const w = halfWidth * Math.pow(Math.sin(Math.PI * Math.pow(u, .82)), .72) * (.64 + .36*u);
-      for (let j = 0; j <= segV; j++) {
-        const v = j / segV * 2 - 1;
-        const x = length * u;
-        const z = v * w;
-        const y = cup * Math.sin(Math.PI*u) + .10 * Math.pow(Math.abs(v), 1.8) * u + twist * v * Math.sin(Math.PI*u);
-        positions.push(x, y, z);
-        const shade = .58 + .42*u - .18*Math.abs(v) + .035*Math.sin(i*1.7+j*.9);
-        colorBase.setHSL(.985 - .018*u, .76 + .12*u, Math.max(.16, Math.min(.66, shade*.49)));
-        colors.push(colorBase.r, colorBase.g, colorBase.b);
-      }
+    function resize() {
+      const width = Math.max(1, viewer.clientWidth);
+      const height = Math.max(1, viewer.clientHeight);
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
     }
-    for (let i=0; i<segU; i++) for (let j=0; j<segV; j++) {
-      const a=i*(segV+1)+j,b=a+segV+1;
-      indices.push(a,b,a+1,b,b+1,a+1);
+    resize();
+    window.addEventListener("resize", resize);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", resize);
+
+    if (!THREE.GLTFLoader) throw new Error("GLTFLoader was not loaded.");
+    loader = new THREE.GLTFLoader();
+    if (THREE.DRACOLoader) {
+      const draco = new THREE.DRACOLoader();
+      draco.setDecoderPath("https://www.gstatic.com/draco/versioned/decoders/1.5.6/");
+      draco.setWorkerLimit(2);
+      loader.setDRACOLoader(draco);
     }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.Float32BufferAttribute(positions,3));
-    g.setAttribute("color", new THREE.Float32BufferAttribute(colors,3));
-    g.setIndex(indices); g.computeVertexNormals();
-    return g;
-  }
 
-  function addPetal(length, width, angle, radius, y, color, options={}) {
-    const mesh = new THREE.Mesh(
-      petalGeometry(length, width, options.cup ?? .16, options.twist ?? .04),
-      new THREE.MeshStandardMaterial({
-        color: 0xffffff, vertexColors:true, roughness: options.roughness ?? .43, metalness:.03,
-        side:THREE.DoubleSide, emissive: new THREE.Color(color).multiplyScalar(.035)
-      })
-    );
-    mesh.position.set(Math.cos(angle)*radius, y, Math.sin(angle)*radius);
-    mesh.rotation.y = -angle;
-    mesh.rotation.z = options.tilt ?? 0;
-    mesh.rotation.x = options.roll ?? 0;
-    fallbackRose.add(mesh);
-  }
-
-  // Layered, individually curved petals make a slowly turning sculptural rose.
-  const outer = ["#7f0c16","#a10d1b","#bd1823","#8e0b15","#c51d27","#78101a","#a91420"];
-  for (let i=0;i<7;i++) addPetal(1.16,.47,i*Math.PI*2/7+.16,.18,.36+Math.sin(i*1.4)*.04,outer[i],{cup:.25,tilt:(i%2?-.12:.06),twist:.09,roughness:.5});
-  const mid = ["#d0202d","#b51221","#e02a35","#a20d1a","#c51c2a","#ed3c41","#b91624"];
-  for (let i=0;i<7;i++) addPetal(.91,.38,i*Math.PI*2/7+.54,.10,.48+Math.cos(i*1.8)*.035,mid[i],{cup:.22,tilt:(i%2?.08:-.1),twist:.075,roughness:.4});
-  const inner = ["#e5323b","#bd111f","#f34b4a","#cf1828","#d52231","#a90e1c"];
-  for (let i=0;i<6;i++) addPetal(.65,.285,i*Math.PI/3+.25,.045,.58+Math.sin(i*2)*.025,inner[i],{cup:.18,tilt:.12,twist:.07,roughness:.36});
-  for (let i=0;i<4;i++) addPetal(.39,.19,i*Math.PI/2+.4,.018,.64,"#dc2632",{cup:.14,tilt:.15,twist:.05,roughness:.34});
-
-  // Stem and leaves.
-  const stem = new THREE.Mesh(new THREE.CylinderGeometry(.045,.075,2.65,16),new THREE.MeshStandardMaterial({color:0x34583b,roughness:.78}));
-  stem.position.set(0,-.98,0); stem.rotation.z=-.025; fallbackRose.add(stem);
-  function makeLeaf(length,width) {
-    const g = new THREE.BufferGeometry(),p=[],c=[],ix=[];
-    const base=new THREE.Color(0x416a42),light=new THREE.Color(0x7c985b);
-    const nu=18,nv=10;
-    for(let i=0;i<=nu;i++){const u=i/nu;for(let j=0;j<=nv;j++){
-      const v=j/nv*2-1, w=width*Math.pow(Math.sin(Math.PI*u),.72);
-      p.push(length*u, .12*Math.sin(Math.PI*u)+.08*(1-v*v)*Math.sin(Math.PI*u), v*w);
-      const cc=base.clone().lerp(light,u*.78); c.push(cc.r,cc.g,cc.b);
-    }}
-    for(let i=0;i<nu;i++)for(let j=0;j<nv;j++){const a=i*(nv+1)+j,b=a+nv+1;ix.push(a,b,a+1,b,b+1,a+1)}
-    g.setAttribute("position",new THREE.Float32BufferAttribute(p,3));g.setAttribute("color",new THREE.Float32BufferAttribute(c,3));g.setIndex(ix);g.computeVertexNormals();
-    return g;
-  }
-  function addLeaf(angle,y,length,width,tilt) {
-    const leaf=new THREE.Mesh(makeLeaf(length,width),new THREE.MeshStandardMaterial({vertexColors:true,side:THREE.DoubleSide,roughness:.68}));
-    leaf.position.set(Math.cos(angle)*.06,y,Math.sin(angle)*.06);
-    leaf.rotation.y=-angle;leaf.rotation.z=tilt;fallbackRose.add(leaf);
-    const vein=new THREE.Mesh(new THREE.CylinderGeometry(.006,.012,length*.78,5),new THREE.MeshStandardMaterial({color:0x9ba66a,roughness:.7}));
-    vein.position.set(leaf.position.x+Math.cos(angle)*length*.39,y+.1,leaf.position.z+Math.sin(angle)*length*.39);
-    vein.rotation.z=tilt+.1;vein.rotation.y=-angle;fallbackRose.add(vein);
-  }
-  addLeaf(-.68,-.98,1.1,.24,-.35); addLeaf(2.52,-1.45,.95,.22,.42);
-  const calyx = new THREE.Mesh(new THREE.ConeGeometry(.25,.42,7),new THREE.MeshStandardMaterial({color:0x315236,roughness:.72}));
-  calyx.position.set(0,-.37,0);calyx.rotation.x=Math.PI;fallbackRose.add(calyx);
-  fallbackRose.position.y=0;
-  fallbackRose.rotation.x=-.07;
-
-  let down=false, moved=false, startX=0,startY=0,lastX=0,lastY=0,rotateX=-.07,rotateY=0,velocityY=0;
-  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let modelMixer = null;
-  let sharedModelLoader = null;
-  let modelLoadAttempted = false;
-
-  // The sandboxed editor iframe has an opaque origin. Its parent passes the
-  // site's /models/rose.glb URL; a directly opened template resolves the same
-  // asset from its own deployment origin. Every variant reuses this single file.
-  function loadSharedRoseModel(modelUrl) {
-    if (!sharedModelLoader || modelLoadAttempted || typeof modelUrl !== "string") return;
-    let resolvedUrl;
-    try {
-      const parsed = new URL(modelUrl, document.baseURI);
-      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return;
-      resolvedUrl = parsed.href;
-    } catch {
-      return;
-    }
-    modelLoadAttempted = true;
-    sharedModelLoader.load(resolvedUrl, (gltf) => {
-      const model = gltf.scene;
-      model.traverse((object) => {
-        if (!object.isMesh) return;
-        object.castShadow = false;
-        object.receiveShadow = false;
-        if (object.material) {
-          const materials = Array.isArray(object.material) ? object.material : [object.material];
-          for (const material of materials) {
-            material.side = THREE.DoubleSide;
-            material.needsUpdate = true;
-          }
-        }
-      });
-      const bounds = new THREE.Box3().setFromObject(model);
-      const size = bounds.getSize(new THREE.Vector3());
-      if (!Number.isFinite(size.y) || size.y <= 0) {
-        console.warn("[Paper Stish Rose] Model has invalid bounds; keeping fallback rose.");
+    function loadRoseModel(modelUrl) {
+      if (!loader || modelLoadAttempted || typeof modelUrl !== "string") return;
+      modelLoadAttempted = true;
+      let resolvedUrl;
+      try {
+        const parsed = new URL(modelUrl, document.baseURI);
+        if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error("Invalid model URL");
+        resolvedUrl = parsed.href;
+      } catch (error) {
+        showModelError(error);
         return;
       }
-      model.scale.setScalar(3.35 / size.y);
-      model.updateMatrixWorld(true);
-      const centeredBounds = new THREE.Box3().setFromObject(model);
-      const center = centeredBounds.getCenter(new THREE.Vector3());
-      model.position.sub(center);
-      model.position.y += .08;
-      rose.add(model);
-      fallbackRose.visible = false;
-      if (!prefersReducedMotion && gltf.animations?.length) {
-        modelMixer = new THREE.AnimationMixer(model);
-        modelMixer.clipAction(gltf.animations[0]).play();
-      }
-    }, undefined, (error) => {
-      fallbackRose.visible = true;
-      console.warn("[Paper Stish Rose] Shared GLB could not load; using fallback rose.", error);
-    });
-  }
+      hint.textContent = "A rose is on its way…";
+      hint.setAttribute("role", "status");
 
-  if (THREE.GLTFLoader && THREE.DRACOLoader) {
-    const dracoLoader = new THREE.DRACOLoader();
-    dracoLoader.setDecoderPath("https://www.gstatic.com/draco/versioned/decoders/1.5.6/");
-    dracoLoader.setWorkerLimit(2);
-    dracoLoader.preload();
-    sharedModelLoader = new THREE.GLTFLoader();
-    sharedModelLoader.setDRACOLoader(dracoLoader);
-    if (window.location.origin !== "null") {
-      loadSharedRoseModel("https://res.cloudinary.com/cmtfrr9s/image/upload/v1793144811/rose_2.glb");
+      loader.load(resolvedUrl, (gltf) => {
+        const model = gltf.scene;
+        if (!model) { showModelError(new Error("GLB contains no scene.")); return; }
+        model.traverse((object) => {
+          if (!object.isMesh) return;
+          object.castShadow = false;
+          object.receiveShadow = false;
+          if (object.material) {
+            const materials = Array.isArray(object.material) ? object.material : [object.material];
+            materials.forEach((material) => {
+              material.side = THREE.DoubleSide;
+              material.needsUpdate = true;
+            });
+          }
+        });
+
+        const bounds = new THREE.Box3().setFromObject(model);
+        const size = bounds.getSize(new THREE.Vector3());
+        if (!Number.isFinite(size.y) || size.y <= 0) { showModelError(new Error("GLB has invalid dimensions.")); return; }
+
+        // Fit, center, then reveal the actual uploaded model with a short rise-and-scale animation.
+        model.scale.setScalar(3.15 / size.y);
+        model.updateMatrixWorld(true);
+        const centeredBounds = new THREE.Box3().setFromObject(model);
+        model.position.sub(centeredBounds.getCenter(new THREE.Vector3()));
+        entrance.add(model);
+        entrance.scale.setScalar(0.001);
+        entrance.position.y = -0.65;
+        entrance.rotation.x = -0.16;
+        entranceStart = performance.now();
+        modelLoaded = true;
+        hint.textContent = editing ? "Tap a text line to personalize it" : "A rose, just for you · drag to turn";
+        if (gltf.animations && gltf.animations.length && !prefersReducedMotion) {
+          const mixer = new THREE.AnimationMixer(model);
+          gltf.animations.forEach((clip) => mixer.clipAction(clip).play());
+          rose.userData.mixer = mixer;
+        }
+      }, undefined, showModelError);
     }
-  } else {
-    console.warn("[Paper Stish Rose] GLTFLoader/DRACOLoader unavailable; using fallback rose.");
-  }
-  viewer.addEventListener("pointerdown",(e)=>{if(editing && e.target.closest(".box"))return;down=true;moved=false;startX=lastX=e.clientX;startY=lastY=e.clientY;viewer.classList.add("dragging");viewer.setPointerCapture?.(e.pointerId)});
-  viewer.addEventListener("pointermove",(e)=>{if(!down)return;const dx=e.clientX-lastX,dy=e.clientY-lastY;if(Math.abs(e.clientX-startX)+Math.abs(e.clientY-startY)>3)moved=true;rotateY+=dx*.009;rotateX=Math.max(-.52,Math.min(.42,rotateX+dy*.004));velocityY=dx*.0015;lastX=e.clientX;lastY=e.clientY});
-  function endDrag(){down=false;viewer.classList.remove("dragging")}
-  viewer.addEventListener("pointerup",endDrag);viewer.addEventListener("pointercancel",endDrag);viewer.addEventListener("lostpointercapture",endDrag);
 
-  let raf=0;
-  function resize(){const w=Math.max(1,viewer.clientWidth),h=Math.max(1,viewer.clientHeight);renderer.setSize(w,h,false);camera.aspect=w/h;camera.position.z=7.8;camera.updateProjectionMatrix()}
-  window.addEventListener("resize",resize);
-  const clock=new THREE.Clock();
-  function render(){
-    raf=requestAnimationFrame(render);
-    const dt=clock.getDelta();
-    const t=clock.elapsedTime;
-    if(!down && !prefersReducedMotion) { rotateY+=.0021+velocityY;velocityY*=.94; }
-    rose.rotation.y=rotateY;
-    rose.rotation.x=rotateX+(prefersReducedMotion ? 0 : Math.sin(t*.32)*.018);
-    rose.position.y=.32+(prefersReducedMotion ? 0 : Math.sin(t*.68)*.035);
-    if(modelMixer) modelMixer.update(dt);
-    renderer.render(scene,camera);
+    // Load the GLB even inside sandboxed preview iframes with an opaque origin.
+    // There is intentionally NO procedural/fallback rose if this request fails.
+    loadRoseModel(MODEL_URL);
+
+    viewer.addEventListener("pointerdown", (event) => {
+      if (event.button !== undefined && event.button !== 0) return;
+      down = true;
+      startX = lastX = event.clientX;
+      startY = lastY = event.clientY;
+      viewer.classList.add("dragging");
+      if (viewer.setPointerCapture) viewer.setPointerCapture(event.pointerId);
+    });
+    viewer.addEventListener("pointermove", (event) => {
+      if (!down) return;
+      const dx = event.clientX - lastX;
+      const dy = event.clientY - lastY;
+      if (Math.abs(event.clientX - startX) + Math.abs(event.clientY - startY) > 3) {
+        rotateY += dx * 0.009;
+        rotateX = Math.max(-0.5, Math.min(0.4, rotateX + dy * 0.004));
+        velocityY = dx * 0.0015;
+      }
+      lastX = event.clientX;
+      lastY = event.clientY;
+    });
+    function endDrag() { down = false; viewer.classList.remove("dragging"); }
+    viewer.addEventListener("pointerup", endDrag);
+    viewer.addEventListener("pointercancel", endDrag);
+    viewer.addEventListener("lostpointercapture", endDrag);
+
+    const clock = new THREE.Clock();
+    function render() {
+      raf = requestAnimationFrame(render);
+      const delta = Math.min(clock.getDelta(), 0.05);
+      const elapsed = clock.elapsedTime;
+      if (modelLoaded) {
+        if (!down && !prefersReducedMotion) {
+          rotateY += delta * 0.33 + velocityY;
+          velocityY *= 0.94;
+        }
+        rose.rotation.y = rotateY;
+        rose.rotation.x = rotateX + (prefersReducedMotion ? 0 : Math.sin(elapsed * 0.32) * 0.012);
+        if (entranceStart) {
+          const progress = Math.min(1, Math.max(0, (performance.now() - entranceStart) / 1250));
+          const inverted = 1 - progress;
+          const eased = 1 - inverted * inverted * inverted;
+          entrance.scale.setScalar(Math.max(0.001, eased));
+          entrance.position.y = -0.65 * inverted;
+          entrance.rotation.x = -0.16 * inverted;
+          if (progress >= 1) entranceStart = 0;
+        }
+        if (rose.userData.mixer) rose.userData.mixer.update(delta);
+      }
+      renderer.render(scene, camera);
+    }
+    render();
+    setEditing(false);
+    window.parent.postMessage({ source: FRAME_SOURCE, type: "ready" }, "*");
+    window.addEventListener("pagehide", () => {
+      cancelAnimationFrame(raf);
+      if (renderer) renderer.dispose();
+    });
+  } catch (error) {
+    showModelError(error);
+    window.parent.postMessage({ source: FRAME_SOURCE, type: "ready" }, "*");
   }
-  render();
-  setEditing(false);
-  window.parent.postMessage({source:FRAME_SOURCE,type:"ready"},"*");
-  window.addEventListener("pagehide",()=>{cancelAnimationFrame(raf);renderer.dispose()});
 })();
 </script>
 </body>
