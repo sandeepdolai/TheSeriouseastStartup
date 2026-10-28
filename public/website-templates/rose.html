@@ -16,6 +16,7 @@ body{min-height:100svh;overflow-x:hidden;overflow-y:auto;font-family:"Bricolage 
 .scene-wash{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 40%,transparent 20%,rgba(10,0,0,.12) 72%,rgba(0,0,0,.28) 100%)}
 .grain{position:fixed;inset:0;pointer-events:none;opacity:.16;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.28'/%3E%3C/svg%3E");mix-blend-mode:soft-light}
 .layout{position:relative;display:grid;place-items:center;width:100%;min-height:100svh;padding:max(34px,env(safe-area-inset-top)) 18px max(42px,env(safe-area-inset-bottom))}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .content-stack{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;width:min(100%,440px);margin:auto}
 .viewer{position:relative;z-index:1;inset:auto;left:auto;top:auto;transform:none;width:100%;height:420px;flex:none;touch-action:pan-y;cursor:grab;pointer-events:auto}
 .viewer.dragging{cursor:grabbing}
@@ -25,8 +26,6 @@ canvas{display:block;width:100%;height:100%}
 .rose-message{max-width:30ch;margin:12px auto 0;color:var(--muted);font-size:15px;font-weight:400;line-height:1.6;letter-spacing:.005em;outline:none!important;border:0}
 [contenteditable="true"],[contenteditable="true"]:focus,[contenteditable="true"]:focus-visible{pointer-events:auto;cursor:text;border:0;outline:none!important;box-shadow:none}
 [contenteditable="false"]{outline:none;border:0;cursor:default}
-.hint{position:absolute;z-index:3;top:max(24px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 36px);color:rgba(255,224,217,.55);font-size:9px;font-weight:500;letter-spacing:.18em;text-align:center;text-transform:uppercase;pointer-events:none}
-.footer{position:absolute;z-index:3;left:0;right:0;bottom:max(12px,env(safe-area-inset-bottom));display:flex;justify-content:center;color:rgba(255,218,210,.33);font-size:8px;letter-spacing:.2em;text-transform:uppercase;pointer-events:none}
 @media(max-width:360px){.box{padding:24px 18px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
 </style>
@@ -34,7 +33,7 @@ canvas{display:block;width:100%;height:100%}
 <body>
 <div class="scene-wash" aria-hidden="true"></div><div class="grain" aria-hidden="true"></div>
 <div class="layout rose-card-layout">
-  <div class="hint" id="hint">A rose, just for you · drag to turn</div>
+  <div class="sr-only" id="modelStatus" role="status" aria-live="polite"></div>
   <div class="content-stack">
     <div class="viewer" id="viewer" aria-label="Interactive three-dimensional rose. Drag to rotate."><canvas id="roseCanvas"></canvas></div>
     <main class="box">
@@ -42,7 +41,6 @@ canvas{display:block;width:100%;height:100%}
       <p class="rose-message" id="roseMessage" hidden></p>
     </main>
   </div>
-  <div class="footer">Made with Paper Stish</div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -56,7 +54,7 @@ canvas{display:block;width:100%;height:100%}
   const DEFAULT_HEADING = "We’re sorry, sir. Your order will be delivered shortly.";
   const heading = document.getElementById("roseHeading");
   const message = document.getElementById("roseMessage");
-  const hint = document.getElementById("hint");
+  const modelStatus = document.getElementById("modelStatus");
   const viewer = document.getElementById("viewer");
   const canvas = document.getElementById("roseCanvas");
   let editing = false;
@@ -78,7 +76,6 @@ canvas{display:block;width:100%;height:100%}
       element.setAttribute("aria-readonly", editing ? "false" : "true");
       element.setAttribute("spellcheck", editing ? "true" : "false");
     });
-    if (modelLoaded) hint.textContent = editing ? "Tap a text line to personalize it" : "A rose, just for you · drag to turn";
   }
 
   function reportChange() {
@@ -102,14 +99,12 @@ canvas{display:block;width:100%;height:100%}
 
   function showModelError(error) {
     modelLoaded = false;
-    hint.textContent = "The 3D rose could not load. Check your connection and refresh.";
-    hint.setAttribute("role", "status");
+    modelStatus.textContent = "The 3D rose could not load. Check your connection and refresh.";
     console.error("[Paper Stish Rose] Uploaded GLB failed to load.", error);
   }
 
   if (!window.THREE) {
-    hint.textContent = "The 3D model library is unavailable. Refresh while connected to the internet.";
-    hint.setAttribute("role", "status");
+    modelStatus.textContent = "The 3D model library is unavailable. Refresh while connected to the internet.";
     window.parent.postMessage({ source: FRAME_SOURCE, type: "ready" }, "*");
     return;
   }
@@ -172,9 +167,6 @@ canvas{display:block;width:100%;height:100%}
         showModelError(error);
         return;
       }
-      hint.textContent = "A rose is on its way…";
-      hint.setAttribute("role", "status");
-
       loader.load(resolvedUrl, (gltf) => {
         const model = gltf.scene;
         if (!model) { showModelError(new Error("GLB contains no scene.")); return; }
@@ -206,7 +198,6 @@ canvas{display:block;width:100%;height:100%}
         entrance.rotation.x = -0.16;
         entranceStart = performance.now();
         modelLoaded = true;
-        hint.textContent = editing ? "Tap a text line to personalize it" : "A rose, just for you · drag to turn";
         if (gltf.animations && gltf.animations.length && !prefersReducedMotion) {
           const mixer = new THREE.AnimationMixer(model);
           gltf.animations.forEach((clip) => mixer.clipAction(clip).play());
