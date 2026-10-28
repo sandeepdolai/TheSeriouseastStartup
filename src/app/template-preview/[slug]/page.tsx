@@ -23,8 +23,6 @@ const PREVIEW_SLUGS: WebsiteTemplatePreviewSlug[] = [
   "photo-album",
   "introducing-him",
   "rose",
-  "rose-blush",
-  "rose-noir",
 ];
 
 export default async function WebsiteTemplatePreviewPage({
