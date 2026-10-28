@@ -5,11 +5,19 @@ import type { TemplatePublicationValues } from "@/lib/publications";
 import styles from "./RoseTemplate.module.css";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-const TEMPLATE_URL = `${BASE_PATH}/website-templates/rose.html`;
+const TEMPLATE_URL = `${BASE_PATH}/website-templates/rose.html?v=rose-card-v2`;
 const EMPTY_DOCUMENT =
   '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{width:100%;height:100%;margin:0;background:#1c0303;overflow:hidden}</style></head><body></body></html>';
 const DEFAULT_HEADING = "We’re sorry, sir — your order will arrive soon.";
 const DEFAULT_MESSAGE = "";
+const LEGACY_MESSAGE = "A little reminder that you make my world bloom.";
+
+function getInitialText(current: TemplatePublicationValues | undefined) {
+  const heading = current?.heading?.trim() ?? "";
+  const message = current?.message?.trim() ?? "";
+  const isLegacyDefault = (!heading || /^(rose|ROSE)$/i.test(heading)) && (!message || message === LEGACY_MESSAGE);
+  return { heading: isLegacyDefault ? DEFAULT_HEADING : (heading || DEFAULT_HEADING), message: isLegacyDefault ? DEFAULT_MESSAGE : message };
+}
 export type RoseTemplateVariant = "classic" | "blush" | "noir";
 const FRAME_SOURCE = "paper-stish-rose";
 const PARENT_SOURCE = "paper-stish-rose-parent";
@@ -44,7 +52,7 @@ export function RoseTemplate({ values, editing = false, variant = "classic", onT
 
   useEffect(() => {
     let alive = true;
-    fetch(TEMPLATE_URL, { cache: "force-cache" })
+    fetch(TEMPLATE_URL, { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error("Could not load the Rose website template.");
         return response.text();
@@ -82,13 +90,13 @@ export function RoseTemplate({ values, editing = false, variant = "classic", onT
       if (data.type === "ready") {
         iframeReady.current = true;
         setPreviewFrameReady(true);
-        const current = latestValues.current;
+        const current = getInitialText(latestValues.current);
         frame.contentWindow?.postMessage({
           source: PARENT_SOURCE,
           type: "set-state",
           editing: latestEditing.current,
-          heading: current?.heading ?? DEFAULT_HEADING,
-          message: current?.message ?? DEFAULT_MESSAGE,
+          heading: current.heading,
+          message: current.message,
           variant: latestVariant.current,
           modelUrl: getSharedRoseModelUrl(),
         }, "*");
@@ -107,7 +115,7 @@ export function RoseTemplate({ values, editing = false, variant = "classic", onT
 
   useEffect(() => {
     if (!iframeReady.current) return;
-    const current = values;
+    const current = getInitialText(values);
     iframeRef.current?.contentWindow?.postMessage({
       source: PARENT_SOURCE,
       type: "set-state",
