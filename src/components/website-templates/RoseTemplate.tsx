@@ -8,7 +8,7 @@ const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const TEMPLATE_URL = `${BASE_PATH}/website-templates/rose.html?v=rose-card-v3`;
 const EMPTY_DOCUMENT =
   '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{width:100%;height:100%;margin:0;background:#1c0303;overflow:hidden}</style></head><body></body></html>';
-const DEFAULT_HEADING = "We’re sorry, sir — your order will arrive soon.";
+const DEFAULT_HEADING = "We’re sorry, sir. Your order will be delivered shortly.";
 const DEFAULT_MESSAGE = "";
 const LEGACY_MESSAGE = "A little reminder that you make my world bloom.";
 
