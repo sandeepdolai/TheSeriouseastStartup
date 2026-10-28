@@ -133,8 +133,9 @@ export function PublishedTemplateViewer({
     }
 
     if (["rose", "rose-blush", "rose-noir"].includes(serverPublication.templateSlug) && serverPublication.values) {
-      const variant = serverPublication.templateSlug === "rose-blush" ? "blush" : serverPublication.templateSlug === "rose-noir" ? "noir" : "classic";
-      return <RoseTemplate key={publicationKey} values={serverPublication.values} variant={variant} />;
+      // Keep older published links working, but render them with the one
+      // canonical Rose design instead of retaining the removed variants.
+      return <RoseTemplate key={publicationKey} values={serverPublication.values} />;
     }
 
     if (serverPublication.templateSlug === "forever-and-ever" && serverPublication.values) {
