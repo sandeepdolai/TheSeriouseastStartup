@@ -12,7 +12,7 @@ import { ProjectSheet } from "../ProjectSheet";
 import { WebsiteEditor, type WebsiteEditorTemplateSlug } from "./WebsiteEditor";
 
 function isEditableSlug(slug: string): slug is WebsiteEditorTemplateSlug {
-  return slug === "red-letter" || slug === "introducing-him" || slug === "love-of-my-life" || slug === "birthday-template" || slug === "birthday-today" || slug === "photo-album" || slug === "love-heart" || slug === "forever-and-ever" || slug === "our-calendar" || slug === "rose" || slug === "rose-blush" || slug === "rose-noir";
+  return slug === "red-letter" || slug === "introducing-him" || slug === "love-of-my-life" || slug === "birthday-template" || slug === "birthday-today" || slug === "photo-album" || slug === "love-heart" || slug === "forever-and-ever" || slug === "our-calendar" || slug === "rose";
 }
 
 function rememberReturnPath(key: string, path: string): void {
@@ -133,6 +133,16 @@ export function WebsiteTemplateBrowser({
         } catch {
           pathSlug = null;
         }
+      }
+
+      // These were experimental duplicate entries. Redirect old saved links
+      // to the single canonical Rose template, preserving an existing draft id.
+      if (pathSlug === "rose-blush" || pathSlug === "rose-noir") {
+        const editSuffix = match?.[2] ? "/edit" : "";
+        const draft = match?.[2] ? url.searchParams.get("draft") : null;
+        const query = draft ? `?draft=${encodeURIComponent(draft)}` : "";
+        navigateToAppPath(`/website-templates/rose${editSuffix}${query}`, true);
+        return;
       }
 
       const requestedSlug = match?.[2] ? pathSlug : legacySlug;
