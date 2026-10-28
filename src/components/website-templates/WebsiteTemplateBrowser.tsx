@@ -122,8 +122,9 @@ export function WebsiteTemplateBrowser({
       let url = new URL(window.location.href);
       const legacySlug = url.pathname === "/website-templates" ? url.searchParams.get("edit") : null;
       const legacyDraftId = url.searchParams.get("draft");
-      if (legacySlug && isEditableSlug(legacySlug)) {
-        const canonical = `/website-templates/${encodeURIComponent(legacySlug)}/edit${legacyDraftId ? `?draft=${encodeURIComponent(legacyDraftId)}` : ""}`;
+      const normalizedLegacySlug = legacySlug ? normalizeEditableSlug(legacySlug) : null;
+      if (legacySlug && normalizedLegacySlug) {
+        const canonical = `/website-templates/${encodeURIComponent(normalizedLegacySlug)}/edit${legacyDraftId ? `?draft=${encodeURIComponent(legacyDraftId)}` : ""}`;
         navigateToAppPath(canonical, true);
         url = new URL(window.location.href);
       }
