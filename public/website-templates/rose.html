@@ -43,7 +43,7 @@ canvas{display:block;width:100%;height:100%}
   <div class="viewer" id="viewer" aria-label="Interactive three-dimensional rose. Drag to rotate."><canvas id="roseCanvas"></canvas></div>
   <div class="hint" id="hint">A rose, just for you · drag to turn</div>
   <main class="box">
-    <h1 id="roseHeading">We’re sorry, sir — your order will arrive soon.</h1>
+    <h1 id="roseHeading">We’re sorry, sir. Your order will be delivered shortly.</h1>
     <p class="rose-message" id="roseMessage" hidden></p>
   </main>
   <div class="footer">Made with Paper Stish</div>
@@ -59,7 +59,7 @@ canvas{display:block;width:100%;height:100%}
   const message = document.getElementById("roseMessage");
   const hint = document.getElementById("hint");
   let editing = false;
-  const state = { heading: "We’re sorry, sir — your order will arrive soon.", message: "", variant: "classic" };
+  const state = { heading: "We’re sorry, sir. Your order will be delivered shortly.", message: "", variant: "classic" };
   const VARIANT_THEMES = {
     classic: { background: "radial-gradient(ellipse at 50% 42%,#79130f 0,#470a08 30%,#250505 63%,#160202 100%)", glow:"#79130f", mid:"#470a08", dark:"#250505", deep:"#160202", text:"#f5e8e4", muted:"#d1a7a1", accent:"#ffd0c8", fog:0x310707, sky:0xffd9d3, ground:0x160b08, key:0xffd2c8, rim:0xff3e31, fill:0x6b0b14 },
     blush: { background: "radial-gradient(ellipse at 50% 42%,#fff0f2 0,#f8dce4 30%,#f1c8d6 63%,#e8b8ca 100%)", glow:"#fff0f2", mid:"#f8dce4", dark:"#f1c8d6", deep:"#e8b8ca", text:"#3b2430", muted:"#87586b", accent:"#6f344d", fog:0xf6dfe6, sky:0xfff4f0, ground:0x8a6273, key:0xffe7e9, rim:0xe8a1b7, fill:0xb47e9b },
@@ -100,7 +100,7 @@ canvas{display:block;width:100%;height:100%}
 
   function reportChange() {
     if (!editing) return;
-    state.heading = (heading.textContent || "We’re sorry, sir — your order will arrive soon.").replace(/[\r\n]+/g, " ").trim().slice(0, 120);
+    state.heading = (heading.textContent || "We’re sorry, sir. Your order will be delivered shortly.").replace(/[\r\n]+/g, " ").trim().slice(0, 120);
     state.message = (message.textContent || "").replace(/[\r\n]+/g, " ").trim().slice(0, 400);
     window.parent.postMessage({ source: FRAME_SOURCE, type: "change", heading: state.heading, message: state.message }, "*");
   }
@@ -110,7 +110,7 @@ canvas{display:block;width:100%;height:100%}
   window.addEventListener("message", (event) => {
     if (event.source !== window.parent || !event.data || event.data.source !== PARENT_SOURCE) return;
     if (event.data.type !== "set-state") return;
-    state.heading = typeof event.data.heading === "string" ? event.data.heading.slice(0,120) : "We’re sorry, sir — your order will arrive soon.";
+    state.heading = typeof event.data.heading === "string" ? event.data.heading.slice(0,120) : "We’re sorry, sir. Your order will be delivered shortly.";
     state.message = typeof event.data.message === "string" ? event.data.message.slice(0,400) : "";
     if (typeof event.data.variant === "string") applyVariant(event.data.variant);
     if (typeof event.data.modelUrl === "string") loadSharedRoseModel(event.data.modelUrl);
