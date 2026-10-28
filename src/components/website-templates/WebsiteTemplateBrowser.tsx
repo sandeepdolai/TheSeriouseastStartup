@@ -62,10 +62,9 @@ export function WebsiteTemplateBrowser({
 
   // Every edit starts with a device-local project record before the editor
   // opens, so it is visible in My even if the user closes the tab immediately.
-  const beginEditing = useCallback(async (slug: string, existingProjectId?: string) => {
-    const canonicalSlug = normalizeEditableSlug(slug);
-    if (!canonicalSlug) return;
-    slug = canonicalSlug;
+  const beginEditing = useCallback(async (requestedSlug: string, existingProjectId?: string) => {
+    const slug = normalizeEditableSlug(requestedSlug);
+    if (!slug) return;
 
     if (existingProjectId) {
       setDraftError("");
