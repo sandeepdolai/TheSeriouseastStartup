@@ -381,7 +381,20 @@ export function WebsiteEditor({
         const captions = Array.isArray(raw.captions)
           ? raw.captions.filter((item): item is string => typeof item === "string").slice(0, MAX_ALBUM_PHOTOS)
           : [];
-        const savedHeading = text("heading", defaults.heading ?? "", templateSlug === "introducing-him" ? 200 : 160);
+        let savedHeading = text("heading", defaults.heading ?? "", templateSlug === "introducing-him" ? 200 : 160);
+        let savedMessage = text("message", defaults.message ?? "", templateSlug === "introducing-him" ? 4000 : 1200);
+        if (templateSlug === "rose") {
+          const legacyRoseDefaults = new Set([
+            "Rose\\u0000A little reminder that you make my world bloom.",
+            "For My Favorite Person\\u0000You make even the ordinary days feel soft and beautiful.",
+            "Forever in Bloom\\u0000Some feelings are quiet, deep, and meant to stay.",
+            "We’re sorry, sir — your order will arrive soon.\\u0000",
+          ]);
+          if (legacyRoseDefaults.has(`${savedHeading}\\u0000${savedMessage}`)) {
+            savedHeading = defaults.heading ?? "We’re sorry, sir. Your order will be delivered shortly.";
+            savedMessage = "";
+          }
+        }
         const savedLetterParagraphs = Array.isArray(raw.letterParagraphs)
           ? raw.letterParagraphs.filter((item): item is string => typeof item === "string").slice(0, 4)
           : defaults.letterParagraphs;
@@ -408,7 +421,7 @@ export function WebsiteEditor({
           years: text("years", defaults.years ?? "", 40),
           yearsLabel: text("yearsLabel", defaults.yearsLabel ?? "", 80),
           sideNote: text("sideNote", defaults.sideNote ?? "", 80),
-          message: text("message", defaults.message ?? "", templateSlug === "introducing-him" ? 4000 : 1200),
+          message: savedMessage,
           photoUrl,
           images,
           captions,
