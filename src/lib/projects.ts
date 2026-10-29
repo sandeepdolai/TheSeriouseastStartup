@@ -31,7 +31,7 @@ export const WEBSITE_TEMPLATES: Project[] = [
     tags: [],
     awards: 0,
     aspect: 1,
-    media: [`${BASE_PATH}/website-templates/rose-preview.svg`],
+    media: [`${BASE_PATH}/website-templates/rose-preview.png`],
   },
   {
     title: "A Little Red Letter",
@@ -41,7 +41,7 @@ export const WEBSITE_TEMPLATES: Project[] = [
     tags: [],
     awards: 0,
     aspect: 1,
-    media: [`${BASE_PATH}/website-templates/red-letter-preview.svg`],
+    media: [`${BASE_PATH}/website-templates/red-letter-preview.png`],
   },
   {
     title: "Love Heart",
