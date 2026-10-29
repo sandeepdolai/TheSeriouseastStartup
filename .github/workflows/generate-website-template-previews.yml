@@ -10,6 +10,7 @@ on:
       - "public/website-templates/forever-and-ever.html.gz.b64"
       - "public/website-templates/introducing-him.html.gz.b64"
       - "public/website-templates/red-letter.html.gz.b64"
+      - "public/website-templates/rose.html"
       - "public/website-templates/our-calendar-source.html"
       - "public/website-templates/our-calendar-cake.png"
       - "src/lib/projects.ts"
