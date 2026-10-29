@@ -37,7 +37,7 @@ function decodeSegment(value: string): string | null {
 export function resolveAppRoute(pathname: string): ResolvedAppRoute | null {
   const path = cleanPath(pathname);
 
-  if (path === "/create") return { view: "home" };
+  if (path === "/create") return { view: "website-templates" };
   if (path === "/create/my") return { view: "my" };
   if (path === "/create/saved") return { view: "saved" };
   if (path === "/create/website-templates" || path === "/website-templates") {
