@@ -23,7 +23,7 @@ const CAM_Z = 41.18;
 
 /** env (ground) config from the reference */
 const MI = {
-  tint: "#F0EFEB",
+  tint: "#000000",
   alpha: 0.9,
   drop: 0.06,
   run: 6,
@@ -100,7 +100,7 @@ export class Folio {
       powerPreference: "high-performance",
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.setClearColor(0xFAF9F5, 1);
+    this.renderer.setClearColor(0x000000, 1);
     container.appendChild(this.renderer.domElement);
 
     this.camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 2000);
@@ -115,7 +115,7 @@ export class Folio {
       new THREE.ShaderMaterial({
         vertexShader: BACKDROP_VERT,
         fragmentShader: BACKDROP_FRAG,
-        uniforms: { u_c0: { value: new THREE.Color(0xFAF9F5) } },
+        uniforms: { u_c0: { value: new THREE.Color(0x000000) } },
         depthTest: false,
         depthWrite: false,
       })
@@ -133,7 +133,7 @@ export class Folio {
         vertexShader: GROUND_VERT,
         fragmentShader: GROUND_FRAG,
         uniforms: {
-          u_c0: { value: new THREE.Color(0xFAF9F5) },
+          u_c0: { value: new THREE.Color(0x000000) },
           u_c1: { value: new THREE.Color(MI.tint) },
           u_alpha: { value: 0 },
           u_grid: { value: MI.grid },
@@ -164,7 +164,7 @@ export class Folio {
         uniforms: {
           u_alpha: { value: 0 },
           u_edge: { value: 0.26 },
-          u_max: { value: 0.12 },
+          u_max: { value: 1 },
         },
         transparent: true,
         depthTest: false,

@@ -2,7 +2,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Dancing+Script:wght@500;600;700&family=Gochi+Hand&family=Oswald:wght@400;500;600;700&family=Patrick+Hand&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
-:root{--ps-page-bg:#FAF9F5;--ps-panel-bg:#F0EFEB;--ps-soft-card:#E9E8E4;--ps-soft-card-2:#F4F3EF;--ps-ink:#1B1B1B;--ps-muted:#8C8880;--ps-muted-light:#BDBAB2;--ps-line:#D9D7D0;--ps-card:#FFFDF8;--ps-accent:#C86D51}
 
 /* ── The reference's design system ─────────────────────────────────────────
    Root font-size is fluid: 1rem = 100vw/size*10, clamped 5px..20px.
@@ -64,8 +63,8 @@
   }
 
   body {
-    background: var(--ps-page-bg);
-    color: var(--ps-ink);
+    background: #000;
+    color: #fff;
     font-family: sans, sans-serif;
     font-size: 1.4rem;
     font-weight: 400;
@@ -240,23 +239,3 @@ html.paper-stish-billing body { background: #fff; color: #191919; }
 }
 .billing-page button:focus-visible,
 .billing-page a:focus-visible { outline: 2px solid #087cf0; outline-offset: 4px; }
-
-
-/* Paper Stish in-product chrome — warm, editorial, and responsive. */
-.ps-app-chrome{position:fixed;z-index:40;inset:16px 16px auto;pointer-events:none;color:var(--ps-ink);font-family:Helvetica,Arial,sans-serif}
-.ps-app-header{pointer-events:auto;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:14px;min-height:58px;padding:8px 10px 8px 14px;border:1px solid rgba(217,215,208,.95);border-radius:24px;background:rgba(255,253,248,.9);box-shadow:0 12px 34px rgba(27,27,27,.055);backdrop-filter:blur(20px) saturate(1.15);-webkit-backdrop-filter:blur(20px) saturate(1.15)}
-.ps-app-brand{display:inline-flex;min-width:0;align-items:center;gap:10px;color:var(--ps-ink);font-size:14px;font-weight:700;letter-spacing:-.045em;white-space:nowrap}
-.ps-app-brand-mark{display:inline-flex;width:32px;height:32px;flex:0 0 auto;align-items:center;justify-content:center;border-radius:50%;background:var(--ps-ink);color:#FFFDF8;font-family:Georgia,"Times New Roman",serif;font-size:17px;font-weight:700;letter-spacing:-.06em}
-.ps-primary-nav{display:flex;min-width:0;align-items:center;justify-content:center;gap:4px}
-.ps-nav-item{display:inline-flex;min-height:36px;align-items:center;justify-content:center;border:1px solid transparent;border-radius:999px;padding:0 14px;color:#6D6962;font-family:Helvetica,Arial,sans-serif;font-size:12px;font-weight:500;letter-spacing:-.01em;white-space:nowrap;transition:color 180ms ease,background 180ms ease,border-color 180ms ease,transform 180ms ease}
-.ps-nav-item:hover{color:var(--ps-ink);background:var(--ps-panel-bg)}.ps-nav-item:active{transform:scale(.98)}.ps-nav-item[aria-current="page"]{color:#FFFDF8;background:var(--ps-ink);border-color:var(--ps-ink)}
-.ps-profile-button{display:inline-flex;min-height:38px;align-items:center;justify-content:center;gap:8px;border:1px solid var(--ps-line);border-radius:999px;background:#FFFDF8;padding:0 13px;color:var(--ps-ink);font-size:12px;font-weight:600;transition:background 180ms ease,border-color 180ms ease,transform 180ms ease}
-.ps-profile-button:hover{background:var(--ps-panel-bg);border-color:#C6C2B8}.ps-profile-button:active{transform:scale(.98)}
-.ps-profile-icon{display:inline-flex;width:22px;height:22px;align-items:center;justify-content:center;border-radius:50%;background:var(--ps-panel-bg)}
-.ps-page-hero{position:fixed;z-index:25;top:100px;left:50%;width:min(92vw,820px);transform:translateX(-50%);color:var(--ps-ink);text-align:center;pointer-events:none;font-family:Helvetica,Arial,sans-serif}
-.ps-page-eyebrow{margin-bottom:10px;color:var(--ps-muted);font-size:10px;font-weight:600;letter-spacing:.13em;line-height:1.2;text-transform:uppercase}
-.ps-page-title{margin:0;font-size:clamp(28px,3.2vw,44px);font-weight:700;line-height:1.02;letter-spacing:-.065em;text-wrap:balance}
-.ps-page-copy{margin:9px auto 0;max-width:530px;color:var(--ps-muted);font-size:13px;line-height:1.5;letter-spacing:-.015em;text-wrap:balance}
-.ps-mobile-nav{display:none}.ps-app-header button:focus-visible,.ps-mobile-nav button:focus-visible{outline:2px solid var(--ps-accent);outline-offset:3px}
-@media(min-width:650px){.ps-app-chrome{inset:22px 32px auto}.ps-app-header{min-height:62px;padding:9px 12px 9px 17px;gap:20px}.ps-app-brand{font-size:15px}.ps-app-brand-mark{width:34px;height:34px}.ps-page-hero{top:106px}}
-@media(max-width:649px){.ps-app-chrome{inset:10px 10px auto}.ps-app-header{grid-template-columns:minmax(0,1fr) auto;min-height:52px;padding:7px 8px 7px 11px;border-radius:20px;gap:8px}.ps-app-brand{font-size:13px;gap:8px}.ps-app-brand-mark{width:30px;height:30px}.ps-primary-nav{display:none}.ps-profile-button{min-height:35px;padding:0 10px;font-size:11px}.ps-profile-icon{width:20px;height:20px}.ps-page-hero{top:79px;width:calc(100vw - 30px)}.ps-page-eyebrow{margin-bottom:6px;font-size:9px}.ps-page-title{max-width:540px;margin-inline:auto;font-size:clamp(25px,7vw,32px);line-height:1.04}.ps-page-copy{margin-top:6px;max-width:360px;font-size:11px;line-height:1.35}.ps-mobile-nav{position:fixed;z-index:40;left:50%;bottom:max(10px,env(safe-area-inset-bottom));display:flex;width:min(calc(100vw - 20px),490px);justify-content:space-between;gap:3px;padding:6px;transform:translateX(-50%);border:1px solid rgba(217,215,208,.95);border-radius:999px;background:rgba(255,253,248,.95);box-shadow:0 12px 34px rgba(27,27,27,.12);backdrop-filter:blur(20px) saturate(1.15);-webkit-backdrop-filter:blur(20px) saturate(1.15);pointer-events:auto}.ps-mobile-nav .ps-nav-item{min-width:0;min-height:36px;flex:1 1 0;padding-inline:7px;font-size:10px}}

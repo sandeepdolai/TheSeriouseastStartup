@@ -417,12 +417,12 @@ export function ProjectSheet({
         ref={sheetRef}
         data-id={project.slug}
         data-gl="sheet"
-        className="fixed inset-y-15 s:inset-y-20 inset-x-20 s:inset-x-50 z-20 flex flex-col s:flex-row s:items-start gap-y-40 s:gap-x-100 overflow-hidden rounded-15 border border-[#D9D7D0] s:rounded-20 px-10 s:pt-40 s:pl-40 s:pr-120 bg-[#FFFDF8] shadow-[0_24px_80px_rgba(27,27,27,0.12)] will-change-transform"
+        className="fixed inset-y-15 s:inset-y-20 inset-x-20 s:inset-x-50 z-20 flex flex-col s:flex-row s:items-start gap-y-40 s:gap-x-100 overflow-hidden rounded-15 s:rounded-20 px-10 s:pt-40 s:pl-40 s:pr-120 bg-white will-change-transform"
         style={{
           opacity: entered ? 1 : 0,
           transform: sheetTransform,
           transition: sheetTransition,
-          backgroundColor: "#FFFDF8",
+          backgroundColor: "#fff",
           touchAction: interactive ? "pan-y" : undefined,
           cursor: interactive ? (swipePhase === "drag" ? "grabbing" : "grab") : undefined,
         }}

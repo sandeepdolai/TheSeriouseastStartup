@@ -168,12 +168,12 @@ export function SavedTemplates({ entered }: Props) {
       >
         <div className="mx-auto flex min-h-full max-w-[1800px] flex-wrap items-center justify-center gap-20 s:gap-24">
           {loading ? (
-            <div className="flex min-h-[55svh] w-full items-center justify-center text-center text-[#8C8880]">
+            <div className="flex min-h-[55svh] w-full items-center justify-center text-center text-white/50">
               <p className="label">Loading saved templates</p>
             </div>
           ) : templates.length === 0 ? (
             <div
-              className="flex min-h-[55svh] w-full items-center justify-center text-center text-[#1B1B1B]"
+              className="flex min-h-[55svh] w-full items-center justify-center text-center text-white"
               style={{
                 opacity: entered ? 1 : 0,
                 transition: "opacity 0.45s cubic-bezier(0.16,1,0.3,1)",
@@ -190,7 +190,7 @@ export function SavedTemplates({ entered }: Props) {
             templates.map((template, index) => (
               <div
                 key={template.id}
-                className="group relative w-full s:h-[43.5svh] s:max-h-[55rem] s:w-auto flex-none overflow-hidden rounded-15 border border-[#D9D7D0] shadow-[0_18px_45px_rgba(27,27,27,0.10)] s:rounded-20"
+                className="group relative w-full s:h-[43.5svh] s:max-h-[55rem] s:w-auto flex-none overflow-hidden rounded-15 s:rounded-20"
                 style={{
                   aspectRatio: "2048 / 1172",
                   animation: entered
@@ -205,7 +205,7 @@ export function SavedTemplates({ entered }: Props) {
                     className="absolute inset-0 size-full object-cover transition-transform duration-700 ease-out group-hover:scale-[0.985]"
                   />
                 ) : (
-                  <div className="absolute inset-0 size-full bg-[#F0EFEB]" />
+                  <div className="absolute inset-0 size-full bg-[#eee]" />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
                 <p className="pointer-events-none absolute bottom-10 inset-x-10 s:bottom-10 s:inset-x-20 flex items-end justify-between text-white">

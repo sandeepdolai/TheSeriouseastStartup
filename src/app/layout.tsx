@@ -42,7 +42,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
-  themeColor: "#FAF9F5",
+  themeColor: "#000000",
 };
 
 export default function RootLayout({
@@ -77,7 +77,7 @@ export default function RootLayout({
           }
         `}</style>
       </head>
-      <body className="antialiased bg-[#FAF9F5] text-[#1B1B1B]">{children}</body>
+      <body className="antialiased bg-black text-white">{children}</body>
     </html>
   );
 }

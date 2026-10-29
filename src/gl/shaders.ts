@@ -437,7 +437,7 @@ void main() {
         float g = smoothstep(1.0 - u_edge, 1.0, vUv.y);
         g = max(g, smoothstep(u_edge, 0.0, vUv.y));
         g *= g;
-        gl_FragColor = vec4(vec3(0.106, 0.102, 0.09), u_alpha * u_max * g);
+        gl_FragColor = vec4(vec3(0.0), u_alpha * u_max * g);
 }
 `;
 
