@@ -465,7 +465,7 @@ export function HomeCarousel({ folio, enabled, returning, onSelect, hidden, apiR
 
       <div
         ref={trackRef}
-        className="absolute w-full left-0 top-0 s:top-1/2 flex flex-col s:flex-row s:-translate-y-1/2 gap-y-20 s:gap-x-10 px-20 s:px-0"
+        className="absolute w-full left-0 top-[190px] s:top-1/2 flex flex-col s:flex-row s:-translate-y-1/2 gap-y-20 s:gap-x-10 px-20 s:px-0"
       >
         {projects.map((p) => (
           <article

@@ -614,7 +614,7 @@ function AppContent({
 
       {accountGateOpen && (
         <div
-          className="fixed inset-0 z-[95] flex items-center justify-center bg-black/55 px-15 backdrop-blur-[10px]"
+          className="fixed inset-0 z-[95] flex items-center justify-center bg-[#1B1B1B]/25 px-15 backdrop-blur-[10px]"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               setAccountGateOpen(false);
@@ -622,11 +622,11 @@ function AppContent({
             }
           }}
         >
-          <div className="w-full max-w-[430px] rounded-[22px] border border-white/10 bg-[#121212] p-18 text-white shadow-2xl">
+          <div className="w-full max-w-[430px] rounded-3xl border border-[#D9D7D0] bg-[#FFFDF8] p-18 text-[#1B1B1B] shadow-[0_24px_70px_rgba(27,27,27,0.18)]">
             <div className="flex items-start justify-between gap-15">
               <div>
                 <p className="text-20 tracking-[-0.05em]">Create your account</p>
-                <p className="mt-6 text-11 leading-15 text-white/42">
+                <p className="mt-6 text-11 leading-15 text-[#8C8880]">
                   Sign up with Google to create Smart Edit projects in your Paper Stish account.
                 </p>
               </div>
@@ -636,7 +636,7 @@ function AppContent({
                   setAccountGateOpen(false);
                   setPendingAccountAction(null);
                 }}
-                className="flex size-32 items-center justify-center rounded-full bg-white/7 text-white/65"
+                className="flex size-32 items-center justify-center rounded-full bg-[#F0EFEB] text-[#1B1B1B]"
                 aria-label="Close account sign-up dialog"
               >
                 ×
@@ -646,12 +646,12 @@ function AppContent({
             <button
               type="button"
               onClick={() => signIn("google")}
-              className="mt-22 flex h-48 w-full items-center justify-center gap-9 rounded-full bg-white text-13 text-black transition-transform duration-300 hover:scale-[1.01] active:scale-[0.99]"
+              className="mt-22 flex h-48 w-full items-center justify-center gap-9 rounded-full bg-[#181818] text-13 text-white transition-transform duration-300 hover:scale-[1.01] active:scale-[0.99]"
             >
               Continue with Google
             </button>
 
-            <p className="mt-12 text-center text-10 leading-14 text-white/32">
+            <p className="mt-12 text-center text-10 leading-14 text-[#8C8880]">
               An account is required to create Smart Edit projects.
             </p>
           </div>

@@ -107,7 +107,7 @@ function ProfileAction({
     <button
       type="button"
       onClick={onClick}
-      className="pointer-events-auto flex h-52 w-full items-center justify-center gap-10 rounded-full border border-white/12 px-20 text-white transition-all duration-300 ease-out hover:border-white/25 hover:bg-white/[0.06] active:scale-[0.99]"
+      className="pointer-events-auto flex h-52 w-full items-center justify-center gap-10 rounded-full border border-[#D9D7D0] bg-[#FFFDF8] px-20 text-[#1B1B1B] transition-all duration-300 ease-out hover:border-[#BDBAB2] hover:bg-[#F0EFEB] active:scale-[0.99]"
     >
       {icon}
       <span className="text-14 tracking-[-0.02em]">{children}</span>
@@ -128,11 +128,11 @@ function MenuRow({
     <button
       type="button"
       onClick={onClick}
-      className="pointer-events-auto flex min-h-40 w-full items-center gap-10 border-b border-white/[0.07] px-3 text-left text-white/90 transition-colors hover:bg-white/[0.04] active:bg-white/[0.07] last:border-b-0"
+      className="pointer-events-auto flex min-h-40 w-full items-center gap-10 border-b border-[#D9D7D0] px-3 text-left text-[#1B1B1B] transition-colors hover:bg-[#F0EFEB] active:bg-[#E9E8E4] last:border-b-0"
     >
-      <span className="flex size-20 shrink-0 items-center justify-center text-white/75">{icon}</span>
+      <span className="flex size-20 shrink-0 items-center justify-center text-[#8C8880]">{icon}</span>
       <span className="min-w-0 flex-1 text-12 tracking-[-0.01em]">{children}</span>
-      <svg viewBox="0 0 24 24" className="size-14 shrink-0 text-white/35" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <svg viewBox="0 0 24 24" className="size-14 shrink-0 text-[#BDBAB2]" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
         <path d="m9 5 7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </button>
@@ -226,13 +226,13 @@ export function ProfileOverlay({
     >
       <div
         data-reveal
-        className="pointer-events-auto w-full max-h-[calc(100dvh-1.5rem)] max-w-[30rem] overflow-y-auto overscroll-contain rounded-[1.6rem] border border-white/10 bg-[#101010]/96 text-white shadow-[0_24px_70px_rgba(0,0,0,0.58)] backdrop-blur-xl"
+        className="pointer-events-auto w-full max-h-[calc(100dvh-1.5rem)] max-w-[30rem] overflow-y-auto overscroll-contain rounded-[1.6rem] border border-[#D9D7D0] bg-[#FFFDF8]/96 text-[#1B1B1B] shadow-[0_24px_70px_rgba(27,27,27,0.16)] backdrop-blur-xl"
       >
         <div className="flex items-center gap-12 px-18 pb-14 pt-18">
           {signedIn ? (
             <>
               <div className="relative flex size-42 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#f2f0e8] via-[#bd82cf] to-[#d8c7e2] p-[2px] shadow-[0_0_20px_rgba(189,130,207,0.32)]">
-                <div className="flex size-full items-center justify-center overflow-hidden rounded-full bg-[#191919] text-white/85">
+                <div className="flex size-full items-center justify-center overflow-hidden rounded-full bg-[#191919] text-[#1B1B1B]">
                   {session.user?.image ? (
                     <img
                       src={session.user.image}
@@ -248,13 +248,13 @@ export function ProfileOverlay({
                 <p className="truncate text-12 font-medium leading-15 tracking-[-0.02em]">
                   {session.user?.name ?? "Paper Stish user"}
                 </p>
-                <p className="mt-2 min-w-0 text-10 leading-13 text-white/55 [overflow-wrap:anywhere]">
+                <p className="mt-2 min-w-0 text-10 leading-13 text-[#8C8880] [overflow-wrap:anywhere]">
                   {session.user?.email ?? ""}
                 </p>
                 <button
                   type="button"
                   onClick={() => signIn("google", { prompt: "select_account" })}
-                  className="pointer-events-auto mt-4 text-9 text-white/55 underline decoration-white/20 underline-offset-3 transition-colors hover:text-white"
+                  className="pointer-events-auto mt-4 text-9 text-[#8C8880] underline decoration-[#BDBAB2] underline-offset-3 transition-colors hover:text-white"
                 >
                   Switch account
                 </button>
@@ -266,7 +266,7 @@ export function ProfileOverlay({
                 <p className="label opacity-55">PAPER STISH</p>
                 <h2 className="mt-5 text-14 leading-17 tracking-[-0.03em]">Your account</h2>
               </div>
-              <div className="flex size-38 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/80">
+              <div className="flex size-38 shrink-0 items-center justify-center rounded-full bg-[#F0EFEB] text-[#1B1B1B]">
                 <UserIcon />
               </div>
             </>
@@ -276,7 +276,7 @@ export function ProfileOverlay({
         <div className="px-14 pb-14">
           {!signedIn ? (
             <>
-              <div data-reveal className="rounded-[1.55rem] bg-[#272727] p-20 s:p-25">
+              <div data-reveal className="rounded-[1.55rem] bg-[#F0EFEB] p-20 s:p-25">
               <div className="flex items-start gap-12">
                 <div className="flex size-38 shrink-0 items-center justify-center rounded-full bg-white text-black">
                   <svg viewBox="0 0 24 24" className="size-17" aria-hidden="true">
@@ -288,7 +288,7 @@ export function ProfileOverlay({
                 </div>
                 <div className="min-w-0">
                   <p className="text-15 leading-17 tracking-[-0.02em]">Sign in with Google</p>
-                  <p className="mt-5 text-12 leading-15 tracking-[-0.01em] text-white/50">
+                  <p className="mt-5 text-12 leading-15 tracking-[-0.01em] text-[#8C8880]">
                     Save your projects to your Paper Stish account.
                   </p>
                 </div>
@@ -309,9 +309,9 @@ export function ProfileOverlay({
             </>
           ) : (
             <>
-              <div data-reveal aria-live="polite" className="mb-10 rounded-[1.15rem] border border-white/[0.05] bg-[#242424] p-16">
+              <div data-reveal aria-live="polite" className="mb-10 rounded-[1.15rem] border border-[#D9D7D0] bg-[#F4F3EF] p-16">
                 {!billingStatus.loaded ? (
-                  <p className="py-8 text-10 leading-14 text-white/65">
+                  <p className="py-8 text-10 leading-14 text-[#6D6962]">
                     {billingError ?? "Checking subscription…"}
                   </p>
                 ) : billingStatus.isPremium ? (
@@ -320,13 +320,13 @@ export function ProfileOverlay({
                       <svg viewBox="0 0 24 24" className="size-16 shrink-0 text-[#d8c7e2]" fill="currentColor" aria-hidden="true">
                         <path d="M5 19h14l1.4-9-4.4 3-4-7-4 7-4.4-3L5 19Zm2 2h10v1H7v-1Z"/>
                       </svg>
-                      <span className="rounded-[4px] bg-white/15 px-5 py-1 text-[8px] font-semibold uppercase tracking-[0.08em] text-white/85">
+                      <span className="rounded-[4px] bg-[#E9E8E4] px-5 py-1 text-[8px] font-semibold uppercase tracking-[0.08em] text-[#1B1B1B]">
                         Pro
                       </span>
                     </div>
-                    <p className="mt-7 text-10 leading-13 text-white/60">$4.99 / month</p>
+                    <p className="mt-7 text-10 leading-13 text-[#8C8880]">$4.99 / month</p>
                     {billingStatus.cancelAtPeriodEnd && billingStatus.currentPeriodEnd && (
-                      <p className="mt-4 text-9 leading-12 text-white/50">
+                      <p className="mt-4 text-9 leading-12 text-[#8C8880]">
                         Active until {new Date(billingStatus.currentPeriodEnd).toLocaleDateString()}
                       </p>
                     )}
@@ -341,9 +341,9 @@ export function ProfileOverlay({
                   </>
                 ) : (
                   <>
-                    <span className="rounded-[4px] bg-white/15 px-5 py-1 text-[8px] font-semibold uppercase tracking-[0.08em] text-white/75">Free</span>
-                    <p className="mt-7 text-11 leading-14 text-white/85">Upgrade to Pro</p>
-                    <p className="mt-3 text-10 leading-13 text-white/55">$4.99 / month</p>
+                    <span className="rounded-[4px] bg-[#E9E8E4] px-5 py-1 text-[8px] font-semibold uppercase tracking-[0.08em] text-[#6D6962]">Free</span>
+                    <p className="mt-7 text-11 leading-14 text-[#1B1B1B]">Upgrade to Pro</p>
+                    <p className="mt-3 text-10 leading-13 text-[#8C8880]">$4.99 / month</p>
                     <button
                       type="button"
                       onClick={() => window.location.assign("/upgrade")}
@@ -354,7 +354,7 @@ export function ProfileOverlay({
                   </>
                 )}
                 {billingError && billingStatus.loaded && (
-                  <p role="alert" className="mt-8 text-9 leading-12 text-white/60">{billingError}</p>
+                  <p role="alert" className="mt-8 text-9 leading-12 text-[#8C8880]">{billingError}</p>
                 )}
               </div>
 
@@ -376,24 +376,24 @@ export function ProfileOverlay({
               <button
                 type="button"
                 onClick={() => window.location.assign("/subscription")}
-                className="pointer-events-auto mt-8 flex min-h-38 w-full items-center gap-10 rounded-[0.85rem] px-3 text-left text-white/80 transition-colors hover:bg-white/[0.04]"
+                className="pointer-events-auto mt-8 flex min-h-38 w-full items-center gap-10 rounded-[0.85rem] px-3 text-left text-[#1B1B1B] transition-colors hover:bg-[#F4F3EF]"
               >
-                <span className="flex size-20 shrink-0 items-center justify-center text-white/65">
+                <span className="flex size-20 shrink-0 items-center justify-center text-[#6D6962]">
                   <svg viewBox="0 0 24 24" className="size-16" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
                 </span>
                 <span className="flex-1 text-11">Manage subscription</span>
-                <span className="text-white/35">›</span>
+                <span className="text-[#8C8880]">›</span>
               </button>
 
               <div data-reveal className="mt-8 border-t border-white/[0.08] pt-8">
                 <button
                   type="button"
                   onClick={() => signOut()}
-                  className="pointer-events-auto flex min-h-36 w-full items-center gap-10 rounded-[0.85rem] px-3 text-left text-11 text-white/70 transition-colors hover:bg-white/[0.04] hover:text-white"
+                  className="pointer-events-auto flex min-h-36 w-full items-center gap-10 rounded-[0.85rem] px-3 text-left text-11 text-[#6D6962] transition-colors hover:bg-[#F4F3EF] hover:text-white"
                 >
                   <span className="flex size-20 items-center justify-center"><UserIcon /></span>
                   <span className="flex-1">Sign out</span>
-                  <span className="text-white/35">›</span>
+                  <span className="text-[#8C8880]">›</span>
                 </button>
               </div>
             </>
@@ -401,14 +401,14 @@ export function ProfileOverlay({
         </div>
 
         <div className="px-16 pb-16 pt-8 text-center">
-          <nav aria-label="Legal and support" className="label mb-8 flex flex-wrap items-center justify-center gap-x-7 gap-y-5 text-[9px] text-white/45">
+          <nav aria-label="Legal and support" className="label mb-8 flex flex-wrap items-center justify-center gap-x-7 gap-y-5 text-[9px] text-[#8C8880]">
             <a href="/privacy" className="transition-opacity hover:text-white">Privacy</a>
             <span aria-hidden="true">•</span>
             <a href="/terms" className="transition-opacity hover:text-white">Terms</a>
             <span aria-hidden="true">•</span>
             <a href="mailto:sandeepdolai.info@gmail.com" className="transition-opacity hover:text-white">Support</a>
           </nav>
-          <p className="text-9 font-medium tracking-[-0.01em] text-white/35">
+          <p className="text-9 font-medium tracking-[-0.01em] text-[#8C8880]">
             Making someone else happy is one of the best feelings.
           </p>
         </div>

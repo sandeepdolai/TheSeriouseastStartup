@@ -269,19 +269,19 @@ export function TemplateBrowser({ onOpenEditor }: Props) {
       )}
 
       {loading && (
-        <div className="pointer-events-none fixed inset-0 z-20 flex items-center justify-center text-10 uppercase tracking-[0.08em] text-white/45">
+        <div className="pointer-events-none fixed inset-0 z-20 flex items-center justify-center text-10 uppercase tracking-[0.08em] text-[#8C8880]">
           Loading templates
         </div>
       )}
 
       {error && (
-        <div className="pointer-events-auto fixed left-1/2 top-1/2 z-[60] w-[min(34rem,calc(100%-3rem))] -translate-x-1/2 -translate-y-1/2 rounded-16 border border-white/10 bg-black/85 px-18 py-15 text-center text-12 text-white backdrop-blur-xl">
+        <div className="pointer-events-auto fixed left-1/2 top-1/2 z-[60] w-[min(34rem,calc(100%-3rem))] -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-[#D9D7D0] bg-[#FFFDF8]/95 px-18 py-15 text-center text-12 text-[#1B1B1B] shadow-[0_24px_70px_rgba(27,27,27,0.16)] backdrop-blur-xl">
           {error}
         </div>
       )}
 
       {!loading && !error && carouselProjects.length === 0 && (
-        <div className="pointer-events-none fixed inset-0 z-20 flex items-center justify-center px-25 text-center text-12 text-white/45">
+        <div className="pointer-events-none fixed inset-0 z-20 flex items-center justify-center px-25 text-center text-12 text-[#8C8880]">
           No published template previews are available yet.
         </div>
       )}

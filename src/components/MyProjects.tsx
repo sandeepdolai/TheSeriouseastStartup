@@ -103,17 +103,17 @@ export function MyProjects({ entered, onOpenProject, onCreateSmartEdit }: Props)
             <button
               type="button"
               onClick={() => setRatioPanelOpen(true)}
-              className="group relative size-full cursor-pointer overflow-hidden rounded-15 border border-dashed border-white/22 text-white transition-colors duration-300 hover:border-white/45 s:rounded-20"
+              className="group relative size-full cursor-pointer overflow-hidden rounded-15 border border-dashed border-[#D9D7D0] bg-[#F4F3EF] text-[#1B1B1B] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.6)] transition-colors duration-300 hover:border-[#8C8880] s:rounded-20"
               aria-label="Create a new Smart Edit project"
             >
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-10 bg-white/[0.025] text-center">
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-10 bg-[#F4F3EF] text-center">
                 <span className="flex size-46 items-center justify-center rounded-full bg-white text-black transition-transform duration-300 group-hover:scale-105" aria-hidden="true">
                   <svg viewBox="0 0 24 24" className="size-20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                 </span>
                 <span className="text-16 s:text-18 tracking-[-0.05em]">New Smart Edit</span>
-                <span className="max-w-[24rem] px-12 text-11 leading-15 text-white/40">
+                <span className="max-w-[24rem] px-12 text-11 leading-15 text-[#8C8880]">
                   Start from a blank canvas — add text, stickers and photos, then publish it as a website.
                 </span>
               </div>
@@ -121,7 +121,7 @@ export function MyProjects({ entered, onOpenProject, onCreateSmartEdit }: Props)
 
             {ratioPanelOpen && (
               <div
-                className="absolute inset-0 z-10 flex items-center justify-center rounded-15 bg-black/72 p-12 backdrop-blur-[6px] s:rounded-20"
+                className="absolute inset-0 z-10 flex items-center justify-center rounded-15 border border-[#D9D7D0] bg-[#FFFDF8]/96 p-12 text-[#1B1B1B] shadow-[0_24px_70px_rgba(27,27,27,0.16)] backdrop-blur-[10px] s:rounded-20"
                 style={{ animation: "ratio-panel-in 0.32s cubic-bezier(0.16,1,0.3,1) both" }}
               >
                 <div className="w-full max-w-[30rem]">
@@ -137,15 +137,15 @@ export function MyProjects({ entered, onOpenProject, onCreateSmartEdit }: Props)
                             setRatioPanelOpen(false);
                             onCreateSmartEdit?.(ratio);
                           }}
-                          className="flex flex-col items-center gap-8 rounded-14 border border-white/12 bg-white/[0.04] py-14 transition-all duration-200 hover:border-white/35 hover:bg-white/[0.08] active:scale-[0.97]"
+                          className="flex flex-col items-center gap-8 rounded-14 border border-[#D9D7D0] bg-[#FFFDF8] py-14 text-[#1B1B1B] transition-all duration-200 hover:border-[#8C8880] hover:bg-[#F4F3EF] active:scale-[0.97]"
                         >
                           <span
-                            className="block w-56 border-[1.5px] border-white/55 bg-white/10"
+                            className="block w-56 border-[1.5px] border-[#1B1B1B]/55 bg-[#F0EFEB]"
                             style={{ aspectRatio: `${preset.width} / ${preset.height}` }}
                             aria-hidden="true"
                           />
                           <span className="text-12 tracking-[-0.02em]">{preset.hint}</span>
-                          <span className="text-9 text-white/35">{preset.label}</span>
+                          <span className="text-9 text-[#8C8880]">{preset.label}</span>
                         </button>
                       );
                     })}
@@ -153,7 +153,7 @@ export function MyProjects({ entered, onOpenProject, onCreateSmartEdit }: Props)
                   <button
                     type="button"
                     onClick={() => setRatioPanelOpen(false)}
-                    className="mt-12 w-full py-8 text-center text-10 text-white/40 transition-colors hover:text-white/70"
+                    className="mt-12 w-full py-8 text-center text-10 text-[#8C8880] transition-colors hover:text-[#1B1B1B]"
                   >
                     Cancel
                   </button>
@@ -164,7 +164,7 @@ export function MyProjects({ entered, onOpenProject, onCreateSmartEdit }: Props)
 
           {projects.length === 0 ? (
             <div
-              className="w-full pb-20 text-center text-white"
+              className="w-full pb-20 text-center text-[#1B1B1B]"
               style={{
                 opacity: entered ? 1 : 0,
                 transition: "opacity 0.45s cubic-bezier(0.16,1,0.3,1)",
@@ -181,7 +181,7 @@ export function MyProjects({ entered, onOpenProject, onCreateSmartEdit }: Props)
                 key={project.id}
                 type="button"
                 onClick={() => onOpenProject?.(project.id, project.templateSlug ?? "")}
-                className="group relative w-full s:h-[70svh] s:max-h-[78rem] s:w-auto flex-none cursor-pointer overflow-hidden rounded-15 s:rounded-20 text-left"
+                className="group relative w-full s:h-[70svh] s:max-h-[78rem] s:w-auto flex-none cursor-pointer overflow-hidden rounded-15 border border-[#D9D7D0] text-left shadow-[0_18px_45px_rgba(27,27,27,0.10)] s:rounded-20"
                 style={{
                   aspectRatio: "1080 / 1550",
                   animation: entered
@@ -201,7 +201,7 @@ export function MyProjects({ entered, onOpenProject, onCreateSmartEdit }: Props)
                   ) : project.thumbnail ? (
                     <img src={project.thumbnail} alt="" className="absolute inset-0 size-full object-cover" />
                   ) : (
-                    <div className="absolute inset-0 bg-black/20" />
+                    <div className="absolute inset-0 bg-[#E9E8E4]" />
                   )}
                 </div>
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
