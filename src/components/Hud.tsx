@@ -41,20 +41,6 @@ export function Hud({ view, overlay, onProfile, onSaved, onHome, onMy, onWebsite
         <nav className="label relative pointer-events-auto flex gap-x-5" aria-label="Paper Stish views">
           <a
             href="#"
-            aria-current={view === "home" || view === "project" ? "page" : undefined}
-            onClick={(e) => {
-              e.preventDefault();
-              onHome();
-            }}
-            className={`relative transition-opacity duration-500 ease-out ${
-              view === "my" || view === "saved" || view === "website-templates" ? "opacity-50 hover:opacity-100" : ""
-            }`}
-          >
-            Template
-          </a>
-          <span aria-hidden="true">/</span>
-          <a
-            href="#"
             aria-current={view === "website-templates" ? "page" : undefined}
             onClick={(e) => {
               e.preventDefault();
