@@ -28,7 +28,7 @@ type AppProps = {
 };
 
 export function App({
-  initialView = "home",
+  initialView = "website-templates",
   initialProjectSlug = null,
   initialSmartEditProjectId = null,
 }: AppProps = {}) {
@@ -101,6 +101,7 @@ function AppContent({
   const [savedEntered, setSavedEntered] = useState(initialView === "saved");
   const [smartEditProjectId, setSmartEditProjectId] = useState<string | null>(initialSmartEditProjectId);
   const [websiteDraftToOpen, setWebsiteDraftToOpen] = useState<{ projectId: string; templateSlug: string } | null>(null);
+  const [websiteBrowserInstance, setWebsiteBrowserInstance] = useState(0);
   const [carouselHidden, setCarouselHidden] = useState(false);
   const [returning, setReturning] = useState<string | null>(null);
   const [accountGateOpen, setAccountGateOpen] = useState(false);
@@ -207,7 +208,7 @@ function AppContent({
     });
   }, [folio]);
 
-  const wipeTo = useCallback(async (next: "my" | "home" | "saved") => {
+  const wipeTo = useCallback(async (next: "my" | "website-templates" | "saved") => {
     if (busy.current) return;
     busy.current = true;
     folio.openHole(window.innerWidth / 2, window.innerHeight / 2);
@@ -278,7 +279,7 @@ function AppContent({
     }
     setSheetEntered(false);
     await wait(260);
-    setView("home");
+    setView("website-templates");
     if (returnPath && window.history.length > 1) window.history.back();
     else navigateToAppPath("/create", true);
     setProjectSlug(null);
@@ -511,11 +512,14 @@ function AppContent({
   const closeWebsiteTemplates = useCallback(() => {
     if (busy.current) return;
     navigateToAppPath("/create", true);
-    setView("home");
+    setView("website-templates");
     setProjectSlug(null);
     setReturning(null);
     setCarouselHidden(false);
     setSheetEntered(false);
+    setMyEntered(false);
+    setSavedEntered(false);
+    setWebsiteBrowserInstance((instance) => instance + 1);
     setSwipe({ active: false, phase: "idle", direction: null, targetSlug: null, x: 0 });
     folio.closeHole();
   }, [folio]);
@@ -526,7 +530,7 @@ function AppContent({
     else if (view === "project") closeProject();
     else if (view === "smart-edit") closeSmartEdit();
     else if (view === "website-templates") closeWebsiteTemplates();
-    else if (view === "my" || view === "saved") wipeTo("home");
+    else if (view === "my" || view === "saved") wipeTo("website-templates");
   }, [view, overlay, closeOverlay, closeProject, closeSmartEdit, closeWebsiteTemplates, wipeTo]);
 
   const goMy = useCallback(() => {
@@ -569,6 +573,7 @@ function AppContent({
 
       {view === "website-templates" && (
         <WebsiteTemplateBrowser
+          key={websiteBrowserInstance}
           draftToOpen={websiteDraftToOpen}
           onDraftOpened={() => setWebsiteDraftToOpen(null)}
         />
