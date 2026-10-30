@@ -24,6 +24,16 @@ export const FEATURED: Project[] = [];
 /** Curated website templates available in the website-template browser. */
 export const WEBSITE_TEMPLATES: Project[] = [
   {
+    title: "Memory Lane",
+    slug: "memory-lane",
+    description: "An animated memory space with profiles by year, cinematic memory details, and a photo episode player.",
+    link: null,
+    tags: [],
+    awards: 0,
+    aspect: 1,
+    media: [`${BASE_PATH}/website-templates/memory-lane-preview.png`],
+  },
+  {
     title: "Rose",
     slug: "rose",
     description: "A romantic rose website with the original design, a personal editable message, and an interactive rose.",
