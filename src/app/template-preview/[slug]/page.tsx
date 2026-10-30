@@ -13,6 +13,7 @@ export const metadata: Metadata = {
 };
 
 const PREVIEW_SLUGS: WebsiteTemplatePreviewSlug[] = [
+  "memory-lane",
   "red-letter",
   "love-heart",
   "forever-and-ever",
