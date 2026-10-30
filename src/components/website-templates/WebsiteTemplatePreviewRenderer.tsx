@@ -7,6 +7,7 @@ import { OurCalendarTemplate } from "./OurCalendarTemplate";
 import { PhotoAlbumTemplate } from "./PhotoAlbumTemplate";
 
 export type WebsiteTemplatePreviewSlug =
+  | "memory-lane"
   | "red-letter"
   | "love-heart"
   | "forever-and-ever"
@@ -29,7 +30,7 @@ export function WebsiteTemplatePreviewRenderer({
   slug: WebsiteTemplatePreviewSlug;
 }) {
   const [previewReady, setPreviewReady] = useState(false);
-  const usesStaticHtml = slug === "red-letter" || slug === "love-heart" || slug === "forever-and-ever" || slug === "introducing-him" || slug === "rose";
+  const usesStaticHtml = slug === "memory-lane" || slug === "red-letter" || slug === "love-heart" || slug === "forever-and-ever" || slug === "introducing-him" || slug === "rose";
 
   useEffect(() => {
     let cancelled = false;
@@ -96,6 +97,17 @@ export function WebsiteTemplatePreviewRenderer({
 
   let template: ReactNode;
   switch (slug) {
+    case "memory-lane":
+      template = (
+        <iframe
+          title="Memory Lane website preview"
+          src="/website-templates/memory-lane.html"
+          sandbox="allow-scripts"
+          referrerPolicy="no-referrer"
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+        />
+      );
+      break;
     case "red-letter":
       template = (
         <iframe

@@ -4,6 +4,7 @@ import path from "node:path";
 import process from "node:process";
 
 const PREVIEWS = [
+  { slug: "memory-lane", waitMs: 6200 },
   { slug: "red-letter", waitMs: 1600 },
   { slug: "rose", waitMs: 12000 },
   { slug: "love-heart", waitMs: 30000 },
@@ -115,9 +116,11 @@ async function main() {
       // Validate the original HTML for the two embedded website templates
       // before screenshotting. A missing/generated fallback must never silently
       // become a cover image.
-      if (slug === "red-letter" || slug === "love-heart" || slug === "forever-and-ever" || slug === "introducing-him" || slug === "rose") {
+      if (slug === "memory-lane" || slug === "red-letter" || slug === "love-heart" || slug === "forever-and-ever" || slug === "introducing-him" || slug === "rose") {
         const sourceHtml = await fetchTemplateSource(slug);
-        const expectedMarkup = slug === "red-letter"
+        const expectedMarkup = slug === "memory-lane"
+          ? "<title>Who’s watching?</title>"
+          : slug === "red-letter"
           ? "<title>A Little Red Letter — Paper Stish</title>"
           : slug === "love-heart"
           ? "<title>Love Heart</title>"
