@@ -357,13 +357,13 @@ const memoryLaneEditableElements={
 let activeMemoryLaneEdit=null;
 const readMemoryLaneText=(element,multiline)=>(
   (multiline?element.innerText:element.textContent)||''
-).replace(/\\r\\n?/g,'\\n');
+).replace(/\r\n?/g,'\n');
 const writeMemoryLaneText=(element,value,multiline)=>{
   if(multiline)element.innerText=value;
   else element.textContent=value;
 };
 const normalizeMemoryLaneText=(value,multiline,max)=>(
-  (multiline?value.replace(/\\r\\n?/g,'\\n'):value.replace(/[\\r\\n]+/g,' '))
+  (multiline?value.replace(/\r\n?/g,'\n'):value.replace(/[\r\n]+/g,' '))
 ).slice(0,max);
 const finishMemoryLaneEdit=commit=>{
   if(!activeMemoryLaneEdit)return;
