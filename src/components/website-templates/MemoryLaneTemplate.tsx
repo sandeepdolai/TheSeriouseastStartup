@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MemoryLaneProfile, TemplatePublicationValues } from "@/lib/publications";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
@@ -17,14 +17,20 @@ export const MEMORY_LANE_TEXT_DEFAULTS = {
 type MemoryLaneTextField = keyof typeof MEMORY_LANE_TEXT_DEFAULTS;
 
 export function resolveMemoryLaneText(values?: TemplatePublicationValues) {
-  return Object.fromEntries(
-    Object.entries(MEMORY_LANE_TEXT_DEFAULTS).map(([field, fallback]) => [
-      field,
-      typeof values?.[field as MemoryLaneTextField] === "string"
-        ? values[field as MemoryLaneTextField] as string
-        : fallback,
-    ]),
-  ) as typeof MEMORY_LANE_TEXT_DEFAULTS;
+  return {
+    memoryLaneTagline: typeof values?.memoryLaneTagline === "string"
+      ? values.memoryLaneTagline
+      : MEMORY_LANE_TEXT_DEFAULTS.memoryLaneTagline,
+    memoryLaneDescription: typeof values?.memoryLaneDescription === "string"
+      ? values.memoryLaneDescription
+      : MEMORY_LANE_TEXT_DEFAULTS.memoryLaneDescription,
+    memoryLaneStarring: typeof values?.memoryLaneStarring === "string"
+      ? values.memoryLaneStarring
+      : MEMORY_LANE_TEXT_DEFAULTS.memoryLaneStarring,
+    memoryLaneGenres: typeof values?.memoryLaneGenres === "string"
+      ? values.memoryLaneGenres
+      : MEMORY_LANE_TEXT_DEFAULTS.memoryLaneGenres,
+  };
 }
 
 export const MEMORY_LANE_DEFAULT_PROFILES: MemoryLaneProfile[] = [
@@ -74,7 +80,10 @@ export function MemoryLaneTemplate({
   const lastSentProfiles = useRef("");
   const lastSentText = useRef("");
 
-  const currentText = resolveMemoryLaneText(values);
+  const currentText = useMemo(
+    () => resolveMemoryLaneText(values),
+    [values?.memoryLaneTagline, values?.memoryLaneDescription, values?.memoryLaneStarring, values?.memoryLaneGenres],
+  );
   const currentTextSnapshot = JSON.stringify(currentText);
   latestProfiles.current = normalizeProfiles(values?.memoryLaneProfiles);
   latestEditing.current = editing;
