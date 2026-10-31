@@ -178,7 +178,7 @@ export function MemoryLaneTemplate({
       type: "paper-stish:update-text",
       text: currentText,
     }, "*");
-  }, [currentTextSnapshot]);
+  }, [currentTextSnapshot, currentText]);
 
   useEffect(() => {
     if (!iframeReady.current) return;
