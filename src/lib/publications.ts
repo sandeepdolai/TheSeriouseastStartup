@@ -29,6 +29,7 @@ export { slugPart };
 /** Template types that can be published. */
 export const PUBLISHABLE_TEMPLATE_SLUGS = [
   "smart-edit",
+  "memory-lane",
   "birthday-template",
   "birthday-today",
   "love-of-my-life",
@@ -49,6 +50,14 @@ export type PublishableTemplateSlug = (typeof PUBLISHABLE_TEMPLATE_SLUGS)[number
 export const TEMPLATE_VALUES_MAX_BYTES = 4_000_000;
 
 /* ── Types ──────────────────────────────────────────────────────────────── */
+
+/** A year/profile entry inside the Memory Lane template. */
+export interface MemoryLaneProfile {
+  year: string;
+  heroTitle: string;
+  /** One device-local image used for the profile tile and its detail backdrop. */
+  photoUrl: string | null;
+}
 
 /** Editable values of a normal template (Birthday, Love of My Life). */
 export interface TemplatePublicationValues {
@@ -72,6 +81,8 @@ export interface TemplatePublicationValues {
   captions?: string[];
   /** Four editable paragraphs used by the notebook-style love-letter template. */
   letterParagraphs?: string[];
+  /** Profiles (year, hero title and optional image) inside Memory Lane. */
+  memoryLaneProfiles?: MemoryLaneProfile[];
   /** Four editable scrapbook notes used by the Our Calendar template. */
   calendarNotes?: string[];
   /** The date marked by the movable heart on Our Calendar. */
@@ -170,6 +181,26 @@ export function validateTemplateValues(raw: unknown): TemplatePublicationValues 
     }
   }
 
+  let memoryLaneProfiles: MemoryLaneProfile[] | undefined;
+  if (v.memoryLaneProfiles !== undefined) {
+    if (!Array.isArray(v.memoryLaneProfiles) || v.memoryLaneProfiles.length > 6) return null;
+    memoryLaneProfiles = [];
+    for (const item of v.memoryLaneProfiles) {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+      const profile = item as Record<string, unknown>;
+      const year = boundedString(profile.year, 4);
+      const heroTitle = boundedString(profile.heroTitle, 80);
+      const photoUrl =
+        profile.photoUrl === null || profile.photoUrl === undefined || profile.photoUrl === ""
+          ? null
+          : boundedString(profile.photoUrl, 560_000);
+      if (!year || !/^\d{4}$/.test(year) || Number(year) < 1900 || Number(year) > 2100) return null;
+      if (heroTitle === undefined) return null;
+      if (photoUrl !== null && (!photoUrl || !PHOTO_URL_RE.test(photoUrl))) return null;
+      memoryLaneProfiles.push({ year, heroTitle, photoUrl });
+    }
+  }
+
   let calendarNotes: string[] | undefined;
   if (v.calendarNotes !== undefined) {
     if (!Array.isArray(v.calendarNotes) || v.calendarNotes.length > 4) return null;
@@ -201,6 +232,7 @@ export function validateTemplateValues(raw: unknown): TemplatePublicationValues 
     images,
     captions,
     letterParagraphs,
+    memoryLaneProfiles,
     calendarNotes,
     calendarHeart,
   };

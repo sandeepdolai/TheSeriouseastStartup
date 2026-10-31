@@ -75,5 +75,16 @@ export async function durableTemplateValues(
     next.images = images;
   }
 
+  if (Array.isArray(next.memoryLaneProfiles)) {
+    const profiles: NonNullable<TemplatePublicationValues["memoryLaneProfiles"]> = [];
+    for (const profile of next.memoryLaneProfiles) {
+      const photoUrl = typeof profile.photoUrl === "string" && profile.photoUrl.startsWith("data:")
+        ? await uploadDataUrlToCloudinary(profile.photoUrl)
+        : profile.photoUrl;
+      profiles.push({ ...profile, photoUrl });
+    }
+    next.memoryLaneProfiles = profiles;
+  }
+
   return next;
 }

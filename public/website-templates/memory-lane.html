@@ -32,6 +32,7 @@ h1{font-size:4.1rem;font-weight:500;line-height:1.2;color:#f2f2f2}
 .add i::before{width:2.2rem;height:.4rem}
 .add i::after{width:.4rem;height:2.2rem}
 .add:hover i,.add:focus-visible i{background:#8a8a8a;transform:scale(1.1)}
+.add[hidden],.manage[hidden]{display:none!important}
 
 .manage{all:unset;box-sizing:border-box;margin-top:5.9rem;padding:.6rem 2.4rem;border:.13rem solid #4d4d4d;color:#999;font-size:1.25rem;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:color .2s,border-color .2s}
 .manage:hover,.manage:focus-visible{color:#fff;border-color:#fff}
@@ -317,9 +318,10 @@ const make=(y,img,heroTitle)=>{
   if(heroTitle)b.dataset.heroTitle=heroTitle;
   b.append(a,n);return b};
 const addProfile=()=>{
+  if(row.querySelectorAll('.profile').length>=6){err.textContent='Memory Lane supports up to six profiles.';return}
   const y=Number(yearIn.value);
   if(!Number.isInteger(y)||y<1900||y>2100){err.textContent='Enter a year between 1900 and 2100.';yearIn.focus();return}
-  const b=make(y,photo,heroTitleIn.value.trim());b.dataset.wide=wide;row.insertBefore(b,addBtn);on(b);closeDlg()};
+  const b=make(y,photo,heroTitleIn.value.trim());b.dataset.wide=wide;row.insertBefore(b,addBtn);on(b);closeDlg();emitProfileChange()};
 addBtn.addEventListener('click',openDlg);
 pick.addEventListener('click',()=>fileIn.click());
 fileIn.addEventListener('change',()=>{
@@ -328,7 +330,7 @@ fileIn.addEventListener('change',()=>{
   r.onload=()=>{const im=new Image();
     im.onload=()=>{const s=Math.min(im.width,im.height),c=document.createElement('canvas');c.width=c.height=256;
       c.getContext('2d').drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,256,256);
-      photo=c.toDataURL('image/jpeg',.85);const k=Math.min(1,1280/im.width),w=document.createElement('canvas');w.width=Math.round(im.width*k);w.height=Math.round(im.height*k);w.getContext('2d').drawImage(im,0,0,w.width,w.height);wide=w.toDataURL('image/jpeg',.8);pick.style.backgroundImage='url("'+photo+'")';pick.classList.add('has');err.textContent=''};
+      photo=c.toDataURL('image/jpeg',.85);const k=Math.min(1,1280/im.width),w=document.createElement('canvas');w.width=Math.round(im.width*k);w.height=Math.round(im.height*k);const wc=w.getContext('2d');if(!wc){err.textContent='Photo processing is unavailable.';return}wc.drawImage(im,0,0,w.width,w.height);wide='';for(const quality of [.8,.7,.6,.5,.4]){wide=w.toDataURL('image/jpeg',quality);if(wide.length<=560000)break}if(wide.length>560000){wide='';err.textContent='Choose a smaller photo.';return}pick.style.backgroundImage='url("'+photo+'")';pick.classList.add('has');err.textContent=''};
     im.onerror=()=>{err.textContent='That file can’t be read as an image.'};
     im.src=r.result};
   r.readAsDataURL(f)});
@@ -594,6 +596,44 @@ document.addEventListener('keydown',e=>{
   if(!tp.hidden){if(e.key==='Escape')closeTitle();return}
   if(!scrim.classList.contains('open'))return;
   if(e.key==='Escape')closeDlg();else if(e.key==='Enter'&&e.target===yearIn)addProfile()});
+
+let paperStishEditing=true;
+const collectProfiles=()=>Array.from(row.querySelectorAll('.profile')).map(profile=>({
+  year:profile.querySelector('.name')?.textContent?.trim()||'',
+  heroTitle:profile.dataset.heroTitle||'',
+  photoUrl:profile.dataset.wide||''
+})).filter(profile=>/^\d{4}$/.test(profile.year));
+const emitProfileChange=()=>window.parent.postMessage({type:'paper-stish:profiles-change',profiles:collectProfiles()},'*');
+const replaceProfiles=profiles=>{
+  row.querySelectorAll('.profile').forEach(profile=>profile.remove());
+  profiles.slice(0,6).forEach(profile=>{
+    const year=String(profile.year||'').slice(0,4);
+    if(!/^\d{4}$/.test(year)||Number(year)<1900||Number(year)>2100)return;
+    const photoUrl=typeof profile.photoUrl==='string'?profile.photoUrl:'';
+    const button=make(year,photoUrl,String(profile.heroTitle||'').slice(0,80));
+    button.dataset.wide=photoUrl;
+    row.insertBefore(button,addBtn);
+  });
+  const first=row.querySelector('.profile');
+  if(first)on(first);
+};
+const setEditing=enabled=>{
+  paperStishEditing=enabled===true;
+  addBtn.hidden=!paperStishEditing;
+  document.querySelector('.manage').hidden=!paperStishEditing;
+  if(!paperStishEditing)scrim.classList.remove('open');
+};
+window.addEventListener('message',event=>{
+  if(event.source!==window.parent||!event.data||typeof event.data!=='object')return;
+  const data=event.data;
+  if(data.type==='paper-stish:init'||data.type==='paper-stish:update-profiles'){
+    if(Array.isArray(data.profiles))replaceProfiles(data.profiles);
+    if(data.type==='paper-stish:init')setEditing(data.editing);
+    return;
+  }
+  if(data.type==='paper-stish:set-editing')setEditing(data.editing);
+});
+window.parent.postMessage({type:'paper-stish:template-ready'},'*');
 </script>
 </body>
 </html>

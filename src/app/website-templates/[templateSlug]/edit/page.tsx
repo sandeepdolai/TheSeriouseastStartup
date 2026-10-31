@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 };
 
 const editableTemplates = new Set([
+  "memory-lane",
   "red-letter",
   "introducing-him",
   "love-of-my-life",

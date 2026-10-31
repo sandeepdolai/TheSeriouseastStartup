@@ -20,6 +20,7 @@ import { OurCalendarTemplate } from "@/components/website-templates/OurCalendarT
 import { BirthdayTodayTemplate } from "@/components/website-templates/BirthdayTodayTemplate";
 import { RedLetterTemplate } from "@/components/website-templates/RedLetterTemplate";
 import { RoseTemplate } from "@/components/website-templates/RoseTemplate";
+import { MemoryLaneTemplate } from "@/components/website-templates/MemoryLaneTemplate";
 
 interface Props {
   username: string;
@@ -119,6 +120,10 @@ export function PublishedTemplateViewer({
     // This is especially important for templates that initialize a document
     // or animation in an iframe and must receive a fresh initial snapshot.
     const publicationKey = `${templateId}:${serverPublication.templateSlug}:${serverPublication.publishedAt}`;
+
+    if (serverPublication.templateSlug === "memory-lane" && serverPublication.values) {
+      return <MemoryLaneTemplate key={publicationKey} values={serverPublication.values} />;
+    }
 
     if (serverPublication.templateSlug === "red-letter" && serverPublication.values) {
       return <RedLetterTemplate key={publicationKey} values={serverPublication.values} />;

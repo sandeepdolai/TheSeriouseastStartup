@@ -10,6 +10,7 @@ import {
   publishWebsite,
   slugPart,
   type PublishedRecord,
+  type MemoryLaneProfile,
   type TemplatePublicationValues,
 } from "@/lib/publications";
 import { isValidCalendarHeartDate } from "@/lib/calendarHeartValue";
@@ -17,6 +18,7 @@ import { PhotoAlbumTemplate, DEFAULT_ALBUM_CAPTIONS, DEFAULT_ALBUM_PHOTOS } from
 import { BirthdayTodayTemplate } from "./BirthdayTodayTemplate";
 import { LoveHeartTemplate } from "./LoveHeartTemplate";
 import { RedLetterTemplate } from "./RedLetterTemplate";
+import { MemoryLaneTemplate, MEMORY_LANE_DEFAULT_PROFILES } from "./MemoryLaneTemplate";
 import { RoseTemplate } from "./RoseTemplate";
 import { IntroducingHimTemplate, INTRODUCING_HIM_DEFAULTS } from "./IntroducingHimTemplate";
 import {
@@ -29,7 +31,7 @@ import { LoveOfMyLifeTemplate } from "./LoveOfMyLifeTemplate";
 import { qrCodeMatrix, qrCodeSvgPath } from "@/lib/qrCode";
 import styles from "./WebsiteEditor.module.css";
 
-export type WebsiteEditorTemplateSlug = "love-of-my-life" | "birthday-template" | "birthday-today" | "photo-album" | "love-heart" | "forever-and-ever" | "our-calendar" | "introducing-him" | "red-letter" | "rose";
+export type WebsiteEditorTemplateSlug = "memory-lane" | "love-of-my-life" | "birthday-template" | "birthday-today" | "photo-album" | "love-heart" | "forever-and-ever" | "our-calendar" | "introducing-him" | "red-letter" | "rose";
 
 type EditableWebsiteField =
   | "heading"
@@ -48,6 +50,13 @@ const MAX_PHOTO_DATA_LENGTH = 560_000;
 const REOPEN_PUBLISH_KEY = "paper-stish-reopen-website-publish";
 
 const TEXT_DEFAULTS: Record<WebsiteEditorTemplateSlug, TemplatePublicationValues> = {
+  "memory-lane": {
+    heading: "Memory Lane",
+    memoryLaneProfiles: MEMORY_LANE_DEFAULT_PROFILES,
+    photoUrl: null,
+    images: [],
+    captions: [],
+  },
   "love-of-my-life": {
     heading: "To the love of my life",
     intro: "A small corner of the internet for everything I sometimes forget to say out loud.",
@@ -132,6 +141,7 @@ const TEXT_DEFAULTS: Record<WebsiteEditorTemplateSlug, TemplatePublicationValues
 };
 
 const TEMPLATE_TITLES: Record<WebsiteEditorTemplateSlug, string> = {
+  "memory-lane": "Memory Lane",
   "love-of-my-life": "Love of My Life",
   "birthday-template": "Birthday Website",
   "birthday-today": "who’s birthday is it today?",
@@ -145,7 +155,11 @@ const TEMPLATE_TITLES: Record<WebsiteEditorTemplateSlug, string> = {
 };
 
 function defaultValues(templateSlug: WebsiteEditorTemplateSlug): TemplatePublicationValues {
-  return { ...TEXT_DEFAULTS[templateSlug] };
+  const values = { ...TEXT_DEFAULTS[templateSlug] };
+  if (templateSlug === "memory-lane") {
+    values.memoryLaneProfiles = (TEXT_DEFAULTS["memory-lane"].memoryLaneProfiles ?? []).map((profile) => ({ ...profile }));
+  }
+  return values;
 }
 
 function normalizeLinkInput(value: string): string {
@@ -210,7 +224,7 @@ export function WebsiteEditor({
   const [values, setValues] = useState<TemplatePublicationValues>(() => defaultValues(templateSlug));
   const [username, setUsername] = useState("");
   const [websiteName, setWebsiteName] = useState(
-    templateSlug === "red-letter" ? "a-little-letter" : templateSlug === "introducing-him" ? "introducing-him" : templateSlug === "birthday-today" ? "birthday-today" : templateSlug === "photo-album" ? "photo-album" : templateSlug === "birthday-template" ? "birthday" : templateSlug === "love-heart" ? "love-heart" : templateSlug === "forever-and-ever" ? "forever-and-ever" : templateSlug === "rose" ? "rose" : "our-story",
+    templateSlug === "memory-lane" ? "memory-lane" : templateSlug === "red-letter" ? "a-little-letter" : templateSlug === "introducing-him" ? "introducing-him" : templateSlug === "birthday-today" ? "birthday-today" : templateSlug === "photo-album" ? "photo-album" : templateSlug === "birthday-template" ? "birthday" : templateSlug === "love-heart" ? "love-heart" : templateSlug === "forever-and-ever" ? "forever-and-ever" : templateSlug === "rose" ? "rose" : "our-story",
   );
   const [draftReady, setDraftReady] = useState(false);
   const [draftMissing, setDraftMissing] = useState(false);
@@ -230,6 +244,7 @@ export function WebsiteEditor({
   const fileInput = useRef<HTMLInputElement>(null);
   const publishedLinkInput = useRef<HTMLInputElement>(null);
   const targetPhotoIndex = useRef(0);
+  const isMemoryLane = templateSlug === "memory-lane";
   const isAlbum = templateSlug === "photo-album";
   const isBirthdayToday = templateSlug === "birthday-today";
   const isForeverAndEver = templateSlug === "forever-and-ever";
@@ -427,6 +442,24 @@ export function WebsiteEditor({
           captions,
           letterParagraphs: restoredLetterText.letterParagraphs,
           calendarNotes: restoredCalendarNotes,
+          memoryLaneProfiles: Array.isArray(raw.memoryLaneProfiles)
+            ? raw.memoryLaneProfiles.slice(0, 6).flatMap((item): MemoryLaneProfile[] => {
+                if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+                const profile = item as Record<string, unknown>;
+                const year = typeof profile.year === "string" ? profile.year.slice(0, 4) : "";
+                if (!/^\d{4}$/.test(year) || Number(year) < 1900 || Number(year) > 2100) return [];
+                const photoUrl = typeof profile.photoUrl === "string" &&
+                  profile.photoUrl.length <= MAX_PHOTO_DATA_LENGTH &&
+                  (profile.photoUrl === "" || /^(data:image\/|https?:\/\/)/.test(profile.photoUrl))
+                  ? profile.photoUrl || null
+                  : null;
+                return [{
+                  year,
+                  heroTitle: typeof profile.heroTitle === "string" ? profile.heroTitle.slice(0, 80) : "",
+                  photoUrl,
+                }];
+              })
+            : defaults.memoryLaneProfiles,
           calendarHeart: isValidCalendarHeartDate(raw.calendarHeart) ? { ...raw.calendarHeart } : defaults.calendarHeart,
         });
       } else {
@@ -528,6 +561,11 @@ export function WebsiteEditor({
 
   const changeText = (field: EditableWebsiteField, value: string) => {
     setValues((current) => ({ ...current, [field]: value }));
+    setHasUnpublishedChanges(true);
+  };
+
+  const changeMemoryLaneProfiles = (profiles: MemoryLaneProfile[]) => {
+    setValues((current) => ({ ...current, memoryLaneProfiles: profiles }));
     setHasUnpublishedChanges(true);
   };
 
@@ -804,7 +842,14 @@ export function WebsiteEditor({
         onChange={(event) => void choosePhoto(event.currentTarget.files)}
       />
 
-      {templateSlug === "red-letter" ? (
+      {isMemoryLane ? (
+        <MemoryLaneTemplate
+          values={values}
+          editing
+          onProfilesChange={changeMemoryLaneProfiles}
+          onExit={onClose}
+        />
+      ) : templateSlug === "red-letter" ? (
         <RedLetterTemplate values={values} editing onTextChange={changeText} onExit={onClose} />
       ) : templateSlug === "introducing-him" ? (
         <IntroducingHimTemplate values={values} editing onTextChange={changeText} onPhotoClick={() => openPhotoChooser(0)} onExit={onClose} />
