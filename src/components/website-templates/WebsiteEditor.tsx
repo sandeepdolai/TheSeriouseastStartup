@@ -43,7 +43,11 @@ type EditableWebsiteField =
   | "sideNote"
   | "noteHeading"
   | "message"
-  | "signature";
+  | "signature"
+  | "memoryLaneTagline"
+  | "memoryLaneDescription"
+  | "memoryLaneStarring"
+  | "memoryLaneGenres";
 
 const MAX_ALBUM_PHOTOS = 6;
 const MAX_PHOTO_DATA_LENGTH = 560_000;
@@ -53,6 +57,10 @@ const TEXT_DEFAULTS: Record<WebsiteEditorTemplateSlug, TemplatePublicationValues
   "memory-lane": {
     heading: "Memory Lane",
     memoryLaneProfiles: MEMORY_LANE_DEFAULT_PROFILES,
+    memoryLaneTagline: "Little moments, big memories",
+    memoryLaneDescription: "Dear world, I am grateful to be alive in you,\nand I am thankful for another year of better times\nand even better memories with the ones I love.",
+    memoryLaneStarring: "27-05-2021",
+    memoryLaneGenres: "ACTION & CRIME",
     photoUrl: null,
     images: [],
     captions: [],
@@ -437,6 +445,10 @@ export function WebsiteEditor({
           yearsLabel: text("yearsLabel", defaults.yearsLabel ?? "", 80),
           sideNote: text("sideNote", defaults.sideNote ?? "", 80),
           message: savedMessage,
+          memoryLaneTagline: text("memoryLaneTagline", defaults.memoryLaneTagline ?? "", 120),
+          memoryLaneDescription: text("memoryLaneDescription", defaults.memoryLaneDescription ?? "", 800),
+          memoryLaneStarring: text("memoryLaneStarring", defaults.memoryLaneStarring ?? "", 60),
+          memoryLaneGenres: text("memoryLaneGenres", defaults.memoryLaneGenres ?? "", 100),
           photoUrl,
           images,
           captions,
@@ -847,6 +859,7 @@ export function WebsiteEditor({
           values={values}
           editing
           onProfilesChange={changeMemoryLaneProfiles}
+          onTextChange={changeText}
           onExit={onClose}
         />
       ) : templateSlug === "red-letter" ? (
