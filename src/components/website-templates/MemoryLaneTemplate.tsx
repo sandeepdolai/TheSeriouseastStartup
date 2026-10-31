@@ -23,7 +23,7 @@ function normalizeProfiles(value: unknown): MemoryLaneProfile[] {
     if (!/^\d{4}$/.test(year) || Number(year) < 1900 || Number(year) > 2100) return [];
     const heroTitle = typeof raw.heroTitle === "string" ? raw.heroTitle.slice(0, 80) : "";
     const photoUrl = typeof raw.photoUrl === "string" && raw.photoUrl.length <= 560_000 &&
-      (raw.photoUrl === "" || /^(data:image\\/|https?:\\/\\/)/.test(raw.photoUrl))
+      (raw.photoUrl === "" || /^(data:image\/|https?:\/\/)/.test(raw.photoUrl))
       ? raw.photoUrl || null
       : null;
     return [{ year, heroTitle, photoUrl }];
