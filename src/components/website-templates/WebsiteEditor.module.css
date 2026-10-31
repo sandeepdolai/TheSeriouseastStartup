@@ -19,11 +19,21 @@
   pointer-events: none;
 }
 
-.publishButton {
+.editorActions {
   position: fixed;
   right: clamp(15px, 3vw, 34px);
   bottom: calc(18px + env(safe-area-inset-bottom));
-  z-index: 85;
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.publishButton {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  z-index: auto;
   min-height: 43px;
   padding: 0 19px;
   border: 1px solid rgba(255, 255, 255, .16);
@@ -41,6 +51,56 @@
 .publishButton:hover {
   background: #44443c;
   transform: translateY(-1px);
+}
+.publishButton:disabled {
+  cursor: default;
+}
+.publishButton:disabled:hover {
+  background: rgba(35, 36, 31, .94);
+  transform: none;
+}
+
+.controlOpacityToggle {
+  display: grid;
+  width: 43px;
+  height: 43px;
+  flex: 0 0 43px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 50%;
+  color: rgba(255, 253, 247, .94);
+  background: rgba(35, 36, 31, .94);
+  box-shadow: 0 8px 28px rgba(28, 26, 19, .2);
+  backdrop-filter: blur(14px);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity .22s ease, filter .22s ease, background .18s ease, transform .18s ease;
+}
+.controlOpacityToggle svg {
+  width: 19px;
+  height: 19px;
+}
+.controlOpacityToggle:hover {
+  background: #44443c;
+  transform: translateY(-1px);
+}
+.controlOpacityToggle:focus-visible {
+  outline: 2px solid #b65b4b;
+  outline-offset: 4px;
+}
+
+.controlsDimmed [aria-label="Back to website templates"],
+.controlsDimmed .publishButton,
+.controlsDimmed .controlOpacityToggle {
+  opacity: .22 !important;
+  filter: grayscale(1);
+  transition: opacity .22s ease, filter .22s ease;
+}
+
+.controlsDimmed [aria-label="Back to website templates"],
+.controlsDimmed .publishButton {
+  cursor: default !important;
 }
 .publishButton:focus-visible {
   outline: 2px solid #b65b4b;
@@ -244,9 +304,17 @@
 }
 
 @media (max-width: 480px) {
-  .publishButton {
+  .editorActions {
     right: 14px;
     bottom: calc(14px + env(safe-area-inset-bottom));
+    gap: 7px;
+  }
+  .controlOpacityToggle {
+    width: 41px;
+    height: 41px;
+    flex-basis: 41px;
+  }
+  .publishButton {
     min-height: 41px;
     padding: 0 16px;
   }
