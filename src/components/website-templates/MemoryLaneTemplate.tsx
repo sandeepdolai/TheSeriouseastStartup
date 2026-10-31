@@ -1,11 +1,37 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MemoryLaneProfile, TemplatePublicationValues } from "@/lib/publications";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const TEMPLATE_URL = `${BASE_PATH}/website-templates/memory-lane.html`;
 const EMPTY_DOCUMENT = '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{width:100%;height:100%;margin:0;background:#000;overflow:hidden}</style></head><body></body></html>';
+
+export const MEMORY_LANE_TEXT_DEFAULTS = {
+  memoryLaneTagline: "Little moments, big memories",
+  memoryLaneDescription: "Dear world, I am grateful to be alive in you,\nand I am thankful for another year of better times\nand even better memories with the ones I love.",
+  memoryLaneStarring: "27-05-2021",
+  memoryLaneGenres: "ACTION & CRIME",
+};
+
+type MemoryLaneTextField = keyof typeof MEMORY_LANE_TEXT_DEFAULTS;
+
+export function resolveMemoryLaneText(values?: TemplatePublicationValues) {
+  return {
+    memoryLaneTagline: typeof values?.memoryLaneTagline === "string"
+      ? values.memoryLaneTagline
+      : MEMORY_LANE_TEXT_DEFAULTS.memoryLaneTagline,
+    memoryLaneDescription: typeof values?.memoryLaneDescription === "string"
+      ? values.memoryLaneDescription
+      : MEMORY_LANE_TEXT_DEFAULTS.memoryLaneDescription,
+    memoryLaneStarring: typeof values?.memoryLaneStarring === "string"
+      ? values.memoryLaneStarring
+      : MEMORY_LANE_TEXT_DEFAULTS.memoryLaneStarring,
+    memoryLaneGenres: typeof values?.memoryLaneGenres === "string"
+      ? values.memoryLaneGenres
+      : MEMORY_LANE_TEXT_DEFAULTS.memoryLaneGenres,
+  };
+}
 
 export const MEMORY_LANE_DEFAULT_PROFILES: MemoryLaneProfile[] = [
   { year: "2023", heroTitle: "", photoUrl: null },
@@ -34,11 +60,13 @@ export function MemoryLaneTemplate({
   values,
   editing = false,
   onProfilesChange,
+  onTextChange,
   onExit,
 }: {
   values?: TemplatePublicationValues;
   editing?: boolean;
   onProfilesChange?: (profiles: MemoryLaneProfile[]) => void;
+  onTextChange?: (field: MemoryLaneTextField, value: string) => void;
   onExit?: () => void;
 }) {
   const [html, setHtml] = useState(EMPTY_DOCUMENT);
@@ -48,10 +76,18 @@ export function MemoryLaneTemplate({
   const iframeReady = useRef(false);
   const latestProfiles = useRef<MemoryLaneProfile[]>(normalizeProfiles(values?.memoryLaneProfiles));
   const latestEditing = useRef(editing);
+  const latestText = useRef(resolveMemoryLaneText(values));
   const lastSentProfiles = useRef("");
+  const lastSentText = useRef("");
 
+  const currentText = useMemo(
+    () => resolveMemoryLaneText(values),
+    [values?.memoryLaneTagline, values?.memoryLaneDescription, values?.memoryLaneStarring, values?.memoryLaneGenres],
+  );
+  const currentTextSnapshot = JSON.stringify(currentText);
   latestProfiles.current = normalizeProfiles(values?.memoryLaneProfiles);
   latestEditing.current = editing;
+  latestText.current = currentText;
 
   useEffect(() => {
     let alive = true;
@@ -78,16 +114,38 @@ export function MemoryLaneTemplate({
     const frame = iframeRef.current;
     const onMessage = (event: MessageEvent<unknown>) => {
       if (!frame || event.source !== frame.contentWindow || !event.data || typeof event.data !== "object") return;
-      const data = event.data as { type?: unknown; profiles?: unknown };
+      const data = event.data as { type?: unknown; profiles?: unknown; text?: unknown; field?: unknown; value?: unknown };
       if (data.type === "paper-stish:template-ready") {
         iframeReady.current = true;
         const profiles = normalizeProfiles(latestProfiles.current);
         lastSentProfiles.current = JSON.stringify(profiles);
+        const text = latestText.current;
+        lastSentText.current = JSON.stringify(text);
         frame.contentWindow?.postMessage({
           type: "paper-stish:init",
           editing: latestEditing.current,
           profiles,
+          text,
         }, "*");
+        return;
+      }
+
+      if (data.type === "paper-stish:text-change" && latestEditing.current &&
+          typeof data.field === "string" && typeof data.value === "string") {
+        const limits: Record<MemoryLaneTextField, number> = {
+          memoryLaneTagline: 120,
+          memoryLaneDescription: 800,
+          memoryLaneStarring: 60,
+          memoryLaneGenres: 100,
+        };
+        if (data.field in limits) {
+          const field = data.field as MemoryLaneTextField;
+          const value = data.value.slice(0, limits[field]);
+          const nextText = { ...latestText.current, [field]: value };
+          latestText.current = nextText;
+          lastSentText.current = JSON.stringify(nextText);
+          onTextChange?.(field, value);
+        }
         return;
       }
 
@@ -102,7 +160,7 @@ export function MemoryLaneTemplate({
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [onProfilesChange]);
+  }, [onProfilesChange, onTextChange]);
 
   useEffect(() => {
     if (!iframeReady.current) return;
@@ -112,6 +170,15 @@ export function MemoryLaneTemplate({
     lastSentProfiles.current = snapshot;
     iframeRef.current?.contentWindow?.postMessage({ type: "paper-stish:update-profiles", profiles }, "*");
   }, [values?.memoryLaneProfiles]);
+
+  useEffect(() => {
+    if (!iframeReady.current || currentTextSnapshot === lastSentText.current) return;
+    lastSentText.current = currentTextSnapshot;
+    iframeRef.current?.contentWindow?.postMessage({
+      type: "paper-stish:update-text",
+      text: currentText,
+    }, "*");
+  }, [currentTextSnapshot, currentText]);
 
   useEffect(() => {
     if (!iframeReady.current) return;

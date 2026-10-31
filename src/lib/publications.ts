@@ -74,6 +74,11 @@ export interface TemplatePublicationValues {
   yearsLabel?: string;
   sideNote?: string;
   message?: string;
+  /** Editable copy shown on the Memory Lane title/detail screen. */
+  memoryLaneTagline?: string;
+  memoryLaneDescription?: string;
+  memoryLaneStarring?: string;
+  memoryLaneGenres?: string;
   photoUrl?: string | null;
   /** Photo Album supports up to six optimized, user-uploaded images. */
   images?: string[];
@@ -228,6 +233,10 @@ export function validateTemplateValues(raw: unknown): TemplatePublicationValues 
     yearsLabel: boundedString(v.yearsLabel, 80),
     sideNote: boundedString(v.sideNote, 80),
     message: boundedString(v.message, 4000),
+    memoryLaneTagline: boundedString(v.memoryLaneTagline, 120),
+    memoryLaneDescription: boundedString(v.memoryLaneDescription, 800),
+    memoryLaneStarring: boundedString(v.memoryLaneStarring, 60),
+    memoryLaneGenres: boundedString(v.memoryLaneGenres, 100),
     photoUrl,
     images,
     captions,
