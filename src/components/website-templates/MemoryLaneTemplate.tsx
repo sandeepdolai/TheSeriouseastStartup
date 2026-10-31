@@ -16,7 +16,7 @@ export const MEMORY_LANE_DEFAULT_PROFILES: MemoryLaneProfile[] = [
 
 function normalizeProfiles(value: unknown): MemoryLaneProfile[] {
   if (!Array.isArray(value)) return MEMORY_LANE_DEFAULT_PROFILES.map((profile) => ({ ...profile }));
-  return value.slice(0, 8).flatMap((item): MemoryLaneProfile[] => {
+  return value.slice(0, 6).flatMap((item): MemoryLaneProfile[] => {
     if (!item || typeof item !== "object" || Array.isArray(item)) return [];
     const raw = item as Record<string, unknown>;
     const year = typeof raw.year === "string" ? raw.year.slice(0, 4) : "";
