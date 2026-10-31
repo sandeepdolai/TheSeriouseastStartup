@@ -413,7 +413,10 @@ Object.entries(memoryLaneEditableElements).forEach(([field,config])=>{
     }
   });
   element.addEventListener('keydown',event=>{
-    if(activeMemoryLaneEdit?.element!==element)return;
+    if(activeMemoryLaneEdit?.element!==element){
+      if(paperStishEditing&&(event.key==='Enter'||event.key===' ')){event.preventDefault();element.click()}
+      return;
+    }
     event.stopPropagation();
     if(event.key==='Escape'){
       event.preventDefault();
@@ -728,6 +731,11 @@ const replaceProfiles=profiles=>{
 const setEditing=enabled=>{
   paperStishEditing=enabled===true;
   document.body.classList.toggle('paper-stish-editing',paperStishEditing);
+  Object.values(memoryLaneEditableElements).forEach(({element})=>{
+    if(!element)return;
+    if(paperStishEditing){element.tabIndex=0;element.title='Tap to edit'}
+    else{element.removeAttribute('tabindex');element.removeAttribute('title')}
+  });
   if(!paperStishEditing&&activeMemoryLaneEdit)finishMemoryLaneEdit(true);
   addBtn.hidden=!paperStishEditing;
   document.querySelector('.manage').hidden=!paperStishEditing;
