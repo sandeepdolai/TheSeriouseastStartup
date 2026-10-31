@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { signIn, useSession } from "next-auth/react";
 import { isAdminEmail } from "@/lib/admin";
 import { GUEST_ACCOUNT_KEY, getAccountKey } from "@/lib/accountStorage";
@@ -294,7 +294,7 @@ export function WebsiteEditor({
     });
   }, [controlsDimmed]);
 
-  const blockDimmedControlActivation = (event: React.MouseEvent<HTMLElement>) => {
+  const blockDimmedControlActivation = (event: MouseEvent<HTMLElement>) => {
     if (!controlsDimmed || !(event.target instanceof Element)) return;
     if (event.target.closest(`[aria-label="Back to website templates"], .${styles.publishButton}`)) {
       event.preventDefault();
