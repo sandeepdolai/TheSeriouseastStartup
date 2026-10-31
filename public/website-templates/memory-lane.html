@@ -600,13 +600,13 @@ const collectProfiles=()=>Array.from(row.querySelectorAll('.profile')).map(profi
   year:profile.querySelector('.name')?.textContent?.trim()||'',
   heroTitle:profile.dataset.heroTitle||'',
   photoUrl:profile.dataset.wide||''
-})).filter(profile=>/^\\d{4}$/.test(profile.year));
+})).filter(profile=>/^\d{4}$/.test(profile.year));
 const emitProfileChange=()=>window.parent.postMessage({type:'paper-stish:profiles-change',profiles:collectProfiles()},'*');
 const replaceProfiles=profiles=>{
   row.querySelectorAll('.profile').forEach(profile=>profile.remove());
   profiles.slice(0,8).forEach(profile=>{
     const year=String(profile.year||'').slice(0,4);
-    if(!/^\\d{4}$/.test(year)||Number(year)<1900||Number(year)>2100)return;
+    if(!/^\d{4}$/.test(year)||Number(year)<1900||Number(year)>2100)return;
     const photoUrl=typeof profile.photoUrl==='string'?profile.photoUrl:'';
     const button=make(year,photoUrl,String(profile.heroTitle||'').slice(0,80));
     button.dataset.wide=photoUrl;
