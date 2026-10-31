@@ -1001,7 +1001,7 @@ export function WebsiteEditor({
         />
       )}
 
-      <div className={styles.editorActions} aria-label="Website editor controls">
+      <div className={styles.editorActions} role="group" aria-label="Website editor controls">
         <button
           type="button"
           className={styles.controlOpacityToggle}
