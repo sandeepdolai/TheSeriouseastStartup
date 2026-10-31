@@ -317,6 +317,7 @@ const make=(y,img,heroTitle)=>{
   if(heroTitle)b.dataset.heroTitle=heroTitle;
   b.append(a,n);return b};
 const addProfile=()=>{
+  if(row.querySelectorAll('.profile').length>=6){err.textContent='Memory Lane supports up to six profiles.';return}
   const y=Number(yearIn.value);
   if(!Number.isInteger(y)||y<1900||y>2100){err.textContent='Enter a year between 1900 and 2100.';yearIn.focus();return}
   const b=make(y,photo,heroTitleIn.value.trim());b.dataset.wide=wide;row.insertBefore(b,addBtn);on(b);closeDlg();emitProfileChange()};
