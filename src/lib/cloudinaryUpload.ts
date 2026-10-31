@@ -76,7 +76,7 @@ export async function durableTemplateValues(
   }
 
   if (Array.isArray(next.memoryLaneProfiles)) {
-    const profiles = [];
+    const profiles: NonNullable<TemplatePublicationValues["memoryLaneProfiles"]> = [];
     for (const profile of next.memoryLaneProfiles) {
       const photoUrl = typeof profile.photoUrl === "string" && profile.photoUrl.startsWith("data:")
         ? await uploadDataUrlToCloudinary(profile.photoUrl)
