@@ -194,7 +194,7 @@ export function validateTemplateValues(raw: unknown): TemplatePublicationValues 
         profile.photoUrl === null || profile.photoUrl === undefined || profile.photoUrl === ""
           ? null
           : boundedString(profile.photoUrl, 560_000);
-      if (!year || !/^\\d{4}$/.test(year) || Number(year) < 1900 || Number(year) > 2100) return null;
+      if (!year || !/^\d{4}$/.test(year) || Number(year) < 1900 || Number(year) > 2100) return null;
       if (heroTitle === undefined) return null;
       if (photoUrl !== null && (!photoUrl || !PHOTO_URL_RE.test(photoUrl))) return null;
       memoryLaneProfiles.push({ year, heroTitle, photoUrl });
