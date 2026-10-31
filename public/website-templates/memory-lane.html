@@ -50,6 +50,9 @@ h1{font-size:4.1rem;font-weight:500;line-height:1.2;color:#f2f2f2}
 .bd.has .ph{display:none}
 .nav{position:absolute;z-index:1;left:calc(1.6rem + var(--sl));top:calc(.6rem + env(safe-area-inset-top,0px));display:flex;align-items:center;gap:1.2rem;font-size:1.25rem;color:#e5e5e5;text-shadow:0 0 .6rem rgba(0,0,0,.7);white-space:nowrap}
 .nav .cur{font-weight:700;color:#fff}
+.nav .nav-back{all:unset;font:inherit;color:inherit;text-shadow:inherit;cursor:pointer}
+.nav .nav-back:hover{color:#fff}
+.nav .nav-back:focus-visible{outline:.2rem solid #fff;outline-offset:.25rem}
 .tp-logo{all:unset;margin-right:1.9rem;color:#e50914;font:900 2.4rem/1 Impact,"Arial Narrow",sans-serif;letter-spacing:.03em;transform:scaleX(.88);transform-origin:left;text-shadow:0 0 .6rem rgba(229,9,20,.55);cursor:pointer}
 .info{position:absolute;z-index:1;left:calc(2.1rem + var(--sl));top:10.9rem}
 .ser{display:flex;align-items:center;gap:.8rem}
@@ -185,7 +188,7 @@ h1{font-size:4.1rem;font-weight:500;line-height:1.2;color:#f2f2f2}
   <div class="foreground-reveal">
     <header class="nav">
       <button class="tp-logo" aria-label="Back to profiles">SETFLIX</button>
-      <span class="cur">Home</span><span>TV Programmes</span><span>Films</span><span>Originals</span><span>Recently Added</span><span>My List</span>
+      <span class="cur">Home</span><span>TV Programmes</span><span>Films</span><span>Originals</span><span>Recently Added</span><span>My List</span><button class="nav-back" type="button" aria-label="Back to profile selection">Back</button>
     </header>
     <section class="more-like-panel" id="moreLikePanel" hidden aria-label="More Like This">
       <h2>More Like This</h2>
@@ -591,6 +594,7 @@ row.addEventListener('contextmenu',ev=>{
   openTitle(p);
 });
 document.querySelector('.tp-logo').addEventListener('click',closeTitle);
+document.querySelector('.nav-back').addEventListener('click',closeTitle);
 document.addEventListener('keydown',e=>{
   if(!playerScreen.hidden){if(e.key==='Escape')closePlayer();return}
   if(!tp.hidden){if(e.key==='Escape')closeTitle();return}
