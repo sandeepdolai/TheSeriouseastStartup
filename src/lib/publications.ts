@@ -183,7 +183,7 @@ export function validateTemplateValues(raw: unknown): TemplatePublicationValues 
 
   let memoryLaneProfiles: MemoryLaneProfile[] | undefined;
   if (v.memoryLaneProfiles !== undefined) {
-    if (!Array.isArray(v.memoryLaneProfiles) || v.memoryLaneProfiles.length > 8) return null;
+    if (!Array.isArray(v.memoryLaneProfiles) || v.memoryLaneProfiles.length > 6) return null;
     memoryLaneProfiles = [];
     for (const item of v.memoryLaneProfiles) {
       if (!item || typeof item !== "object" || Array.isArray(item)) return null;
