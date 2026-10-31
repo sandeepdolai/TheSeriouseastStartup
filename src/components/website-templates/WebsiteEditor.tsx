@@ -447,10 +447,10 @@ export function WebsiteEditor({
                 if (!item || typeof item !== "object" || Array.isArray(item)) return [];
                 const profile = item as Record<string, unknown>;
                 const year = typeof profile.year === "string" ? profile.year.slice(0, 4) : "";
-                if (!/^\\d{4}$/.test(year) || Number(year) < 1900 || Number(year) > 2100) return [];
+                if (!/^\d{4}$/.test(year) || Number(year) < 1900 || Number(year) > 2100) return [];
                 const photoUrl = typeof profile.photoUrl === "string" &&
                   profile.photoUrl.length <= MAX_PHOTO_DATA_LENGTH &&
-                  (profile.photoUrl === "" || /^(data:image\\/|https?:\\/\\/)/.test(profile.photoUrl))
+                  (profile.photoUrl === "" || /^(data:image\/|https?:\/\/)/.test(profile.photoUrl))
                   ? profile.photoUrl || null
                   : null;
                 return [{
