@@ -249,6 +249,8 @@ export function WebsiteEditor({
   const [editingPublishDetails, setEditingPublishDetails] = useState(false);
   const [qrExpanded, setQrExpanded] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
+  const [controlsDimmed, setControlsDimmed] = useState(false);
+  const editorScreenRef = useRef<HTMLElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const publishedLinkInput = useRef<HTMLInputElement>(null);
   const targetPhotoIndex = useRef(0);
@@ -267,6 +269,38 @@ export function WebsiteEditor({
       ? ["our-memories", "little-moments", "photo-album"]
       : ["our-story", "for-you", "a-little-surprise"];
   const qrMatrix = useMemo(() => published?.url ? qrCodeMatrix(published!.url) : null, [published?.url]);
+
+  // The template-specific "Templates" controls live inside each design, while
+  // publishing belongs to this shared editor. Disable both from one shared
+  // control-visibility mode without interfering with the editable template.
+  useEffect(() => {
+    const selector = `[aria-label="Back to website templates"], .${styles.publishButton}`;
+    const controls = editorScreenRef.current?.querySelectorAll<HTMLElement>(selector);
+    controls?.forEach((control) => {
+      control.setAttribute("aria-disabled", String(controlsDimmed));
+      if (control instanceof HTMLButtonElement) {
+        control.disabled = controlsDimmed;
+      } else if (control instanceof HTMLAnchorElement) {
+        if (controlsDimmed) {
+          control.dataset.paperStishPreviousTabIndex = control.getAttribute("tabindex") ?? "";
+          control.tabIndex = -1;
+        } else {
+          const previousTabIndex = control.dataset.paperStishPreviousTabIndex;
+          if (previousTabIndex === "") control.removeAttribute("tabindex");
+          else if (previousTabIndex !== undefined) control.setAttribute("tabindex", previousTabIndex);
+          delete control.dataset.paperStishPreviousTabIndex;
+        }
+      }
+    });
+  }, [controlsDimmed]);
+
+  const blockDimmedControlActivation = (event: React.MouseEvent<HTMLElement>) => {
+    if (!controlsDimmed || !(event.target instanceof Element)) return;
+    if (event.target.closest(`[aria-label="Back to website templates"], .${styles.publishButton}`)) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
 
   useEffect(() => {
     if (!publishDialogOpen) return;
@@ -844,7 +878,11 @@ export function WebsiteEditor({
   }
 
   return (
-    <main className={styles.screen}>
+    <main
+      ref={editorScreenRef}
+      className={`${styles.screen} ${controlsDimmed ? styles.controlsDimmed : ""}`}
+      onClickCapture={blockDimmedControlActivation}
+    >
       <input
         ref={fileInput}
         className={styles.hiddenInput}
@@ -963,17 +1001,33 @@ export function WebsiteEditor({
         />
       )}
 
-      <button
-        type="button"
-        className={styles.publishButton}
-        onClick={() => {
-          setEditingPublishDetails(false);
-          setError("");
-          setPublishDialogOpen(true);
-        }}
-      >
-        {published && !hasUnpublishedChanges ? "Share website" : "Publish website"}
-      </button>
+      <div className={styles.editorActions} aria-label="Website editor controls">
+        <button
+          type="button"
+          className={styles.controlOpacityToggle}
+          aria-label={controlsDimmed ? "Restore template controls" : "Reduce template controls opacity"}
+          aria-pressed={controlsDimmed}
+          title={controlsDimmed ? "Restore controls" : "Reduce controls opacity"}
+          onClick={() => setControlsDimmed((current) => !current)}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="m15.5 5.5 3 3" />
+            <path d="M4 20l4.2-.8L19 8.4a2.12 2.12 0 0 0-3-3L5.2 16.2 4 20Z" />
+            <path d="M13 7.5 16.5 11" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          className={styles.publishButton}
+          onClick={() => {
+            setEditingPublishDetails(false);
+            setError("");
+            setPublishDialogOpen(true);
+          }}
+        >
+          {published && !hasUnpublishedChanges ? "Share website" : "Publish website"}
+        </button>
+      </div>
 
       {photoLoading && <p className={styles.notice} role="status">Preparing photo…</p>}
       {draftSaveError && <p className={styles.notice} role="alert">{draftSaveError}</p>}
