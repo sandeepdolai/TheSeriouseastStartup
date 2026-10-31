@@ -20,7 +20,7 @@ function normalizeProfiles(value: unknown): MemoryLaneProfile[] {
     if (!item || typeof item !== "object" || Array.isArray(item)) return [];
     const raw = item as Record<string, unknown>;
     const year = typeof raw.year === "string" ? raw.year.slice(0, 4) : "";
-    if (!/^\\d{4}$/.test(year) || Number(year) < 1900 || Number(year) > 2100) return [];
+    if (!/^\d{4}$/.test(year) || Number(year) < 1900 || Number(year) > 2100) return [];
     const heroTitle = typeof raw.heroTitle === "string" ? raw.heroTitle.slice(0, 80) : "";
     const photoUrl = typeof raw.photoUrl === "string" && raw.photoUrl.length <= 560_000 &&
       (raw.photoUrl === "" || /^(data:image\\/|https?:\\/\\/)/.test(raw.photoUrl))
