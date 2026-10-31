@@ -31,7 +31,7 @@ h1{font-size:4.1rem;font-weight:500;line-height:1.2;color:#f2f2f2}
 .add i::before,.add i::after{content:"";position:absolute;left:50%;top:50%;background:#eee;transform:translate(-50%,-50%)}
 .add i::before{width:2.2rem;height:.4rem}
 .add i::after{width:.4rem;height:2.2rem}
-.add:hover i,.add:focus-visible i{background:#8a8a8a;transform:scale(1.1)}
+.add:hover i,.add:focus-visible i{background:#8a8a8a;transform:scale(1.1)}\n.add[hidden],.manage[hidden]{display:none!important}
 
 .manage{all:unset;box-sizing:border-box;margin-top:5.9rem;padding:.6rem 2.4rem;border:.13rem solid #4d4d4d;color:#999;font-size:1.25rem;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:color .2s,border-color .2s}
 .manage:hover,.manage:focus-visible{color:#fff;border-color:#fff}
@@ -328,7 +328,7 @@ fileIn.addEventListener('change',()=>{
   r.onload=()=>{const im=new Image();
     im.onload=()=>{const s=Math.min(im.width,im.height),c=document.createElement('canvas');c.width=c.height=256;
       c.getContext('2d').drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,256,256);
-      photo=c.toDataURL('image/jpeg',.85);const k=Math.min(1,1280/im.width),w=document.createElement('canvas');w.width=Math.round(im.width*k);w.height=Math.round(im.height*k);w.getContext('2d').drawImage(im,0,0,w.width,w.height);wide=w.toDataURL('image/jpeg',.8);pick.style.backgroundImage='url("'+photo+'")';pick.classList.add('has');err.textContent=''};
+      photo=c.toDataURL('image/jpeg',.85);const k=Math.min(1,1280/im.width),w=document.createElement('canvas');w.width=Math.round(im.width*k);w.height=Math.round(im.height*k);const wc=w.getContext('2d');if(!wc){err.textContent='Photo processing is unavailable.';return}wc.drawImage(im,0,0,w.width,w.height);wide='';for(const quality of [.8,.7,.6,.5,.4]){wide=w.toDataURL('image/jpeg',quality);if(wide.length<=560000)break}if(wide.length>560000){wide='';err.textContent='Choose a smaller photo.';return}pick.style.backgroundImage='url("'+photo+'")';pick.classList.add('has');err.textContent=''};
     im.onerror=()=>{err.textContent='That file can’t be read as an image.'};
     im.src=r.result};
   r.readAsDataURL(f)});
@@ -604,7 +604,7 @@ const collectProfiles=()=>Array.from(row.querySelectorAll('.profile')).map(profi
 const emitProfileChange=()=>window.parent.postMessage({type:'paper-stish:profiles-change',profiles:collectProfiles()},'*');
 const replaceProfiles=profiles=>{
   row.querySelectorAll('.profile').forEach(profile=>profile.remove());
-  profiles.slice(0,8).forEach(profile=>{
+  profiles.slice(0,6).forEach(profile=>{
     const year=String(profile.year||'').slice(0,4);
     if(!/^\d{4}$/.test(year)||Number(year)<1900||Number(year)>2100)return;
     const photoUrl=typeof profile.photoUrl==='string'?profile.photoUrl:'';
