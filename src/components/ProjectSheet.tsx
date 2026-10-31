@@ -444,7 +444,7 @@ export function ProjectSheet({
               <div key={`${project.slug}-${i}`} className="w-full flex-none overflow-hidden rounded-10 s:rounded-15" style={{ aspectRatio: `${aspects[i] ?? 16 / 9}` }}>
                 {project.slug === "memory-lane" ? (
                   <iframe
-                    src={m.replace(/memory-lane-preview\\.png$/i, "memory-lane.html")}
+                    src={m.replace(/memory-lane-preview\.png$/i, "memory-lane.html")}
                     title="Memory Lane interactive website template preview"
                     className="h-full w-full border-0"
                     sandbox="allow-scripts"
