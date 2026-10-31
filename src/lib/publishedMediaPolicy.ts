@@ -57,6 +57,7 @@ export interface SmartEditDocumentLike {
 export interface TemplateValuesLike {
   photoUrl?: string | null;
   images?: string[];
+  memoryLaneProfiles?: Array<{ photoUrl?: string | null }>;
 }
 
 /** Count embedded base64 IMAGES in a Smart Edit document.
@@ -78,6 +79,9 @@ export function templateValuesEmbeddedImageCount(values: TemplateValuesLike): nu
   if (isEmbeddedImage(values.photoUrl)) count += 1;
   for (const image of values.images ?? []) {
     if (isEmbeddedImage(image)) count += 1;
+  }
+  for (const profile of values.memoryLaneProfiles ?? []) {
+    if (isEmbeddedImage(profile.photoUrl)) count += 1;
   }
   return count;
 }
@@ -163,6 +167,9 @@ export function templateValuesUnauthorizedReferences(
   }
   for (const image of values.images ?? []) {
     if (typeof image === "string" && image.length > 0 && !isEmbeddedImage(image)) urls.push(image);
+  }
+  for (const profile of values.memoryLaneProfiles ?? []) {
+    if (typeof profile.photoUrl === "string" && !isEmbeddedImage(profile.photoUrl)) urls.push(profile.photoUrl);
   }
   return unauthorizedReferences(urls, cloudName, userId);
 }
