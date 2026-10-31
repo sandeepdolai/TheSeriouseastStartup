@@ -320,6 +320,64 @@ export function WebsiteTemplateBrowser({
     [cancelSwipe, selectedIndex],
   );
 
+  const closeSelectedTemplate = useCallback(() => {
+    const returnPath = takeReturnPath("paper-stish:return:website-preview");
+    if (returnPath && window.history.length > 1) window.history.back();
+    else navigateToAppPath("/website-templates", true);
+    setSelectedSlug(null);
+    setSwipe({ phase: "idle", direction: null, x: 0 });
+  }, []);
+
+  // Memory Lane is a full-viewport experience. Keep its original document at
+  // the device viewport size so its bottom details tabs and player controls
+  // remain inside the visible screen instead of being cropped by a gallery card.
+  if (selected?.slug === "memory-lane") {
+    return (
+      <main className="fixed inset-0 z-[100] overflow-hidden bg-black">
+        <iframe
+          title="Memory Lane website template"
+          src="/website-templates/memory-lane.html"
+          sandbox="allow-scripts"
+          loading="eager"
+          referrerPolicy="no-referrer"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            border: 0,
+          }}
+        />
+        <button
+          type="button"
+          onClick={closeSelectedTemplate}
+          aria-label="Close Memory Lane preview"
+          title="Close preview"
+          style={{
+            position: "absolute",
+            zIndex: 2,
+            top: "max(12px, env(safe-area-inset-top))",
+            right: "max(12px, env(safe-area-inset-right))",
+            display: "grid",
+            width: 38,
+            height: 38,
+            placeItems: "center",
+            border: "1px solid rgba(255,255,255,.28)",
+            borderRadius: "50%",
+            color: "#fff",
+            background: "rgba(0,0,0,.58)",
+            cursor: "pointer",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </main>
+    );
+  }
+
   if (editingSlug && editingProjectId) {
     return (
       <WebsiteEditor
