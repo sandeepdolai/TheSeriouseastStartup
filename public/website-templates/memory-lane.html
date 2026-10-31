@@ -74,6 +74,10 @@ h1{font-size:4.1rem;font-weight:500;line-height:1.2;color:#f2f2f2}
 .av{display:block;width:2.6rem;height:2.6rem;margin-top:2.1rem;border:.15rem solid #8a8a8a;border-radius:50%;background:#444}
 .meta{margin-top:1.8rem;font-size:1.05rem;line-height:1.55rem;color:#6e6e6e}
 .meta b{color:#8a8a8a}
+.memory-editable{border-radius:2px;cursor:text;outline-offset:4px;-webkit-tap-highlight-color:transparent}
+body.paper-stish-editing .memory-editable:hover:not([contenteditable="true"]){outline:1px dashed rgba(255,255,255,.42)}
+body.paper-stish-editing .memory-editable[contenteditable="true"]{outline:1px dashed rgba(255,255,255,.76);outline-offset:4px;user-select:text;-webkit-user-select:text;white-space:pre-wrap;cursor:text}
+body.paper-stish-editing .memory-editable[contenteditable="true"]:focus{outline-color:rgba(255,255,255,.9)}
 .tabs{position:absolute;z-index:1;left:calc(32rem + var(--sl));bottom:calc(1.4rem + env(safe-area-inset-bottom,0px));display:flex;gap:3.4rem;font-size:1.25rem;line-height:1.2;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;text-shadow:0 0 .6rem rgba(0,0,0,.8)}
 .tabs span{padding-bottom:.4rem;border-bottom:.25rem solid transparent}
 .tabs .act{font-weight:700;border-color:#e50914}
@@ -196,9 +200,9 @@ h1{font-size:4.1rem;font-weight:500;line-height:1.2;color:#f2f2f2}
     </section>
     <div class="info">
       <div class="ser"><b>N</b><span>SERIES</span></div>
-      <h2 id="tpt">2025 MEMORY LANE</h2>
-      <div class="rate"><i>★★★★★</i><span>Little moments, big memories</span></div>
-      <p class="desc">Dear world, I am grateful to be alive in you,<br>and I am thankful for another year of better times<br>and even better memories with the ones I love.</p>
+      <h2 id="tpt" class="memory-editable" data-memory-field="title">2025 MEMORY LANE</h2>
+      <div class="rate"><i>★★★★★</i><span class="memory-editable" data-memory-field="memoryLaneTagline">Little moments, big memories</span></div>
+      <p class="desc memory-editable" data-memory-field="memoryLaneDescription">Dear world, I am grateful to be alive in you,<br>and I am thankful for another year of better times<br>and even better memories with the ones I love.</p>
       <div class="acts">
         <button class="pl"><i></i>PLAY</button>
         <button class="ml">+ MY LIST</button>
@@ -206,7 +210,7 @@ h1{font-size:4.1rem;font-weight:500;line-height:1.2;color:#f2f2f2}
         <button class="ci dn" aria-label="Dislike"><svg viewBox="0 0 24 24"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg></button>
       </div>
       <span class="av"></span>
-      <div class="meta"><div><b>Starring:</b> 27-05-2021</div><div><b>Genres:</b> ACTION &amp; CRIME</div></div>
+      <div class="meta"><div><b>Starring:</b> <span class="memory-editable" data-memory-field="memoryLaneStarring">27-05-2021</span></div><div><b>Genres:</b> <span class="memory-editable" data-memory-field="memoryLaneGenres">ACTION &amp; CRIME</span></div></div>
     </div>
     <nav class="tabs"><button class="tab act" type="button" data-view="overview">Overview</button><span>Episodes</span><button class="tab" type="button" data-view="more">More like this</button><span>Trailers &amp; more</span></nav>
   </div>
@@ -342,6 +346,104 @@ document.querySelector('.cancel').addEventListener('click',closeDlg);
 scrim.addEventListener('click',e=>{if(e.target===scrim)closeDlg()});
 const tp=document.querySelector('.tp'),tpTitle=document.getElementById('tpt'),bd=document.querySelector('.bd'),stage=document.querySelector('.stage');
 const foreground=document.querySelector('.foreground-reveal');
+
+const memoryLaneEditableElements={
+  title:{element:tpTitle,max:80,multiline:false},
+  memoryLaneTagline:{element:document.querySelector('[data-memory-field="memoryLaneTagline"]'),max:120,multiline:false},
+  memoryLaneDescription:{element:document.querySelector('[data-memory-field="memoryLaneDescription"]'),max:800,multiline:true},
+  memoryLaneStarring:{element:document.querySelector('[data-memory-field="memoryLaneStarring"]'),max:60,multiline:false},
+  memoryLaneGenres:{element:document.querySelector('[data-memory-field="memoryLaneGenres"]'),max:100,multiline:false}
+};
+let activeMemoryLaneEdit=null;
+const readMemoryLaneText=(element,multiline)=>(
+  (multiline?element.innerText:element.textContent)||''
+).replace(/\\r\\n?/g,'\\n');
+const writeMemoryLaneText=(element,value,multiline)=>{
+  if(multiline)element.innerText=value;
+  else element.textContent=value;
+};
+const normalizeMemoryLaneText=(value,multiline,max)=>(
+  (multiline?value.replace(/\\r\\n?/g,'\\n'):value.replace(/[\\r\\n]+/g,' '))
+).slice(0,max);
+const finishMemoryLaneEdit=commit=>{
+  if(!activeMemoryLaneEdit)return;
+  const current=activeMemoryLaneEdit;
+  const {field,element,previous,multiline,max}=current;
+  const next=normalizeMemoryLaneText(commit?readMemoryLaneText(element,multiline):previous,multiline,max);
+  writeMemoryLaneText(element,next,multiline);
+  element.removeAttribute('contenteditable');
+  element.removeAttribute('role');
+  element.removeAttribute('aria-label');
+  element.removeAttribute('aria-multiline');
+  activeMemoryLaneEdit=null;
+  if(!commit||next===previous)return;
+  if(field==='title'){
+    const selected=row.querySelector('.profile.on');
+    if(selected){
+      selected.dataset.heroTitle=next;
+      emitProfileChange();
+    }
+  }else{
+    window.parent.postMessage({type:'paper-stish:text-change',field,value:next},'*');
+  }
+};
+Object.entries(memoryLaneEditableElements).forEach(([field,config])=>{
+  const element=config.element;
+  if(!element)return;
+  element.addEventListener('click',event=>{
+    if(!paperStishEditing)return;
+    event.stopPropagation();
+    if(activeMemoryLaneEdit?.element===element)return;
+    if(activeMemoryLaneEdit)finishMemoryLaneEdit(true);
+    const previous=readMemoryLaneText(element,config.multiline);
+    activeMemoryLaneEdit={field,element,previous,multiline:config.multiline,max:config.max};
+    element.setAttribute('contenteditable','true');
+    element.setAttribute('role','textbox');
+    element.setAttribute('aria-label',field==='title'?'Memory Lane title':field.replace(/^memoryLane/,'').replace(/([A-Z])/g,' $1').trim());
+    element.setAttribute('aria-multiline',String(config.multiline));
+    element.setAttribute('spellcheck','false');
+    element.focus();
+    const selection=window.getSelection();
+    if(selection){
+      const range=document.createRange();
+      range.selectNodeContents(element);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  });
+  element.addEventListener('keydown',event=>{
+    if(activeMemoryLaneEdit?.element!==element)return;
+    event.stopPropagation();
+    if(event.key==='Escape'){
+      event.preventDefault();
+      finishMemoryLaneEdit(false);
+      element.blur();
+    }else if(event.key==='Enter'&&!config.multiline){
+      event.preventDefault();
+      element.blur();
+    }
+  });
+  element.addEventListener('input',()=>{
+    if(activeMemoryLaneEdit?.element!==element)return;
+    const raw=readMemoryLaneText(element,config.multiline);
+    const normalized=normalizeMemoryLaneText(raw,config.multiline,config.max);
+    if(raw!==normalized)writeMemoryLaneText(element,normalized,config.multiline);
+  });
+  element.addEventListener('blur',()=>{
+    if(activeMemoryLaneEdit?.element===element)finishMemoryLaneEdit(true);
+  });
+});
+const applyMemoryLaneText=text=>{
+  if(!text||typeof text!=='object')return;
+  Object.entries(memoryLaneEditableElements).forEach(([field,config])=>{
+    if(field==='title'||typeof text[field]!=='string')return;
+    const element=config.element;
+    if(element&&element!==document.activeElement&&!element.isContentEditable){
+      writeMemoryLaneText(element,text[field],config.multiline);
+    }
+  });
+};
 
 const moreLikePanel=document.getElementById('moreLikePanel');
 const recommendationRow=document.getElementById('recommendationRow');
@@ -609,6 +711,7 @@ const collectProfiles=()=>Array.from(row.querySelectorAll('.profile')).map(profi
 })).filter(profile=>/^\d{4}$/.test(profile.year));
 const emitProfileChange=()=>window.parent.postMessage({type:'paper-stish:profiles-change',profiles:collectProfiles()},'*');
 const replaceProfiles=profiles=>{
+  const selectedYear=row.querySelector('.profile.on .name')?.textContent?.trim()||'';
   row.querySelectorAll('.profile').forEach(profile=>profile.remove());
   profiles.slice(0,6).forEach(profile=>{
     const year=String(profile.year||'').slice(0,4);
@@ -619,10 +722,13 @@ const replaceProfiles=profiles=>{
     row.insertBefore(button,addBtn);
   });
   const first=row.querySelector('.profile');
-  if(first)on(first);
+  const selected=Array.from(row.querySelectorAll('.profile')).find(profile=>profile.querySelector('.name')?.textContent?.trim()===selectedYear);
+  if(selected||first)on(selected||first);
 };
 const setEditing=enabled=>{
   paperStishEditing=enabled===true;
+  document.body.classList.toggle('paper-stish-editing',paperStishEditing);
+  if(!paperStishEditing&&activeMemoryLaneEdit)finishMemoryLaneEdit(true);
   addBtn.hidden=!paperStishEditing;
   document.querySelector('.manage').hidden=!paperStishEditing;
   if(!paperStishEditing)scrim.classList.remove('open');
@@ -632,7 +738,14 @@ window.addEventListener('message',event=>{
   const data=event.data;
   if(data.type==='paper-stish:init'||data.type==='paper-stish:update-profiles'){
     if(Array.isArray(data.profiles))replaceProfiles(data.profiles);
-    if(data.type==='paper-stish:init')setEditing(data.editing);
+    if(data.type==='paper-stish:init'){
+      setEditing(data.editing);
+      applyMemoryLaneText(data.text);
+    }
+    return;
+  }
+  if(data.type==='paper-stish:update-text'){
+    applyMemoryLaneText(data.text);
     return;
   }
   if(data.type==='paper-stish:set-editing')setEditing(data.editing);
