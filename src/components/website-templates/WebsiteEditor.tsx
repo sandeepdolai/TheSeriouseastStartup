@@ -443,7 +443,7 @@ export function WebsiteEditor({
           letterParagraphs: restoredLetterText.letterParagraphs,
           calendarNotes: restoredCalendarNotes,
           memoryLaneProfiles: Array.isArray(raw.memoryLaneProfiles)
-            ? raw.memoryLaneProfiles.slice(0, 8).flatMap((item): MemoryLaneProfile[] => {
+            ? raw.memoryLaneProfiles.slice(0, 6).flatMap((item): MemoryLaneProfile[] => {
                 if (!item || typeof item !== "object" || Array.isArray(item)) return [];
                 const profile = item as Record<string, unknown>;
                 const year = typeof profile.year === "string" ? profile.year.slice(0, 4) : "";
