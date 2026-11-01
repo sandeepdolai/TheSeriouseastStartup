@@ -59,23 +59,21 @@ export interface MemoryLaneProfile {
   photoUrl: string | null;
 }
 
-/** Media used by the Setflix-style Memory Lane player.
- *  Local drafts keep a Blob on-device; published snapshots contain only a durable URL. */
+/** Freeform placement of an independent photo/video pin on the Setflix canvas. */
+export interface MemoryLaneCanvasLayout {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  z: number;
+  fit: "cover" | "contain";
+}
+
+/** Media used by the Setflix Memory Lane canvas. Local drafts keep a Blob on-device. */
 export type MemoryLaneMediaItem =
-  | {
-      id: string;
-      type: "image" | "video";
-      name: string;
-      url: string;
-      file?: never;
-    }
-  | {
-      id: string;
-      type: "image" | "video";
-      name: string;
-      file: Blob;
-      url?: never;
-    };
+  | { id: string; type: "image" | "video"; name: string; layout?: MemoryLaneCanvasLayout; url: string; file?: never }
+  | { id: string; type: "image" | "video"; name: string; layout?: MemoryLaneCanvasLayout; file: Blob; url?: never };
 
 /** Editable values of a normal template (Birthday, Love of My Life). */
 export interface TemplatePublicationValues {
@@ -242,7 +240,22 @@ export function validateTemplateValues(raw: unknown): TemplatePublicationValues 
       if (!id || !/^[A-Za-z0-9_-]+$/.test(id)) return null;
       if (type !== "image" && type !== "video") return null;
       if (name === undefined || !url || !MEMORY_LANE_MEDIA_URL_RE.test(url)) return null;
-      memoryLaneMedia.push({ id, type, name, url });
+      let layout: MemoryLaneCanvasLayout | undefined;
+      if (media.layout !== undefined) {
+        if (!media.layout || typeof media.layout !== "object" || Array.isArray(media.layout)) return null;
+        const rawLayout = media.layout as Record<string, unknown>;
+        const { x, y, width, height, rotation, z, fit } = rawLayout;
+        if (typeof x !== "number" || !Number.isFinite(x) || x < 0 || x > 100 ||
+            typeof y !== "number" || !Number.isFinite(y) || y < 0 || y > 100 ||
+            typeof width !== "number" || !Number.isFinite(width) || width < 10 || width > 100 ||
+            typeof height !== "number" || !Number.isFinite(height) || height < 10 || height > 100 ||
+            x + width > 100.01 || y + height > 100.01 ||
+            typeof rotation !== "number" || !Number.isFinite(rotation) || rotation < -30 || rotation > 30 ||
+            typeof z !== "number" || !Number.isFinite(z) || z < 0 || z > 100 ||
+            (fit !== "cover" && fit !== "contain")) return null;
+        layout = { x, y, width, height, rotation, z, fit };
+      }
+      memoryLaneMedia.push({ id, type, name, url, ...(layout ? { layout } : {}) });
     }
   }
 
