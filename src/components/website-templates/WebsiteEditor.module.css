@@ -1098,3 +1098,16 @@
 @media (max-width: 380px) {
   .dialog.linkEditorDialog { padding-left: 18px; padding-right: 18px; }
 }
+
+/* Pass pointer input through dimmed editor controls to the website underneath. */
+.controlsDimmed .editorActions {
+  pointer-events: none;
+}
+
+.controlsDimmed .controlOpacityToggle {
+  pointer-events: auto;
+}
+
+.controlsDimmed [aria-label="Back to website templates"] {
+  pointer-events: none;
+}
