@@ -36,7 +36,7 @@ function dataUrlToBlob(dataUrl: string): Blob {
   const base64 = dataUrl.slice(comma + 1);
   const bytes = Uint8Array.from(atob(base64), (ch) => ch.charCodeAt(0));
   if (bytes.byteLength > MAX_UPLOAD_BYTES) {
-    throw new Error("That media file is too large (15 MB max). Use a smaller file.");
+    throw new Error("That photo is too large (15 MB max). Use a smaller photo.");
   }
   return new Blob([bytes], { type: mime });
 }
@@ -55,13 +55,7 @@ export async function uploadDataUrlToCloudinary(dataUrl: string): Promise<string
 export async function durableTemplateValues(
   values: TemplatePublicationValues,
 ): Promise<TemplatePublicationValues> {
-  const hasLocalMemoryLaneFiles = values.memoryLaneMedia?.some((item) => "file" in item && Boolean(item.file));
-  if (!cloudinaryClientConfig()) {
-    if (hasLocalMemoryLaneFiles) {
-      throw new Error("Cloud storage must be configured to publish the photos and videos in Memory Lane.");
-    }
-    return values;
-  }
+  if (!cloudinaryClientConfig()) return values;
 
   const next: TemplatePublicationValues = { ...values };
 
@@ -90,22 +84,6 @@ export async function durableTemplateValues(
       profiles.push({ ...profile, photoUrl });
     }
     next.memoryLaneProfiles = profiles;
-  }
-
-  if (Array.isArray(next.memoryLaneMedia)) {
-    const media: NonNullable<TemplatePublicationValues["memoryLaneMedia"]> = [];
-    for (const item of next.memoryLaneMedia) {
-      if ("file" in item && item.file) {
-        const uploaded = await authorizedUpload(item.file, "template-photos");
-        media.push({ id: item.id, type: item.type, name: item.name, url: uploaded.url, ...(item.layout ? { layout: item.layout } : {}) });
-      } else if ("url" in item && item.url.startsWith("data:")) {
-        const uploadedUrl = await uploadDataUrlToCloudinary(item.url);
-        media.push({ id: item.id, type: item.type, name: item.name, url: uploadedUrl, ...(item.layout ? { layout: item.layout } : {}) });
-      } else if ("url" in item) {
-        media.push(item);
-      }
-    }
-    next.memoryLaneMedia = media;
   }
 
   return next;
