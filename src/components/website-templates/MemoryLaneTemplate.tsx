@@ -140,7 +140,7 @@ export function MemoryLaneTemplate({
     const frame = iframeRef.current;
     const onMessage = (event: MessageEvent<unknown>) => {
       if (!frame || event.source !== frame.contentWindow || !event.data || typeof event.data !== "object") return;
-      const data = event.data as { type?: unknown; profiles?: unknown; text?: unknown; field?: unknown; value?: unknown };
+      const data = event.data as { type?: unknown; profiles?: unknown; text?: unknown; media?: unknown; mediaId?: unknown; field?: unknown; value?: unknown };
       if (data.type === "paper-stish:template-ready") {
         iframeReady.current = true;
         const profiles = normalizeProfiles(latestProfiles.current);
