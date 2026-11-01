@@ -498,7 +498,7 @@ export function WebsiteEditor({
                 const type = media.type === "image" || media.type === "video" ? media.type : null;
                 const name = typeof media.name === "string" ? media.name.slice(0, 120) : "";
                 if (!id || !/^[A-Za-z0-9_-]+$/.test(id) || !type) return [];
-                if (typeof media.url === "string" && /^(data:(?:image|video)\\/|https:\\/\\/)/i.test(media.url)) {
+                if (typeof media.url === "string" && (media.url.startsWith("https://") || /^data:(?:image|video)\//i.test(media.url))) {
                   return [{ id, type, name, url: media.url }];
                 }
                 const file = media.file as Blob | undefined;
@@ -1131,7 +1131,7 @@ export function WebsiteEditor({
       </div>
 
       {photoLoading && <p className={styles.notice} role="status">Preparing photo…</p>}
-      {mediaLoading && <p className={styles.notice} role="status">Preparing photos and videos…</p>}}
+      {mediaLoading && <p className={styles.notice} role="status">Preparing photos and videos…</p>}
       {draftSaveError && <p className={styles.notice} role="alert">{draftSaveError}</p>}
       {error && !publishDialogOpen && <p className={styles.notice} role="alert">{error}</p>}
 
