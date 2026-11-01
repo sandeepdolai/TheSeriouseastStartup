@@ -137,40 +137,6 @@ body.paper-stish-editing .memory-editable[contenteditable="true"]:focus{outline-
 .player-panel button{display:block;width:100%;padding:.65rem .4rem;border:0;border-radius:.2rem;text-align:left;background:transparent;color:#eee;font:inherit;cursor:pointer}
 .player-panel button:hover,.player-panel button:focus-visible{background:rgba(255,255,255,.14)}
 .player-panel button.selected{color:#fff;font-weight:700}
-.player-shot{padding:2rem;color:#ddd;font-size:clamp(1rem,2vw,1.5rem);font-weight:500;white-space:normal;text-align:center}
-.player-shot[hidden]{display:none}
-.player-media-image,.player-media-video{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;background:#080808}
-.player-media-image{z-index:1}
-.player-media-video{z-index:1}
-#episodesItems{max-height:min(42vh,20rem);overflow:auto}
-#episodesItems button{display:flex;align-items:center;gap:.8rem}
-#episodesItems button .episode-kind{margin-left:auto;color:#aaa;font-size:.75em}
-.player-action:disabled{opacity:.35;cursor:default}
-.player-progress input:disabled{opacity:.35;cursor:default}
-.media-editor{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:2rem;background:rgba(0,0,0,.84);backdrop-filter:blur(1rem)}
-.media-editor[hidden]{display:none}
-.media-editor-card{width:min(48rem,94vw);max-height:min(88vh,54rem);overflow:auto;padding:2.2rem;background:#151515;border:1px solid #353535;border-radius:.8rem;box-shadow:0 2rem 6rem rgba(0,0,0,.55)}
-.media-editor-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}
-.media-editor-kicker{font-size:.85rem;letter-spacing:.18em;color:#e50914;font-weight:700}
-.media-editor-card h2{margin-top:.5rem;font-size:2.1rem;line-height:1.15;font-weight:650;color:#fff}
-.media-editor-copy{margin-top:.8rem;color:#aaa;font-size:1rem;line-height:1.5}
-.media-editor-close{flex:none;width:2.4rem;height:2.4rem;border:1px solid #444;border-radius:50%;background:#242424;color:#fff;font-size:1.6rem;line-height:1;cursor:pointer}
-.media-editor-add{display:flex;align-items:center;justify-content:center;width:100%;min-height:3.4rem;margin-top:1.5rem;padding:.8rem 1rem;border:0;border-radius:.35rem;background:#e50914;color:#fff;font-size:1.05rem;font-weight:700;cursor:pointer}
-.media-editor-add:hover{background:#f41a25}
-.media-editor-list{display:grid;gap:.7rem;margin-top:1rem}
-.media-editor-empty{padding:1.5rem;border:1px dashed #555;border-radius:.4rem;color:#999;text-align:center;font-size:.95rem;line-height:1.5}
-.media-editor-item{display:flex;align-items:center;gap:.8rem;min-width:0;padding:.55rem;border:1px solid #333;border-radius:.45rem;background:#202020}
-.media-editor-thumb{width:4rem;height:3.2rem;flex:none;object-fit:cover;border-radius:.25rem;background:#080808}
-.media-editor-item-name{min-width:0;flex:1;overflow:hidden;color:#eee;font-size:.95rem;text-overflow:ellipsis;white-space:nowrap}
-.media-editor-item-kind{display:block;margin-top:.15rem;color:#888;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase}
-.media-editor-remove{width:2rem;height:2rem;flex:none;border:1px solid #444;border-radius:50%;background:transparent;color:#ccc;font-size:1.2rem;cursor:pointer}
-.media-editor-remove:hover{background:rgba(229,9,20,.2);border-color:#e50914;color:#fff}
-.media-editor-footer{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:1.2rem;color:#777;font-size:.82rem}
-.media-editor-preview{padding:.55rem .95rem;border:1px solid #555;border-radius:999px;background:transparent;color:#fff;font-size:.85rem;cursor:pointer}
-.media-editor-preview:disabled{opacity:.35;cursor:default}
-.media-editor-preview:not(:disabled):hover{border-color:#fff}
-@media(max-width:600px){.media-editor{padding:1rem}.media-editor-card{padding:1.3rem}.media-editor-card h2{font-size:1.7rem}.media-editor-thumb{width:3.4rem;height:2.8rem}}
-
 @media (max-width:600px){
   .player-bottom{padding:4.2rem 5vw calc(2.4rem + env(safe-area-inset-bottom,0px))}
   .player-actions{gap:clamp(.9rem,4vw,1.8rem)}
@@ -204,70 +170,6 @@ body.paper-stish-editing .memory-editable[contenteditable="true"]:focus{outline-
 /* Intro animation adapted from Claudio Bonfati's MIT-licensed CodePen. Scoped to its own overlay. */
 #introAnimation{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;justify-content:center;align-items:center;width:100%;height:100%;background:#000;overflow:hidden;opacity:1;transition:opacity .3s ease}#introAnimation.intro-finished{opacity:0;pointer-events:none}#introAnimation netflixintro{display:block;position:relative;width:300px;height:300px;overflow:hidden;animation-name:zoom-in;animation-delay:0.5s;animation-duration:3.5s;animation-timing-function:ease-in;animation-fill-mode:forwards;background-size:4000px;background-position:-1950px 0;}#introAnimation netflixintro::before{content:"";position:absolute;display:block;background-color:#000000;width:150%;height:30%;left:-25%;bottom:-27%;border-radius:50%;z-index:5;transform-origin:left center;background-size:4000px;background-position:-1950px 0;}#introAnimation netflixintro[letter=N]{transform-origin:30% center;}#introAnimation netflixintro[letter=N] .helper-1{width:19.5%;height:100%;background-color:rgba(228,9,19,0.5);left:22.4%;top:0;transform:rotate(180deg);animation-name:fading-lumieres-box;animation-duration:2s;animation-delay:0.6s;animation-fill-mode:forwards;}#introAnimation netflixintro[letter=N] .helper-1 .effect-brush{animation-name:brush-moving;animation-duration:2.5s;animation-fill-mode:forwards;animation-delay:1.2s;}#introAnimation netflixintro[letter=N] .helper-1 .effect-brush [class*=fur-]{bottom:0;height:40%;}#introAnimation netflixintro[letter=N] .helper-3{width:19%;height:150%;left:40.5%;top:-25%;transform:rotate(-19.5deg);box-shadow:0px 0px 35px -12px rgba(0,0,0,0.4);overflow:hidden;}#introAnimation netflixintro[letter=N] .helper-3 .effect-brush{animation-name:brush-moving;animation-duration:2s;animation-fill-mode:forwards;animation-delay:0.8s;}#introAnimation netflixintro[letter=N] .helper-2{width:19.5%;height:100%;left:57.8%;top:0;transform:rotate(180deg);overflow:hidden;}#introAnimation netflixintro[letter=N] .helper-2 .effect-brush{animation-name:brush-moving;animation-duration:2s;animation-fill-mode:forwards;animation-delay:0.5s;}#introAnimation netflixintro [class*=helper-]{position:absolute;}#introAnimation netflixintro [class*=helper-] .effect-brush{position:absolute;width:100%;height:300%;top:0;overflow:hidden;}#introAnimation netflixintro [class*=helper-] .effect-brush::before{display:block;content:"";position:absolute;background-color:#e40913;width:100%;height:70%;box-shadow:0px 0px 29px 24px #e40913;}#introAnimation netflixintro [class*=helper-] .effect-brush [class*=fur-]{display:block;position:absolute;bottom:10%;height:30%;}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-1{left:0%;width:3.8%;background:linear-gradient(to bottom,#e40913 0%,#e40913 15%,rgba(0,0,0,0) 81%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-2{left:3.8%;width:2.8%;background:linear-gradient(to bottom,#e40913 0%,#e40913 10%,rgba(0,0,0,0) 62%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-3{left:6.6%;width:4.8%;background:linear-gradient(to bottom,#e40913 0%,#e40913 37%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-4{left:11.4%;width:4%;background:linear-gradient(to bottom,#e40913 0%,#e40913 23%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-5{left:15.4%;width:4%;background:linear-gradient(to bottom,#e40913 0%,#e40913 15%,rgba(0,0,0,0) 86%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-6{left:19.4%;width:2.5%;background:linear-gradient(to bottom,#e40913 0%,#e40913 27%,rgba(0,0,0,0) 89%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-7{left:21.9%;width:4%;background:linear-gradient(to bottom,#e40913 0%,#e40913 20%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-8{left:25.9%;width:2%;background:linear-gradient(to bottom,#e40913 0%,#e40913 30%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-9{left:27.9%;width:4%;background:linear-gradient(to bottom,#e40913 0%,#e40913 35%,rgba(0,0,0,0) 95%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-10{left:31.9%;width:3.5%;background:linear-gradient(to bottom,#e40913 0%,#e40913 39%,rgba(0,0,0,0) 95%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-11{left:35.4%;width:2%;background:linear-gradient(to bottom,#e40913 0%,#e40913 34%,rgba(0,0,0,0) 95%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-12{left:37.4%;width:2.6%;background:linear-gradient(to bottom,#e40913 0%,#e40913 22%,rgba(0,0,0,0) 95%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-13{left:40%;width:6%;background:linear-gradient(to bottom,#e40913 0%,#e40913 47%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-14{left:46%;width:2%;background:linear-gradient(to bottom,#e40913 0%,#e40913 36%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-15{left:48%;width:5.5%;background:linear-gradient(to bottom,#e40913 0%,#e40913 29%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-16{left:53.5%;width:3%;background:linear-gradient(to bottom,#e40913 0%,#e40913 39%,rgba(0,0,0,0) 95%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-17{left:56.5%;width:4.1%;background:linear-gradient(to bottom,#e40913 0%,#e40913 45%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-18{left:60.6%;width:2.4%;background:linear-gradient(to bottom,#e40913 0%,#e40913 34%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-19{left:63%;width:4%;background:linear-gradient(to bottom,#e40913 0%,#e40913 47%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-20{left:67%;width:1.5%;background:linear-gradient(to bottom,#e40913 0%,#e40913 27%,rgba(0,0,0,0) 95%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-21{left:68.5%;width:2.8%;background:linear-gradient(to bottom,#e40913 0%,#e40913 37%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-22{left:71.3%;width:2.3%;background:linear-gradient(to bottom,#e40913 0%,#e40913 9%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-23{left:73.6%;width:2.2%;background:linear-gradient(to bottom,#e40913 0%,#e40913 28%,rgba(0,0,0,0) 92%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-24{left:75.8%;width:1%;background:linear-gradient(to bottom,#e40913 0%,#e40913 37%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-25{left:76.8%;width:2.1%;background:linear-gradient(to bottom,#e40913 0%,#e40913 28%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-26{left:78.9%;width:4.1%;background:linear-gradient(to bottom,#e40913 0%,#e40913 34%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-27{left:83%;width:2.5%;background:linear-gradient(to bottom,#e40913 0%,#e40913 21%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-28{left:85.5%;width:4.5%;background:linear-gradient(to bottom,#e40913 0%,#e40913 39%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-29{left:90%;width:2.8%;background:linear-gradient(to bottom,#e40913 0%,#e40913 30%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-30{left:92.8%;width:3.5%;background:linear-gradient(to bottom,#e40913 0%,#e40913 19%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-brush .fur-31{left:96.3%;width:3.7%;background:linear-gradient(to bottom,#e40913 0%,#e40913 37%,rgba(0,0,0,0) 100%);}#introAnimation netflixintro [class*=helper-] .effect-lumieres{position:absolute;width:100%;height:100%;opacity:0;animation-name:showing-lumieres;animation-duration:2s;animation-delay:1.6s;animation-fill-mode:forwards;}#introAnimation netflixintro [class*=helper-] .effect-lumieres [class*=lamp-]{position:absolute;display:block;height:100%;box-shadow:0px 0px 10px 0px rgba(228,9,19,0.75);background:var(--color);}#introAnimation netflixintro [class*=helper-] .effect-lumieres [class*=lamp-]::before{position:absolute;content:" ";display:block;width:100%;height:100%;background:var(--color);box-shadow:0px 0px 10px 0px rgba(228,9,19,0.75);}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-1{--color:#ff0100;z:6;left:0.7%;width:1%;animation-delay:0.91s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-1::before{left:65%;animation-delay:0.76s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-2{--color:#ffde01;left:2.2%;width:1.4%;animation-delay:0.32s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-2::before{left:109%;animation-delay:1.32s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-3{--color:#ff00cc;left:5.8%;width:2.1%;animation-delay:1.19s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-3::before{left:200%;animation-delay:1.45s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-4{--color:#04fd8f;left:10.1%;width:2%;animation-delay:0.39s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-4::before{left:55%;animation-delay:0.02s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-5{--color:#ff0100;left:12.9%;width:1.4%;animation-delay:0.18s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-5::before{left:173%;animation-delay:0.09s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-6{--color:#ff9600;left:15.3%;width:2.8%;animation-delay:0.64s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-6::before{left:54%;animation-delay:0.02s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-7{--color:#0084ff;left:21.2%;width:2.5%;animation-delay:0.82s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-7::before{left:185%;animation-delay:0.12s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-8{--color:#f84006;left:25%;width:2.5%;animation-delay:0.46s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-8::before{left:97%;animation-delay:0.92s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-9{--color:#ffc601;left:30.5%;width:3%;animation-delay:1.8s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-9::before{left:98%;animation-delay:1.91s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-10{--color:#ff4800;left:36.3%;width:3%;animation-delay:0.16s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-10::before{left:105%;animation-delay:0.61s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-11{--color:#fd0100;left:41%;width:2.2%;animation-delay:1.98s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-11::before{left:62%;animation-delay:1s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-12{--color:#01ffff;left:44.2%;width:2.6%;animation-delay:0.42s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-12::before{left:40%;animation-delay:1.51s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-13{--color:#ffc601;left:51.7%;width:0.5%;animation-delay:0.24s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-13::before{left:44%;animation-delay:0.51s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-14{--color:#ffc601;left:52.1%;width:1.8%;animation-delay:1.52s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-14::before{left:77%;animation-delay:1.4s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-15{--color:#0078fe;left:53.8%;width:2.3%;animation-delay:1.2s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-15::before{left:65%;animation-delay:0.73s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-16{--color:#0080ff;left:57.2%;width:2%;animation-delay:1.92s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-16::before{left:164%;animation-delay:1.09s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-17{--color:#ffae01;left:62.3%;width:2.9%;animation-delay:1.97s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-17::before{left:146%;animation-delay:1.79s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-18{--color:#ff00bf;left:65.8%;width:1.7%;animation-delay:1.98s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-18::before{left:97%;animation-delay:1.88s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-19{--color:#a601f4;left:72.8%;width:0.8%;animation-delay:1.14s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-19::before{left:10%;animation-delay:1.71s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-20{--color:#f30b34;left:74.3%;width:2%;animation-delay:1.6s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-20::before{left:153%;animation-delay:0.15s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-21{--color:#ff00bf;left:79.8%;width:2%;animation-delay:1.43s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-21::before{left:193%;animation-delay:0.93s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-22{--color:#04fd8f;left:78.2%;width:2%;animation-delay:1.74s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-22::before{left:148%;animation-delay:0.81s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-23{--color:#01ffff;left:78.5%;width:2%;animation-delay:0.73s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-23::before{left:51%;animation-delay:0.57s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-24{--color:#a201ff;left:85.3%;width:1.1%;animation-delay:0.58s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-24::before{left:164%;animation-delay:0.69s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-25{--color:#ec0014;left:86.9%;width:1.1%;animation-delay:0.7s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-25::before{left:198%;animation-delay:1.73s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-26{--color:#0078fe;left:88.8%;width:2%;animation-delay:1.67s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-26::before{left:187%;animation-delay:0.12s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-27{--color:#ff0036;left:92.4%;width:2.4%;animation-delay:0.14s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-27::before{left:60%;animation-delay:1.63s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-28{--color:#06f98c;left:96.2%;width:2.1%;animation-delay:1.94s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-28::before{left:190%;animation-delay:1.64s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-1,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-3,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-5,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-7,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-9,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-11,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-13,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-15,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-17,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-19,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-21,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-23,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-25,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-27{animation-name:lumieres-moving-left;animation-duration:5s;animation-fill-mode:forwards;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-1::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-3::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-5::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-7::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-9::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-11::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-13::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-15::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-17::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-19::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-21::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-23::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-25::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-27::before{animation-name:lumieres-moving-left;animation-duration:5.5s;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-2,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-4,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-6,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-8,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-10,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-12,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-14,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-16,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-18,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-20,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-22,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-24,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-26,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-28{animation-name:lumieres-moving-right;animation-duration:5s;animation-fill-mode:forwards;}#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-2::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-4::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-6::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-8::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-10::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-12::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-14::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-16::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-18::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-20::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-22::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-24::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-26::before,#introAnimation netflixintro [class*=helper-] .effect-lumieres .lamp-28::before{animation-name:lumieres-moving-right;animation-duration:5.5s;}@keyframes brush-moving{0%{transform:translateY(0);}100%{transform:translateY(-100%);}}@keyframes fading-out{0%{opacity:1;}100%{opacity:0;}}@keyframes lumieres-moving-right{0%{transform:translate(0);}40%{transform:translate(-10px) scaleX(1);}50%{transform:translate(-60px);}100%{transform:translate(-120px) scaleX(3);}}@keyframes lumieres-moving-left{0%{transform:translate(0);}40%{transform:translate(10px) scaleX(1);}50%{transform:translate(60px);}100%{transform:translate(120px) scaleX(3);}}@keyframes zoom-in{0%{transform:scale(1);}100%{transform:scale(15);}}@keyframes showing-lumieres{0%{opacity:0;}100%{opacity:1;}}@keyframes fading-lumieres-box{0%{background-color:rgba(228,9,19,0.5);}100%{background-color:rgba(228,9,19,0);}}#introAnimation netflixintro .effect-lumieres [class*=lamp-]{will-change:transform,opacity}#introAnimation netflixintro[letter=N] .helper-1::before{content:"";position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1;background:rgba(228,9,19,.5);animation:fading-out 2s .6s forwards;will-change:opacity}
 #introAnimation netflixintro,#introAnimation netflixintro [class*=helper-] .effect-brush{will-change:transform}
-</style>
-<style>
-/* Setflix-only Memory Lane collage canvas. */
-.memory-canvas{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;overflow:hidden;background:#f3f1ed;color:#242321;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-.memory-canvas[hidden]{display:none!important}
-.memory-canvas-topbar{height:72px;flex:none;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:0 clamp(16px,3vw,42px);background:#fff;border-bottom:1px solid #e8e6e1}
-.memory-canvas-brand{display:flex;align-items:center;gap:12px;min-width:0}
-.memory-canvas-mark{width:34px;height:34px;display:grid;place-items:center;border-radius:11px;background:#e50914;color:#fff;font-size:17px;font-weight:900}
-.memory-canvas-brand-copy{display:flex;flex-direction:column;gap:2px}
-.memory-canvas-brand-copy strong{font-size:15px;line-height:1.1;font-weight:750;letter-spacing:-.02em}
-.memory-canvas-brand-copy small{font-size:11px;color:#898781;letter-spacing:.02em}
-.memory-canvas-top-actions{display:flex;align-items:center;gap:8px}
-.memory-canvas-count{margin-right:9px;color:#86837d;font-size:12px;white-space:nowrap}
-.memory-canvas-button{min-height:38px;padding:0 14px;border:1px solid #dfddd7;border-radius:999px;background:#fff;color:#34332f;font:650 12px/1 Inter,system-ui,sans-serif;cursor:pointer;transition:background .16s,border-color .16s,transform .16s}
-.memory-canvas-button:hover{border-color:#aaa69e;background:#f8f7f4}
-.memory-canvas-button:active{transform:scale(.98)}
-.memory-canvas-button.primary{background:#20201e;border-color:#20201e;color:#fff}
-.memory-canvas-button.primary:hover{background:#383733;border-color:#383733}
-.memory-canvas-button:focus-visible,.memory-canvas-tool:focus-visible{outline:2px solid #2457c5;outline-offset:3px}
-.memory-canvas-context{flex:none;display:flex;align-items:center;justify-content:center;gap:7px;min-height:52px;padding:7px 14px;background:#fff;border-bottom:1px solid #e8e6e1}
-.memory-canvas-context[hidden]{display:none}
-.memory-canvas-selection-name{max-width:180px;margin-right:5px;overflow:hidden;color:#77736d;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
-.memory-canvas-tool{min-height:32px;padding:0 10px;border:1px solid #e7e5df;border-radius:8px;background:#fff;color:#42413c;font:600 11px/1 Inter,system-ui,sans-serif;cursor:pointer}
-.memory-canvas-tool:hover{background:#f5f3ee;border-color:#d2cfc7}
-.memory-canvas-tool.danger{color:#b4232d}
-.memory-canvas-workspace{flex:1;min-height:0;overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:clamp(16px,3.2vw,42px);background-color:#f3f1ed;background-image:radial-gradient(#ddd9d1 .75px,transparent .75px);background-size:18px 18px}
-.memory-canvas-board{position:relative;isolation:isolate;flex:none;width:min(100%,1180px);aspect-ratio:16/10;min-height:420px;overflow:hidden;border:1px solid rgba(72,66,55,.12);border-radius:14px;background:#e9e6df;box-shadow:0 12px 42px rgba(37,34,28,.1)}
-.memory-canvas-item{position:absolute;display:flex;flex-direction:column;min-width:0;min-height:0;padding:0;overflow:visible;border:0;border-radius:9px;background:#fff;box-shadow:0 5px 18px rgba(34,31,25,.18);cursor:grab;touch-action:none;transform-origin:center;transition:box-shadow .16s}
-.memory-canvas-item:active{cursor:grabbing}
-.memory-canvas-item.selected{outline:2px solid #2457c5;outline-offset:3px;box-shadow:0 8px 25px rgba(36,87,197,.18),0 5px 18px rgba(34,31,25,.18)}
-.memory-canvas-media{display:block;width:100%;height:100%;min-height:0;flex:1;object-fit:cover;border-radius:9px;background:#d5d1c9;pointer-events:none}
-.memory-canvas-item video.memory-canvas-media{pointer-events:none}
-.memory-canvas-item.viewer video.memory-canvas-media{pointer-events:auto}
-.memory-canvas-video-tag{position:absolute;top:9px;left:9px;padding:5px 8px;border-radius:999px;background:rgba(22,22,22,.72);color:#fff;font-size:9px;font-weight:750;letter-spacing:.1em;pointer-events:none}
-.memory-canvas-item.viewer .memory-canvas-video-tag{display:none}
-.memory-canvas-resize{position:absolute;right:-9px;bottom:-9px;width:19px;height:19px;border:2px solid #fff;border-radius:50%;background:#2457c5;box-shadow:0 1px 5px rgba(0,0,0,.22);cursor:nwse-resize;touch-action:none}
-.memory-canvas-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center;color:#64615a}
-.memory-canvas-empty-mark{width:56px;height:56px;display:grid;place-items:center;border:1px solid #d3cfc6;border-radius:18px;background:rgba(255,255,255,.72);color:#78746b;font-size:27px}
-.memory-canvas-empty strong{font-size:16px;letter-spacing:-.02em}
-.memory-canvas-empty p{max-width:280px;color:#88847b;font-size:12px;line-height:1.55}
-.memory-canvas-empty button{margin-top:4px}
-.memory-canvas-footnote{flex:none;min-height:34px;display:flex;align-items:center;justify-content:center;padding:4px 14px;color:#8b877f;font-size:10px;letter-spacing:.02em}
-.memory-canvas.is-viewer .memory-canvas-topbar{height:60px}
-.memory-canvas.is-viewer .memory-canvas-workspace{align-items:center}
-.memory-canvas.is-viewer .memory-canvas-board{background:#e9e6df}
-.memory-canvas.is-viewer .memory-canvas-item{cursor:default}
-.memory-canvas.is-viewer .memory-canvas-item.selected{outline:0;box-shadow:0 5px 18px rgba(34,31,25,.18)}
-@media(max-width:680px){
-  .memory-canvas-topbar{height:auto;min-height:66px;padding:10px 12px;gap:8px}
-  .memory-canvas-brand{gap:8px}
-  .memory-canvas-mark{width:30px;height:30px;border-radius:9px;font-size:15px}
-  .memory-canvas-brand-copy strong{font-size:13px}
-  .memory-canvas-brand-copy small{font-size:9px}
-  .memory-canvas-top-actions{gap:5px}
-  .memory-canvas-count{display:none}
-  .memory-canvas-button{min-height:34px;padding:0 10px;font-size:10px}
-  .memory-canvas-context{justify-content:flex-start;overflow-x:auto;padding:7px 10px}
-  .memory-canvas-selection-name{display:none}
-  .memory-canvas-tool{flex:none}
-  .memory-canvas-workspace{padding:12px 10px 20px}
-  .memory-canvas-board{width:100%;aspect-ratio:4/5;min-height:570px;border-radius:11px}
-  .memory-canvas-footnote{font-size:9px}
-}
-@media(prefers-reduced-motion:reduce){.memory-canvas-button{transition:none}}
 </style>
 </head>
 <body>
@@ -315,15 +217,17 @@ body.paper-stish-editing .memory-editable[contenteditable="true"]:focus{outline-
   </div>
 </section>
 
-<section class="player-screen" hidden aria-label="Memory player">
-  <div class="player-stage" id="playerStage">
-    <div class="player-shot" id="playerShot">No photos or videos have been added yet.</div>
+<section class="player-screen" hidden aria-label="Player">
+  <div class="player-stage">
+    <div class="player-shot" id="playerShot">Photo 3</div>
   </div>
   <button class="player-close" type="button" aria-label="Back to memory details">×</button>
   <div class="player-bottom">
     <div class="player-panel" id="episodesPanel" hidden>
-      <h3>Memories</h3>
-      <div id="episodesItems"></div>
+      <h3>Episodes</h3>
+      <button type="button" data-episode="1">Photo 1</button>
+      <button type="button" data-episode="2">Photo 2</button>
+      <button type="button" data-episode="3" class="selected">Photo 3</button>
     </div>
     <div class="player-panel" id="audioPanel" hidden>
       <h3>Audio &amp; Subtitles</h3>
@@ -331,50 +235,21 @@ body.paper-stish-editing .memory-editable[contenteditable="true"]:focus{outline-
       <button type="button">Subtitles: Off</button>
     </div>
     <div class="player-progress">
-      <input id="playerProgress" type="range" min="0" max="100" value="0" aria-label="Playback progress" disabled>
+      <input id="playerProgress" type="range" min="0" max="100" value="12" aria-label="Playback progress">
     </div>
     <div class="player-actions">
-      <button class="player-action" id="episodesButton" type="button" aria-expanded="false" disabled>
+      <button class="player-action" id="episodesButton" type="button" aria-expanded="false">
         <svg viewBox="0 0 24 24"><rect x="6" y="4" width="14" height="14"/><path d="M3 7v14h14"/></svg>
-        <span>Memories</span>
+        <span>Episodes</span>
       </button>
       <button class="player-action" id="audioButton" type="button" aria-expanded="false">
         <svg viewBox="0 0 24 24"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3h13A2.5 2.5 0 0 1 21 5.5v9a2.5 2.5 0 0 1-2.5 2.5H10l-5 4v-4.5A2.5 2.5 0 0 1 3 14z"/><path d="M7 8h10M7 12h7"/></svg>
         <span>Audio &amp; Subtitles</span>
       </button>
-      <button class="player-action" id="nextEpisodeButton" type="button" disabled>
+      <button class="player-action" id="nextEpisodeButton" type="button">
         <svg viewBox="0 0 24 24"><path d="M4 5v14l11-7z" fill="currentColor" stroke="none"/><path d="M19 5v14"/></svg>
-        <span>Next</span>
+        <span>Next Episode</span>
       </button>
-    </div>
-  </div>
-</section>
-
-<section class="memory-canvas" id="memoryCanvas" hidden aria-label="Setflix Memory Lane canvas">
-  <header class="memory-canvas-topbar">
-    <div class="memory-canvas-brand"><span class="memory-canvas-mark" aria-hidden="true">S</span><div class="memory-canvas-brand-copy"><strong>Memory Lane</strong><small id="memoryCanvasSubtitle">Arrange your photos and videos</small></div></div>
-    <div class="memory-canvas-top-actions"><span class="memory-canvas-count" id="memoryCanvasCount">0 memories</span><button class="memory-canvas-button" id="memoryCanvasAdd" type="button">＋ Add memories</button><button class="memory-canvas-button" id="memoryCanvasPreview" type="button">Preview</button><button class="memory-canvas-button primary" id="memoryCanvasClose" type="button">Done</button></div>
-  </header>
-  <div class="memory-canvas-context" id="memoryCanvasContext" hidden><span class="memory-canvas-selection-name" id="memoryCanvasSelectionName">Selected memory</span><button class="memory-canvas-tool" type="button" data-canvas-action="fit">Fit</button><button class="memory-canvas-tool" type="button" data-canvas-action="rotate">Rotate</button><button class="memory-canvas-tool" type="button" data-canvas-action="front">Bring forward</button><button class="memory-canvas-tool" type="button" data-canvas-action="back">Send backward</button><button class="memory-canvas-tool danger" type="button" data-canvas-action="remove">Remove</button></div>
-  <div class="memory-canvas-workspace"><div class="memory-canvas-board" id="memoryCanvasBoard" aria-label="Memory collage canvas"></div></div>
-  <footer class="memory-canvas-footnote">Drag to arrange · Pull a corner to resize · Select a memory for more options</footer>
-</section>
-<section class="media-editor" id="mediaEditor" hidden role="dialog" aria-modal="true" aria-labelledby="mediaEditorTitle">
-  <div class="media-editor-card">
-    <div class="media-editor-heading">
-      <div>
-        <p class="media-editor-kicker">SETFLIX STUDIO</p>
-        <h2 id="mediaEditorTitle">Add to your Memory Lane</h2>
-      </div>
-      <button class="media-editor-close" id="mediaEditorClose" type="button" aria-label="Close media editor">×</button>
-    </div>
-    <p class="media-editor-copy">Choose the photos and videos people will see when they press Play on your published website.</p>
-    <button class="media-editor-add" id="addMediaButton" type="button">+ Add photos &amp; videos</button>
-    <input id="memoryMediaInput" type="file" accept="image/*,video/*" multiple hidden>
-    <div class="media-editor-list" id="mediaEditorList"></div>
-    <div class="media-editor-footer">
-      <span id="mediaEditorCount">0 of 12 memories added</span>
-      <button class="media-editor-preview" id="previewMemoryButton" type="button" disabled>Preview player</button>
     </div>
   </div>
 </section>
@@ -658,219 +533,13 @@ moreLikeTab.addEventListener('click',()=>{
 let activeOpenToken=0;
 
 const playerScreen=document.querySelector('.player-screen');
-const playerStage=document.getElementById('playerStage');
 const playerShot=document.getElementById('playerShot');
-const playerProgress=document.getElementById('playerProgress');
 const episodesPanel=document.getElementById('episodesPanel');
-const episodesItems=document.getElementById('episodesItems');
 const audioPanel=document.getElementById('audioPanel');
 const episodesButton=document.getElementById('episodesButton');
 const audioButton=document.getElementById('audioButton');
-const nextEpisodeButton=document.getElementById('nextEpisodeButton');
-const mediaEditor=document.getElementById('mediaEditor');
-const mediaEditorList=document.getElementById('mediaEditorList');
-const mediaEditorCount=document.getElementById('mediaEditorCount');
-const previewMemoryButton=document.getElementById('previewMemoryButton');
-const memoryMediaInput=document.getElementById('memoryMediaInput');
-const PHOTO_DURATION_MS=7000;
-let memoryLaneMedia=[];
-let currentEpisode=0;
-let activePlayerElement=null;
-let photoTicker=null;
-let photoStartedAt=0;
-let returningToMediaEditor=false;
-const mediaObjectUrls=new Map();
-const clearPhotoTicker=()=>{
-  if(photoTicker!==null){window.clearInterval(photoTicker);photoTicker=null}
-};
-const mediaUrl=item=>{
-  if(typeof item.url==='string')return item.url;
-  if(item.file&&typeof item.file.size==='number'&&typeof item.file.slice==='function'){
-    if(!mediaObjectUrls.has(item.id))mediaObjectUrls.set(item.id,URL.createObjectURL(item.file));
-    return mediaObjectUrls.get(item.id);
-  }
-  return '';
-};
-const normalizeMedia=items=>{
-  if(!Array.isArray(items))return [];
-  return items.slice(0,12).filter(item=>{
-    if(!item||typeof item!=='object'||typeof item.id!=='string')return false;
-    if(item.type!=='image'&&item.type!=='video')return false;
-    return (typeof item.url==='string'&&/^(https:\/\/|data:(image|video)\/)/i.test(item.url))||
-      (item.file&&typeof item.file.size==='number'&&typeof item.file.slice==='function');
-  }).map(item=>({
-    id:item.id.slice(0,80),
-    type:item.type,
-    name:typeof item.name==='string'?item.name.slice(0,120):'',
-    ...(item.layout&&typeof item.layout==='object'?{layout:item.layout}:{}),
-    ...(typeof item.url==='string'?{url:item.url}:{file:item.file})
-  }));
-};
-const renderMediaEditor=()=>{
-  mediaEditorList.replaceChildren();
-  mediaEditorCount.textContent=memoryLaneMedia.length+' of 12 memories added';
-  previewMemoryButton.disabled=memoryLaneMedia.length===0;
-  if(!memoryLaneMedia.length){
-    const empty=document.createElement('div');
-    empty.className='media-editor-empty';
-    empty.textContent='Your photos and videos will appear here. Add the memories you want to play.';
-    mediaEditorList.append(empty);
-    return;
-  }
-  memoryLaneMedia.forEach(item=>{
-    const row=document.createElement('div');
-    row.className='media-editor-item';
-    const url=mediaUrl(item);
-    if(item.type==='image'){
-      const thumb=document.createElement('img');
-      thumb.className='media-editor-thumb';
-      thumb.alt='';
-      thumb.src=url;
-      row.append(thumb);
-    }else{
-      const thumb=document.createElement('video');
-      thumb.className='media-editor-thumb';
-      thumb.muted=true;
-      thumb.playsInline=true;
-      thumb.preload='metadata';
-      thumb.src=url;
-      row.append(thumb);
-    }
-    const details=document.createElement('div');
-    details.style.minWidth='0';
-    details.style.flex='1';
-    const name=document.createElement('div');
-    name.className='media-editor-item-name';
-    name.textContent=item.name|| (item.type==='video'?'Video':'Photo');
-    const kind=document.createElement('span');
-    kind.className='media-editor-item-kind';
-    kind.textContent=item.type==='video'?'Video':'Photo';
-    name.append(kind);
-    details.append(name);
-    const remove=document.createElement('button');
-    remove.type='button';
-    remove.className='media-editor-remove';
-    remove.setAttribute('aria-label','Remove '+(item.name||item.type));
-    remove.textContent='×';
-    remove.addEventListener('click',()=>{
-      if(!paperStishEditing)return;
-      window.parent.postMessage({type:'paper-stish:media-remove',mediaId:item.id},'*');
-    });
-    row.append(details,remove);
-    mediaEditorList.append(row);
-  });
-};
-const setMemoryLaneMedia=items=>{
-  const next=normalizeMedia(items);
-  const keep=new Set(next.filter(item=>!item.url).map(item=>item.id));
-  for(const [id,url] of mediaObjectUrls.entries()){
-    if(!keep.has(id)){
-      URL.revokeObjectURL(url);
-      mediaObjectUrls.delete(id);
-    }
-  }
-  memoryLaneMedia=next;
-  renderMediaEditor();
-  if(window.__setflixMemoryCanvas)window.__setflixMemoryCanvas.render();
-};
-const openMediaEditor=()=>{
-  if(!paperStishEditing)return;
-  renderMediaEditor();
-  mediaEditor.hidden=false;
-};
-const closeMediaEditor=()=>{mediaEditor.hidden=true};
-const renderEpisodeList=()=>{
-  episodesItems.replaceChildren();
-  if(!memoryLaneMedia.length){
-    const empty=document.createElement('div');
-    empty.className='media-editor-empty';
-    empty.textContent='No photos or videos were added to this Memory Lane.';
-    episodesItems.append(empty);
-    return;
-  }
-  memoryLaneMedia.forEach((item,index)=>{
-    const button=document.createElement('button');
-    button.type='button';
-    button.className=index===currentEpisode?'selected':'';
-    button.textContent=(index+1)+'. '+(item.name|| (item.type==='video'?'Video':'Photo'));
-    const kind=document.createElement('span');
-    kind.className='episode-kind';
-    kind.textContent=item.type==='video'?'VIDEO':'PHOTO';
-    button.append(kind);
-    button.addEventListener('click',()=>selectEpisode(index));
-    episodesItems.append(button);
-  });
-};
-const nextEpisode=()=>{
-  if(!memoryLaneMedia.length)return;
-  selectEpisode((currentEpisode+1)%memoryLaneMedia.length);
-};
-const selectEpisode=index=>{
-  if(!memoryLaneMedia.length)return;
-  currentEpisode=Math.max(0,Math.min(index,memoryLaneMedia.length-1));
-  clearPhotoTicker();
-  if(activePlayerElement){
-    if(activePlayerElement instanceof HTMLVideoElement){
-      activePlayerElement.pause();
-      activePlayerElement.removeAttribute('src');
-      activePlayerElement.load();
-    }
-    activePlayerElement.remove();
-    activePlayerElement=null;
-  }
-  const item=memoryLaneMedia[currentEpisode];
-  const url=mediaUrl(item);
-  playerShot.hidden=true;
-  playerProgress.disabled=false;
-  playerProgress.value=0;
-  nextEpisodeButton.disabled=memoryLaneMedia.length<2;
-  episodesButton.disabled=false;
-  if(item.type==='image'){
-    const image=document.createElement('img');
-    image.className='player-media-image';
-    image.alt=item.name||'Memory Lane photo';
-    image.src=url;
-    image.onerror=()=>{image.remove();playerShot.hidden=false;playerShot.textContent='This photo could not be loaded.'};
-    playerStage.append(image);
-    activePlayerElement=image;
-    photoStartedAt=Date.now();
-    photoTicker=window.setInterval(()=>{
-      const elapsed=Date.now()-photoStartedAt;
-      const percent=Math.min(100,elapsed/PHOTO_DURATION_MS*100);
-      playerProgress.value=percent;
-      if(percent>=100)nextEpisode();
-    },100);
-  }else{
-    const video=document.createElement('video');
-    video.className='player-media-video';
-    video.src=url;
-    video.controls=true;
-    video.autoplay=true;
-    video.playsInline=true;
-    video.preload='metadata';
-    video.addEventListener('timeupdate',()=>{
-      if(Number.isFinite(video.duration)&&video.duration>0)playerProgress.value=video.currentTime/video.duration*100;
-    });
-    video.addEventListener('ended',nextEpisode);
-    video.addEventListener('error',()=>{playerShot.hidden=false;playerShot.textContent='This video could not be played.'});
-    playerStage.append(video);
-    activePlayerElement=video;
-    const playRequest=video.play();
-    if(playRequest&&typeof playRequest.catch==='function')playRequest.catch(()=>{});
-  }
-  renderEpisodeList();
-};
+let currentEpisode=3;
 const closePlayer=()=>{
-  clearPhotoTicker();
-  if(activePlayerElement){
-    if(activePlayerElement instanceof HTMLVideoElement){
-      activePlayerElement.pause();
-      activePlayerElement.removeAttribute('src');
-      activePlayerElement.load();
-    }
-    activePlayerElement.remove();
-    activePlayerElement=null;
-  }
   playerScreen.classList.remove('active');
   playerScreen.hidden=true;
   episodesPanel.hidden=true;
@@ -878,403 +547,19 @@ const closePlayer=()=>{
   episodesButton.setAttribute('aria-expanded','false');
   audioButton.setAttribute('aria-expanded','false');
   tp.hidden=false;
-  if(returningToMediaEditor&&paperStishEditing)mediaEditor.hidden=false;
-  returningToMediaEditor=false;
 };
-const openPlayer=fromEditorPreview=>{
-  currentEpisode=0;
-  returningToMediaEditor=fromEditorPreview===true;
-  mediaEditor.hidden=true;
+const openPlayer=()=>{
+  currentEpisode=3;
+  playerShot.textContent='Photo '+currentEpisode;
+  document.getElementById('playerProgress').value=12;
   episodesPanel.hidden=true;
   audioPanel.hidden=true;
   playerScreen.hidden=false;
-  playerShot.hidden=false;
-  playerShot.textContent=memoryLaneMedia.length?'Loading memory…':'No photos or videos have been added yet.';
-  nextEpisodeButton.disabled=memoryLaneMedia.length<2;
-  episodesButton.disabled=memoryLaneMedia.length===0;
-  renderEpisodeList();
-  if(memoryLaneMedia.length)selectEpisode(0);
-  else playerProgress.disabled=true;
   void playerScreen.offsetWidth;
   requestAnimationFrame(()=>playerScreen.classList.add('active'));
 };
-/* Dedicated Setflix Memory Lane collage interaction. */
-(function () {
-  const canvas = document.getElementById("memoryCanvas");
-  const board = document.getElementById("memoryCanvasBoard");
-  const contextBar = document.getElementById("memoryCanvasContext");
-  const countLabel = document.getElementById("memoryCanvasCount");
-  const selectedName = document.getElementById("memoryCanvasSelectionName");
-  const closeButton = document.getElementById("memoryCanvasClose");
-  const addButton = document.getElementById("memoryCanvasAdd");
-  const previewButton = document.getElementById("memoryCanvasPreview");
-  if (!canvas || !board || !closeButton || !addButton || !previewButton) return;
-
-  let readOnly = false;
-  let returnToEditor = false;
-  let selectedId = null;
-  let pointer = null;
-  let lastPostedLayout = "";
-
-  const defaultLayout = (index, total) => {
-    if (total === 1) return { x: 27, y: 15, width: 46, height: 70, rotation: -1, z: 1, fit: "cover" };
-    if (total === 2) return { x: index === 0 ? 5 : 55, y: 18, width: 40, height: 62, rotation: index === 0 ? -1.5 : 1.5, z: index + 1, fit: "cover" };
-    if (total === 3) return { x: [4, 36, 68][index], y: [20, 9, 23][index], width: 28, height: 55, rotation: [-1.5, 1.2, -0.5][index], z: index + 1, fit: "cover" };
-    if (total === 4) return { x: index % 2 === 0 ? 5 : 53, y: index < 2 ? 6 : 53, width: 42, height: 40, rotation: index % 2 === 0 ? -1 : 1, z: index + 1, fit: "cover" };
-    const mobile = window.matchMedia("(max-width: 680px)").matches;
-    const columns = mobile ? 3 : 4;
-    const gap = 2.5;
-    const width = mobile ? 30 : 22;
-    const height = mobile ? 20 : 25;
-    const column = index % columns;
-    const row = Math.floor(index / columns);
-    return {
-      x: gap + column * (width + gap),
-      y: 3 + row * (height + (mobile ? 4 : 2)),
-      width,
-      height,
-      rotation: ((index % 3) - 1) * 1.2,
-      z: index + 1,
-      fit: "cover"
-    };
-  };
-
-  const normalizeLayout = (value, index, total) => {
-    const fallback = defaultLayout(index, total);
-    if (!value || typeof value !== "object") return fallback;
-    const x = Number(value.x), y = Number(value.y);
-    const width = Number(value.width), height = Number(value.height);
-    const rotation = Number(value.rotation), z = Number(value.z);
-    if (![x, y, width, height, rotation, z].every(Number.isFinite)) return fallback;
-    const safeWidth = Math.max(10, Math.min(width, 100));
-    const safeHeight = Math.max(10, Math.min(height, 100));
-    return {
-      x: Math.max(0, Math.min(x, 100 - safeWidth)),
-      y: Math.max(0, Math.min(y, 100 - safeHeight)),
-      width: safeWidth,
-      height: safeHeight,
-      rotation: Math.max(-30, Math.min(30, rotation)),
-      z: Math.max(0, Math.min(100, z)),
-      fit: value.fit === "contain" ? "contain" : "cover"
-    };
-  };
-
-  const postLayout = () => {
-    if (!paperStishEditing) return;
-    const snapshot = JSON.stringify(memoryLaneMedia.map(item => ({ id: item.id, layout: item.layout })));
-    if (snapshot === lastPostedLayout) return;
-    lastPostedLayout = snapshot;
-    window.parent.postMessage({ type: "paper-stish:media-change", media: memoryLaneMedia }, "*");
-  };
-
-  const setTileLayout = (tile, layout) => {
-    tile.style.left = layout.x + "%";
-    tile.style.top = layout.y + "%";
-    tile.style.width = layout.width + "%";
-    tile.style.height = layout.height + "%";
-    tile.style.zIndex = String(layout.z);
-    tile.style.transform = "rotate(" + layout.rotation + "deg)";
-    const media = tile.querySelector(".memory-canvas-media");
-    if (media) media.style.objectFit = layout.fit;
-  };
-
-  const selectedItem = () => memoryLaneMedia.find(item => item.id === selectedId) || null;
-
-  const updateSelection = () => {
-    board.querySelectorAll(".memory-canvas-item").forEach(tile => {
-      const active = tile.dataset.memoryId === selectedId;
-      tile.classList.toggle("selected", active && !readOnly);
-      let handle = tile.querySelector(".memory-canvas-resize");
-      if (active && !readOnly && !handle) {
-        handle = document.createElement("span");
-        handle.className = "memory-canvas-resize";
-        handle.setAttribute("aria-label", "Resize memory");
-        tile.append(handle);
-      } else if ((!active || readOnly) && handle) {
-        handle.remove();
-      }
-    });
-    const item = selectedItem();
-    contextBar.hidden = readOnly || !item;
-    selectedName.textContent = item ? (item.name || (item.type === "video" ? "Video" : "Photo")) : "";
-    const fitButton = contextBar.querySelector('[data-canvas-action="fit"]');
-    if (fitButton && item) fitButton.textContent = item.layout.fit === "contain" ? "Fill" : "Fit";
-  };
-
-  const render = () => {
-    board.replaceChildren();
-    countLabel.textContent = memoryLaneMedia.length + (memoryLaneMedia.length === 1 ? " memory" : " memories");
-    if (!memoryLaneMedia.length) {
-      const empty = document.createElement("div");
-      empty.className = "memory-canvas-empty";
-      const mark = document.createElement("div");
-      mark.className = "memory-canvas-empty-mark";
-      mark.textContent = "＋";
-      const title = document.createElement("strong");
-      title.textContent = readOnly ? "No memories yet" : "Start your Memory Lane";
-      const copy = document.createElement("p");
-      copy.textContent = readOnly
-        ? "There are no photos or videos in this Memory Lane yet."
-        : "Add photos and videos, then arrange each memory anywhere on your canvas.";
-      empty.append(mark, title, copy);
-      if (!readOnly) {
-        const add = document.createElement("button");
-        add.className = "memory-canvas-button primary";
-        add.type = "button";
-        add.textContent = "Add photos & videos";
-        add.addEventListener("click", () => memoryMediaInput.click());
-        empty.append(add);
-      }
-      board.append(empty);
-      selectedId = null;
-      updateSelection();
-      return;
-    }
-
-    if (!memoryLaneMedia.some(item => item.id === selectedId)) selectedId = null;
-    memoryLaneMedia.forEach((item, index) => {
-      const tile = document.createElement("figure");
-      tile.className = "memory-canvas-item" + (readOnly ? " viewer" : "");
-      tile.dataset.memoryId = item.id;
-      tile.setAttribute("aria-label", item.name || "Memory");
-      if (!readOnly) {
-        tile.tabIndex = 0;
-        tile.setAttribute("role", "button");
-      }
-
-      const url = mediaUrl(item);
-      let media;
-      if (item.type === "video") {
-        media = document.createElement("video");
-        media.src = url;
-        media.playsInline = true;
-        media.preload = "metadata";
-        media.muted = !readOnly;
-        media.loop = !readOnly;
-        media.controls = readOnly;
-        media.className = "memory-canvas-media";
-        const tag = document.createElement("span");
-        tag.className = "memory-canvas-video-tag";
-        tag.textContent = "VIDEO";
-        tile.append(media, tag);
-      } else {
-        media = document.createElement("img");
-        media.src = url;
-        media.alt = item.name || "Memory Lane photo";
-        media.draggable = false;
-        media.className = "memory-canvas-media";
-        media.addEventListener("error", () => { media.alt = "This photo could not be loaded"; });
-        tile.append(media);
-      }
-
-      item.layout = normalizeLayout(item.layout, index, memoryLaneMedia.length);
-      setTileLayout(tile, item.layout);
-      board.append(tile);
-    });
-    updateSelection();
-  };
-
-  const openEditor = () => {
-    if (!paperStishEditing) return;
-    readOnly = false;
-    returnToEditor = false;
-    canvas.classList.remove("is-viewer");
-    closeButton.textContent = "Done";
-    closeButton.setAttribute("aria-label", "Done editing memories");
-    document.getElementById("memoryCanvasSubtitle").textContent = "Arrange your photos and videos";
-    addButton.hidden = false;
-    previewButton.hidden = memoryLaneMedia.length === 0;
-    canvas.hidden = false;
-    mediaEditor.hidden = true;
-    playerScreen.hidden = true;
-    tp.hidden = true;
-    render();
-    postLayout();
-  };
-
-  const openViewer = fromPreview => {
-    readOnly = true;
-    returnToEditor = fromPreview === true;
-    canvas.classList.add("is-viewer");
-    closeButton.textContent = fromPreview ? "Back" : "×";
-    closeButton.setAttribute("aria-label", fromPreview ? "Back to editing" : "Close memories");
-    document.getElementById("memoryCanvasSubtitle").textContent = "A collection of favourite moments";
-    addButton.hidden = true;
-    previewButton.hidden = true;
-    canvas.hidden = false;
-    mediaEditor.hidden = true;
-    playerScreen.hidden = true;
-    tp.hidden = true;
-    render();
-  };
-
-  const closeCanvas = () => {
-    if (returnToEditor && paperStishEditing) {
-      openEditor();
-      return;
-    }
-    canvas.hidden = true;
-    canvas.classList.remove("is-viewer");
-    selectedId = null;
-    pointer = null;
-    returnToEditor = false;
-    tp.hidden = false;
-  };
-
-  closeButton.addEventListener("click", closeCanvas);
-  addButton.addEventListener("click", () => { if (paperStishEditing) memoryMediaInput.click(); });
-  previewButton.addEventListener("click", () => {
-    if (paperStishEditing && memoryLaneMedia.length) openViewer(true);
-  });
-
-  contextBar.addEventListener("click", event => {
-    const button = event.target.closest("[data-canvas-action]");
-    const item = selectedItem();
-    if (!button || !item || !paperStishEditing) return;
-    const action = button.dataset.canvasAction;
-    if (action === "remove") {
-      const next = memoryLaneMedia.filter(media => media.id !== item.id);
-      selectedId = null;
-      setMemoryLaneMedia(next);
-      render();
-      postLayout();
-      return;
-    }
-    const layout = item.layout || defaultLayout(memoryLaneMedia.indexOf(item), memoryLaneMedia.length);
-    if (action === "fit") layout.fit = layout.fit === "cover" ? "contain" : "cover";
-    if (action === "rotate") layout.rotation = Math.max(-30, Math.min(30, layout.rotation + 5));
-    if (action === "front") layout.z = Math.min(100, Math.max.apply(null, memoryLaneMedia.map(media => (media.layout || {}).z || 0)) + 1);
-    if (action === "back") layout.z = Math.max(0, Math.min.apply(null, memoryLaneMedia.map(media => (media.layout || {}).z || 0)) - 1);
-    item.layout = layout;
-    render();
-    postLayout();
-  });
-
-  board.addEventListener("pointerdown", event => {
-    if (readOnly || !paperStishEditing) return;
-    const tile = event.target.closest(".memory-canvas-item");
-    if (!tile) {
-      selectedId = null;
-      updateSelection();
-      return;
-    }
-    if (event.pointerType === "mouse" && event.button !== 0) return;
-    const item = memoryLaneMedia.find(media => media.id === tile.dataset.memoryId);
-    if (!item) return;
-    selectedId = item.id;
-    updateSelection();
-    event.preventDefault();
-    const activeTile = board.querySelector('[data-memory-id="' + item.id + '"]');
-    if (activeTile && activeTile.setPointerCapture) activeTile.setPointerCapture(event.pointerId);
-    const rect = board.getBoundingClientRect();
-    pointer = {
-      id: item.id,
-      pointerId: event.pointerId,
-      tile: activeTile,
-      startX: event.clientX,
-      startY: event.clientY,
-      boardWidth: rect.width,
-      boardHeight: rect.height,
-      startLayout: { ...(item.layout || defaultLayout(memoryLaneMedia.indexOf(item), memoryLaneMedia.length)) },
-      resize: Boolean(event.target.closest(".memory-canvas-resize"))
-    };
-  });
-
-  board.addEventListener("pointermove", event => {
-    const drag = pointer;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    const item = memoryLaneMedia.find(media => media.id === drag.id);
-    if (!item) return;
-    const dx = (event.clientX - drag.startX) / Math.max(1, drag.boardWidth) * 100;
-    const dy = (event.clientY - drag.startY) / Math.max(1, drag.boardHeight) * 100;
-    const start = drag.startLayout;
-    if (drag.resize) {
-      item.layout = {
-        ...start,
-        width: Math.max(10, Math.min(100 - start.x, start.width + dx)),
-        height: Math.max(10, Math.min(100 - start.y, start.height + dy))
-      };
-    } else {
-      item.layout = {
-        ...start,
-        x: Math.max(0, Math.min(100 - start.width, start.x + dx)),
-        y: Math.max(0, Math.min(100 - start.height, start.y + dy))
-      };
-    }
-    if (drag.tile) setTileLayout(drag.tile, item.layout);
-  });
-
-  const finishPointer = event => {
-    if (!pointer || pointer.pointerId !== event.pointerId) return;
-    pointer = null;
-    postLayout();
-  };
-  board.addEventListener("pointerup", finishPointer);
-  board.addEventListener("pointercancel", finishPointer);
-
-
-
-  document.addEventListener("keydown", event => {
-    if (!canvas.hidden && event.key === "Escape") {
-      event.preventDefault();
-      closeCanvas();
-    }
-  });
-
-  window.addEventListener("message", event => {
-    if (event.source !== window.parent || !event.data || typeof event.data !== "object") return;
-    const type = event.data.type;
-    if (type === "paper-stish:init" || type === "paper-stish:update-media") {
-      const hadUnplaced = memoryLaneMedia.some(item => !item.layout);
-      memoryLaneMedia.forEach((item, index) => {
-        item.layout = normalizeLayout(item.layout, index, memoryLaneMedia.length);
-      });
-      if (!canvas.hidden) render();
-      if (hadUnplaced && paperStishEditing) postLayout();
-    }
-    if (type === "paper-stish:set-editing" && event.data.editing === false && !readOnly && !canvas.hidden) {
-      closeCanvas();
-    }
-  });
-  window.__setflixMemoryCanvas = {
-    openEditor,
-    openViewer,
-    closeCanvas,
-    render
-  };
-})();
-document.querySelector('.pl').addEventListener('click',()=>{
-  if(paperStishEditing){
-    if(window.__setflixMemoryCanvas)window.__setflixMemoryCanvas.openEditor();
-    else{
-      const fallback=document.getElementById('mediaEditor');
-      fallback.hidden=false;
-      document.getElementById('mediaEditorTitle').textContent='Memory Lane editor unavailable';
-      document.querySelector('.media-editor-copy').textContent='Please refresh this editor before continuing. The normal viewer will not open while editing.';
-      document.getElementById('addMediaButton').hidden=true;
-      document.getElementById('mediaEditorList').replaceChildren();
-      document.getElementById('mediaEditorCount').textContent='Editor could not load';
-      document.getElementById('previewMemoryButton').hidden=true;
-    }
-  }else if(window.__setflixMemoryCanvas)window.__setflixMemoryCanvas.openViewer(false);
-  else openPlayer(false);
-});
+document.querySelector('.pl').addEventListener('click',openPlayer);
 document.querySelector('.player-close').addEventListener('click',closePlayer);
-document.getElementById('mediaEditorClose').addEventListener('click',closeMediaEditor);
-document.getElementById('doneMediaButton')?.addEventListener('click',closeMediaEditor);
-document.getElementById('addMediaButton').addEventListener('click',()=>{
-  if(paperStishEditing)memoryMediaInput.click();
-});
-memoryMediaInput.addEventListener('change',()=>{
-  const files=Array.from(memoryMediaInput.files||[]);
-  if(paperStishEditing&&files.length){
-    window.parent.postMessage({type:'paper-stish:media-files-selected',files},'*');
-  }
-  memoryMediaInput.value='';
-});
-previewMemoryButton.addEventListener('click',()=>{
-  if(memoryLaneMedia.length&&paperStishEditing)openPlayer(true);
-});
 episodesButton.addEventListener('click',()=>{
   const show=episodesPanel.hidden;
   episodesPanel.hidden=!show;
@@ -1289,16 +574,27 @@ audioButton.addEventListener('click',()=>{
   audioButton.setAttribute('aria-expanded',String(show));
   episodesButton.setAttribute('aria-expanded','false');
 });
-nextEpisodeButton.addEventListener('click',nextEpisode);
-playerProgress.addEventListener('input',()=>{
-  if(!memoryLaneMedia.length)return;
-  const percent=Number(playerProgress.value)/100;
-  if(activePlayerElement instanceof HTMLVideoElement&&Number.isFinite(activePlayerElement.duration)){
-    activePlayerElement.currentTime=activePlayerElement.duration*percent;
-  }else if(activePlayerElement instanceof HTMLImageElement){
-    photoStartedAt=Date.now()-PHOTO_DURATION_MS*percent;
-  }
+document.querySelectorAll('[data-episode]').forEach(button=>{
+  button.addEventListener('click',()=>{
+    currentEpisode=Number(button.dataset.episode);
+    playerShot.textContent='Photo '+currentEpisode;
+    document.querySelectorAll('[data-episode]').forEach(item=>item.classList.toggle('selected',item===button));
+    episodesPanel.hidden=true;
+    episodesButton.setAttribute('aria-expanded','false');
+    document.getElementById('playerProgress').value=12;
+  });
 });
+document.getElementById('nextEpisodeButton').addEventListener('click',()=>{
+  currentEpisode+=1;
+  playerShot.textContent='Photo '+currentEpisode;
+  document.querySelectorAll('[data-episode]').forEach(item=>item.classList.toggle('selected',Number(item.dataset.episode)===currentEpisode));
+  episodesPanel.hidden=true;
+  audioPanel.hidden=true;
+  episodesButton.setAttribute('aria-expanded','false');
+  audioButton.setAttribute('aria-expanded','false');
+  document.getElementById('playerProgress').value=0;
+});
+
 const REQUIRED_PROFILE_CLICKS=2;
 const PROFILE_CLICK_INTERVAL_MS=650;
 const profileTapProgress=new WeakMap();
@@ -1351,8 +647,6 @@ const openTitle=p=>{
   stage.addEventListener('transitionend',finishFadeOut);
 };
 const closeTitle=()=>{
-  closeMediaEditor();
-  if(window.__setflixMemoryCanvas)window.__setflixMemoryCanvas.closeCanvas();
   activeOpenToken++;
   foreground.classList.remove('revealed');
   tp.hidden=true;
@@ -1408,8 +702,6 @@ row.addEventListener('contextmenu',ev=>{
 document.querySelector('.tp-logo').addEventListener('click',closeTitle);
 document.querySelector('.nav-back').addEventListener('click',closeTitle);
 document.addEventListener('keydown',e=>{
-  if(window.__setflixMemoryCanvas&&!document.getElementById('memoryCanvas').hidden){if(e.key==='Escape')window.__setflixMemoryCanvas.closeCanvas();return}
-  if(!mediaEditor.hidden){if(e.key==='Escape')closeMediaEditor();return}
   if(!playerScreen.hidden){if(e.key==='Escape')closePlayer();return}
   if(!tp.hidden){if(e.key==='Escape')closeTitle();return}
   if(!scrim.classList.contains('open'))return;
@@ -1446,10 +738,6 @@ const setEditing=enabled=>{
     else{element.removeAttribute('tabindex');element.removeAttribute('title')}
   });
   if(!paperStishEditing&&activeMemoryLaneEdit)finishMemoryLaneEdit(true);
-  if(!paperStishEditing){
-    closeMediaEditor();
-    if(window.__setflixMemoryCanvas&&!document.getElementById('memoryCanvas').hidden)window.__setflixMemoryCanvas.closeCanvas();
-  }
   addBtn.hidden=!paperStishEditing;
   document.querySelector('.manage').hidden=!paperStishEditing;
   if(!paperStishEditing)scrim.classList.remove('open');
@@ -1462,12 +750,7 @@ window.addEventListener('message',event=>{
     if(data.type==='paper-stish:init'){
       setEditing(data.editing);
       applyMemoryLaneText(data.text);
-      setMemoryLaneMedia(data.media);
     }
-    return;
-  }
-  if(data.type==='paper-stish:update-media'){
-    setMemoryLaneMedia(data.media);
     return;
   }
   if(data.type==='paper-stish:update-text'){
@@ -1478,6 +761,5 @@ window.addEventListener('message',event=>{
 });
 window.parent.postMessage({type:'paper-stish:template-ready'},'*');
 </script>
-
 </body>
 </html>
