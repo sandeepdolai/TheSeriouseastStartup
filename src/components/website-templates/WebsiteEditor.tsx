@@ -1002,20 +1002,22 @@ export function WebsiteEditor({
       )}
 
       <div className={styles.editorActions} role="group" aria-label="Website editor controls">
-        <button
-          type="button"
-          className={styles.controlOpacityToggle}
-          aria-label={controlsDimmed ? "Restore template controls" : "Reduce template controls opacity"}
-          aria-pressed={controlsDimmed}
-          title={controlsDimmed ? "Restore controls" : "Reduce controls opacity"}
-          onClick={() => setControlsDimmed((current) => !current)}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="m15.5 5.5 3 3" />
-            <path d="M4 20l4.2-.8L19 8.4a2.12 2.12 0 0 0-3-3L5.2 16.2 4 20Z" />
-            <path d="M13 7.5 16.5 11" />
-          </svg>
-        </button>
+        {!isMemoryLane && (
+          <button
+            type="button"
+            className={styles.controlOpacityToggle}
+            aria-label={controlsDimmed ? "Restore template controls" : "Reduce template controls opacity"}
+            aria-pressed={controlsDimmed}
+            title={controlsDimmed ? "Restore controls" : "Reduce controls opacity"}
+            onClick={() => setControlsDimmed((current) => !current)}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="m15.5 5.5 3 3" />
+              <path d="M4 20l4.2-.8L19 8.4a2.12 2.12 0 0 0-3-3L5.2 16.2 4 20Z" />
+              <path d="M13 7.5 16.5 11" />
+            </svg>
+          </button>
+        )}
         <button
           type="button"
           className={styles.publishButton}
