@@ -97,10 +97,10 @@ export async function durableTemplateValues(
     for (const item of next.memoryLaneMedia) {
       if ("file" in item && item.file) {
         const uploaded = await authorizedUpload(item.file, "template-photos");
-        media.push({ id: item.id, type: item.type, name: item.name, url: uploaded.url });
+        media.push({ id: item.id, type: item.type, name: item.name, url: uploaded.url, ...(item.layout ? { layout: item.layout } : {}) });
       } else if ("url" in item && item.url.startsWith("data:")) {
         const uploadedUrl = await uploadDataUrlToCloudinary(item.url);
-        media.push({ id: item.id, type: item.type, name: item.name, url: uploadedUrl });
+        media.push({ id: item.id, type: item.type, name: item.name, url: uploadedUrl, ...(item.layout ? { layout: item.layout } : {}) });
       } else if ("url" in item) {
         media.push(item);
       }
