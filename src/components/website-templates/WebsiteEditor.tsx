@@ -1002,7 +1002,6 @@ export function WebsiteEditor({
       )}
 
       <div className={styles.editorActions} role="group" aria-label="Website editor controls">
-        {!isMemoryLane && (
           <button
             type="button"
             className={styles.controlOpacityToggle}
@@ -1017,7 +1016,6 @@ export function WebsiteEditor({
               <path d="M13 7.5 16.5 11" />
             </svg>
           </button>
-        )}
         <button
           type="button"
           className={styles.publishButton}
