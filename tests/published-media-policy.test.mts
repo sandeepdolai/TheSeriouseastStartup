@@ -9,14 +9,20 @@ import assert from "node:assert/strict";
 
 import {
   cloudinaryMediaConfigured,
+  cloudinaryPublicIdFromUrl,
   embeddedMediaError,
   isEmbeddedImage,
+  isEmbeddedMedia,
+  isEmbeddedVideo,
   smartEditEmbeddedImageCount,
   templateValuesEmbeddedImageCount,
+  templateValuesUnauthorizedReferences,
 } from "../src/lib/publishedMediaPolicy.ts";
 
 const DATA_URL = "data:image/webp;base64,UklGRhoAABXRUJQVlA4TA";
-const CLOUDINARY_URL = "https://res.cloudinary.com/demo-cloud/image/upload/v1/paper-stish/x";
+const VIDEO_DATA_URL = "data:video/mp4;base64,AAAA";
+const CLOUDINARY_URL = "https://res.cloudinary.com/demo-cloud/image/upload/v1/paper-stish/x.jpg";
+const CLOUDINARY_VIDEO_URL = "https://res.cloudinary.com/demo-cloud/video/upload/v1/paper-stish/video.mp4";
 const BUNDLED_URL = "/smart-edit/library/stickers/heart.png";
 const HTTPS_URL = "https://example.com/photo.jpg";
 
@@ -28,6 +34,16 @@ test("isEmbeddedImage detects only base64 image payloads", () => {
   assert.equal(isEmbeddedImage(HTTPS_URL), false);
   assert.equal(isEmbeddedImage(undefined), false);
   assert.equal(isEmbeddedImage(42), false);
+});
+
+test("embedded video helpers distinguish videos from images", () => {
+  assert.equal(isEmbeddedVideo(VIDEO_DATA_URL), true);
+  assert.equal(isEmbeddedVideo(DATA_URL), false);
+  assert.equal(isEmbeddedMedia(VIDEO_DATA_URL), true);
+  assert.equal(isEmbeddedMedia(DATA_URL), true);
+  assert.equal(isEmbeddedMedia(HTTPS_URL), false);
+  assert.equal(cloudinaryPublicIdFromUrl(CLOUDINARY_VIDEO_URL, "demo-cloud"), "paper-stish/video");
+  assert.equal(cloudinaryPublicIdFromUrl(CLOUDINARY_VIDEO_URL, "another-cloud"), null);
 });
 
 test("smartEditEmbeddedImageCount counts image/sticker layers only", () => {
@@ -71,6 +87,27 @@ test("templateValuesEmbeddedImageCount counts photoUrl and album images", () => 
   assert.equal(templateValuesEmbeddedImageCount({}), 0);
 });
 
+test("template media policy counts embedded photos and videos and validates their storage", () => {
+  assert.equal(templateValuesEmbeddedImageCount({
+    memoryLaneMedia: [
+      { type: "image", url: DATA_URL },
+      { type: "video", url: VIDEO_DATA_URL },
+      { type: "video", url: CLOUDINARY_VIDEO_URL },
+      { type: "image", url: HTTPS_URL },
+    ],
+  }), 2);
+
+  assert.deepEqual(
+    templateValuesUnauthorizedReferences({
+      memoryLaneMedia: [
+        { type: "video", url: CLOUDINARY_VIDEO_URL },
+        { type: "image", url: "https://res.cloudinary.com/demo-cloud/image/upload/v1/paper-stish/published-websites/u/other-user/photo.jpg" },
+      ],
+    }, "demo-cloud", "current-user"),
+    ["paper-stish/published-websites/u/other-user/photo"],
+  );
+});
+
 test("cloudinaryMediaConfigured requires the SERVER-side Cloudinary credentials", () => {
   const saved = { ...process.env };
 
@@ -102,6 +139,6 @@ test("cloudinaryMediaConfigured requires the SERVER-side Cloudinary credentials"
 });
 
 test("embeddedMediaError renders singular and plural messages", () => {
-  assert.match(embeddedMediaError(1), /a photo that is/);
-  assert.match(embeddedMediaError(3), /3 photos that are/);
+  assert.match(embeddedMediaError(1), /1 media file/);
+  assert.match(embeddedMediaError(3), /3 media files/);
 });
