@@ -134,7 +134,7 @@ export function MemoryLaneTemplate({
 
   useEffect(() => {
     let alive = true;
-    fetch(TEMPLATE_URL, { cache: "force-cache" })
+    fetch(TEMPLATE_URL, { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error("Could not load the original Memory Lane template.");
         return response.text();
