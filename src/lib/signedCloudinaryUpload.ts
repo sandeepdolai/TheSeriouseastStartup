@@ -88,11 +88,10 @@ export async function uploadWithGrant(
   form.append("public_id", grant.uploadPublicId);
   form.append("signature", grant.signature);
 
-  const resourceType = blob.type.toLowerCase().startsWith("video/") ? "video" : "image";
   let response: Response;
   try {
     response = await fetch(
-      `https://api.cloudinary.com/v1_1/${encodeURIComponent(grant.cloudName)}/${resourceType}/upload`,
+      `https://api.cloudinary.com/v1_1/${encodeURIComponent(grant.cloudName)}/image/upload`,
       { method: "POST", body: form },
     );
   } catch {
