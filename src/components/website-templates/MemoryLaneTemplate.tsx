@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { MemoryLaneMediaItem, MemoryLaneProfile, TemplatePublicationValues } from "@/lib/publications";
+import type { MemoryLaneCanvasLayout, MemoryLaneMediaItem, MemoryLaneProfile, TemplatePublicationValues } from "@/lib/publications";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const TEMPLATE_URL = `${BASE_PATH}/website-templates/memory-lane.html`;
@@ -56,6 +56,21 @@ function normalizeProfiles(value: unknown): MemoryLaneProfile[] {
   });
 }
 
+function normalizeMemoryLaneCanvasLayout(value: unknown): MemoryLaneCanvasLayout | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const raw = value as Record<string, unknown>;
+  const { x, y, width, height, rotation, z, fit } = raw;
+  if (typeof x !== "number" || !Number.isFinite(x) || x < 0 || x > 100 ||
+      typeof y !== "number" || !Number.isFinite(y) || y < 0 || y > 100 ||
+      typeof width !== "number" || !Number.isFinite(width) || width < 10 || width > 100 ||
+      typeof height !== "number" || !Number.isFinite(height) || height < 10 || height > 100 ||
+      x + width > 100.01 || y + height > 100.01 ||
+      typeof rotation !== "number" || !Number.isFinite(rotation) || rotation < -30 || rotation > 30 ||
+      typeof z !== "number" || !Number.isFinite(z) || z < 0 || z > 100 ||
+      (fit !== "cover" && fit !== "contain")) return undefined;
+  return { x, y, width, height, rotation, z, fit };
+}
+
 function normalizeMemoryLaneMedia(value: unknown): MemoryLaneMediaItem[] {
   if (!Array.isArray(value)) return [];
   return value.slice(0, 12).flatMap((item): MemoryLaneMediaItem[] => {
@@ -64,13 +79,14 @@ function normalizeMemoryLaneMedia(value: unknown): MemoryLaneMediaItem[] {
     const id = typeof raw.id === "string" ? raw.id.slice(0, 80) : "";
     const type = raw.type === "image" || raw.type === "video" ? raw.type : null;
     const name = typeof raw.name === "string" ? raw.name.slice(0, 120) : "";
+    const layout = normalizeMemoryLaneCanvasLayout(raw.layout);
     if (!id || !/^[A-Za-z0-9_-]+$/.test(id) || !type) return [];
     if (typeof raw.url === "string" && /^(data:(?:image|video)\/|https:\/\/)/i.test(raw.url)) {
-      return [{ id, type, name, url: raw.url }];
+      return [{ id, type, name, ...(layout ? { layout } : {}), url: raw.url }];
     }
     const file = raw.file as Blob | undefined;
     if (file && typeof file.arrayBuffer === "function" && typeof file.size === "number") {
-      return [{ id, type, name, file }];
+      return [{ id, type, name, ...(layout ? { layout } : {}), file }];
     }
     return [];
   });
@@ -104,6 +120,7 @@ export function MemoryLaneTemplate({
   const latestText = useRef(resolveMemoryLaneText(values));
   const lastSentProfiles = useRef("");
   const lastSentText = useRef("");
+  const lastSentMedia = useRef("");
 
   const currentText = useMemo(
     () => resolveMemoryLaneText(values),
@@ -154,6 +171,7 @@ export function MemoryLaneTemplate({
           text,
           media: latestMedia.current,
         }, "*");
+        lastSentMedia.current = JSON.stringify(latestMedia.current);
         return;
       }
 
@@ -199,11 +217,22 @@ export function MemoryLaneTemplate({
         return;
       }
 
+      if (data.type === "paper-stish:media-change" && latestEditing.current && Array.isArray(data.media)) {
+        const nextMedia = normalizeMemoryLaneMedia(data.media);
+        const snapshot = JSON.stringify(nextMedia);
+        latestMedia.current = nextMedia;
+        if (snapshot === lastSentMedia.current) return;
+        lastSentMedia.current = snapshot;
+        onMediaChange?.(nextMedia);
+        return;
+      }
+
       if (data.type === "paper-stish:media-remove" && latestEditing.current &&
           typeof data.mediaId === "string") {
         const nextMedia = latestMedia.current.filter((item) => item.id !== data.mediaId);
         if (nextMedia.length !== latestMedia.current.length) {
           latestMedia.current = nextMedia;
+          lastSentMedia.current = JSON.stringify(nextMedia);
           onMediaChange?.(nextMedia);
         }
       }
@@ -234,7 +263,10 @@ export function MemoryLaneTemplate({
   useEffect(() => {
     if (!iframeReady.current) return;
     const media = normalizeMemoryLaneMedia(values?.memoryLaneMedia);
+    const snapshot = JSON.stringify(media);
     latestMedia.current = media;
+    if (snapshot === lastSentMedia.current) return;
+    lastSentMedia.current = snapshot;
     iframeRef.current?.contentWindow?.postMessage({ type: "paper-stish:update-media", media }, "*");
   }, [values?.memoryLaneMedia]);
 
