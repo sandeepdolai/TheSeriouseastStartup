@@ -82,9 +82,6 @@ export function smartEditEmbeddedImageCount(document: SmartEditDocumentLike): nu
     if (layer.type !== "image" && layer.type !== "sticker") continue;
     if (isEmbeddedImage(layer.url)) count += 1;
   }
-  for (const media of values.memoryLaneMedia ?? []) {
-    if (isEmbeddedMedia(media.url)) count += 1;
-  }
   return count;
 }
 
@@ -97,6 +94,9 @@ export function templateValuesEmbeddedImageCount(values: TemplateValuesLike): nu
   }
   for (const profile of values.memoryLaneProfiles ?? []) {
     if (isEmbeddedImage(profile.photoUrl)) count += 1;
+  }
+  for (const media of values.memoryLaneMedia ?? []) {
+    if (isEmbeddedMedia(media.url)) count += 1;
   }
   return count;
 }
@@ -167,9 +167,6 @@ export function smartEditUnauthorizedReferences(
     if (layer.type !== "image" && layer.type !== "sticker") continue;
     if (typeof layer.url === "string" && !isEmbeddedImage(layer.url)) urls.push(layer.url);
   }
-  for (const media of values.memoryLaneMedia ?? []) {
-    if (typeof media.url === "string" && !isEmbeddedMedia(media.url)) urls.push(media.url);
-  }
   return unauthorizedReferences(urls, cloudName, userId);
 }
 
@@ -188,6 +185,9 @@ export function templateValuesUnauthorizedReferences(
   }
   for (const profile of values.memoryLaneProfiles ?? []) {
     if (typeof profile.photoUrl === "string" && !isEmbeddedImage(profile.photoUrl)) urls.push(profile.photoUrl);
+  }
+  for (const media of values.memoryLaneMedia ?? []) {
+    if (typeof media.url === "string" && !isEmbeddedMedia(media.url)) urls.push(media.url);
   }
   return unauthorizedReferences(urls, cloudName, userId);
 }
