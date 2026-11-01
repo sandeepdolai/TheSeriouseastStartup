@@ -183,9 +183,9 @@ body.paper-stish-editing .memory-editable[contenteditable="true"]:focus{outline-
       <button class="profile"><span class="avatar" style="--a:#d4492b;--b:#f2b24a"></span><span class="name">2025</span></button>
       <button class="profile"><span class="avatar" style="--a:#5b3fa8;--b:#4b8fd6"></span><span class="name">2024</span></button>
       <button class="profile"><span class="avatar" style="--a:#6b4a33;--b:#d9a98a"></span><span class="name">2022</span></button>
-      <button class="add" aria-label="Add profile"><i></i></button>
+      <button class="add" aria-label="Add profile" hidden><i></i></button>
     </div>
-    <button class="manage">Manage profiles</button>
+    <button class="manage" hidden>Manage profiles</button>
   </main>
 </div>
 <section class="tp" hidden aria-label="Series">
@@ -707,7 +707,7 @@ document.addEventListener('keydown',e=>{
   if(!scrim.classList.contains('open'))return;
   if(e.key==='Escape')closeDlg();else if(e.key==='Enter'&&e.target===yearIn)addProfile()});
 
-let paperStishEditing=true;
+let paperStishEditing=false;
 const collectProfiles=()=>Array.from(row.querySelectorAll('.profile')).map(profile=>({
   year:profile.querySelector('.name')?.textContent?.trim()||'',
   heroTitle:profile.dataset.heroTitle||'',
@@ -729,8 +729,8 @@ const replaceProfiles=profiles=>{
   const selected=Array.from(row.querySelectorAll('.profile')).find(profile=>profile.querySelector('.name')?.textContent?.trim()===selectedYear);
   if(selected||first)on(selected||first);
 };
-const setEditing=enabled=>{
-  paperStishEditing=enabled===true;
+const setEditing=()=>{
+  paperStishEditing=false;
   document.body.classList.toggle('paper-stish-editing',paperStishEditing);
   Object.values(memoryLaneEditableElements).forEach(({element})=>{
     if(!element)return;
