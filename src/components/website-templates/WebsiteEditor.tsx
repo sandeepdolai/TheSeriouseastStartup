@@ -10,6 +10,7 @@ import {
   publishWebsite,
   slugPart,
   type PublishedRecord,
+  type MemoryLaneCanvasLayout,
   type MemoryLaneMediaItem,
   type MemoryLaneProfile,
   type TemplatePublicationValues,
@@ -55,6 +56,22 @@ const MAX_PHOTO_DATA_LENGTH = 560_000;
 const MAX_MEMORY_LANE_MEDIA_ITEMS = 12;
 const MAX_MEMORY_LANE_MEDIA_FILE_BYTES = 15 * 1024 * 1024;
 const MAX_MEMORY_LANE_MEDIA_TOTAL_BYTES = 60 * 1024 * 1024;
+
+function normalizeMemoryLaneCanvasLayout(value: unknown): MemoryLaneCanvasLayout | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const raw = value as Record<string, unknown>;
+  const { x, y, width, height, rotation, z, fit } = raw;
+  if (typeof x !== "number" || !Number.isFinite(x) || x < 0 || x > 100 ||
+      typeof y !== "number" || !Number.isFinite(y) || y < 0 || y > 100 ||
+      typeof width !== "number" || !Number.isFinite(width) || width < 10 || width > 100 ||
+      typeof height !== "number" || !Number.isFinite(height) || height < 10 || height > 100 ||
+      x + width > 100.01 || y + height > 100.01 ||
+      typeof rotation !== "number" || !Number.isFinite(rotation) || rotation < -30 || rotation > 30 ||
+      typeof z !== "number" || !Number.isFinite(z) || z < 0 || z > 100 ||
+      (fit !== "cover" && fit !== "contain")) return undefined;
+  return { x, y, width, height, rotation, z, fit };
+}
+
 const REOPEN_PUBLISH_KEY = "paper-stish-reopen-website-publish";
 
 const TEXT_DEFAULTS: Record<WebsiteEditorTemplateSlug, TemplatePublicationValues> = {
@@ -496,14 +513,15 @@ export function WebsiteEditor({
                 const id = typeof media.id === "string" ? media.id.slice(0, 80) : "";
                 const type = media.type === "image" || media.type === "video" ? media.type : null;
                 const name = typeof media.name === "string" ? media.name.slice(0, 120) : "";
+                const layout = normalizeMemoryLaneCanvasLayout(media.layout);
                 if (!id || !/^[A-Za-z0-9_-]+$/.test(id) || !type) return [];
                 if (typeof media.url === "string" && (media.url.startsWith("https://") || /^data:(?:image|video)\//i.test(media.url))) {
-                  return [{ id, type, name, url: media.url }];
+                  return [{ id, type, name, ...(layout ? { layout } : {}), url: media.url }];
                 }
                 const file = media.file as Blob | undefined;
                 if (file && typeof file.arrayBuffer === "function" &&
                     file.size <= MAX_MEMORY_LANE_MEDIA_FILE_BYTES && file.type.startsWith(type === "image" ? "image/" : "video/")) {
-                  return [{ id, type, name, file }];
+                  return [{ id, type, name, ...(layout ? { layout } : {}), file }];
                 }
                 return [];
               })
