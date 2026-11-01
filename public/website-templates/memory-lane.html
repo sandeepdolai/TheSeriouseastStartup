@@ -137,6 +137,40 @@ body.paper-stish-editing .memory-editable[contenteditable="true"]:focus{outline-
 .player-panel button{display:block;width:100%;padding:.65rem .4rem;border:0;border-radius:.2rem;text-align:left;background:transparent;color:#eee;font:inherit;cursor:pointer}
 .player-panel button:hover,.player-panel button:focus-visible{background:rgba(255,255,255,.14)}
 .player-panel button.selected{color:#fff;font-weight:700}
+.player-shot{padding:2rem;color:#ddd;font-size:clamp(1rem,2vw,1.5rem);font-weight:500;white-space:normal;text-align:center}
+.player-shot[hidden]{display:none}
+.player-media-image,.player-media-video{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;background:#080808}
+.player-media-image{z-index:1}
+.player-media-video{z-index:1}
+#episodesItems{max-height:min(42vh,20rem);overflow:auto}
+#episodesItems button{display:flex;align-items:center;gap:.8rem}
+#episodesItems button .episode-kind{margin-left:auto;color:#aaa;font-size:.75em}
+.player-action:disabled{opacity:.35;cursor:default}
+.player-progress input:disabled{opacity:.35;cursor:default}
+.media-editor{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:2rem;background:rgba(0,0,0,.84);backdrop-filter:blur(1rem)}
+.media-editor[hidden]{display:none}
+.media-editor-card{width:min(48rem,94vw);max-height:min(88vh,54rem);overflow:auto;padding:2.2rem;background:#151515;border:1px solid #353535;border-radius:.8rem;box-shadow:0 2rem 6rem rgba(0,0,0,.55)}
+.media-editor-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}
+.media-editor-kicker{font-size:.85rem;letter-spacing:.18em;color:#e50914;font-weight:700}
+.media-editor-card h2{margin-top:.5rem;font-size:2.1rem;line-height:1.15;font-weight:650;color:#fff}
+.media-editor-copy{margin-top:.8rem;color:#aaa;font-size:1rem;line-height:1.5}
+.media-editor-close{flex:none;width:2.4rem;height:2.4rem;border:1px solid #444;border-radius:50%;background:#242424;color:#fff;font-size:1.6rem;line-height:1;cursor:pointer}
+.media-editor-add{display:flex;align-items:center;justify-content:center;width:100%;min-height:3.4rem;margin-top:1.5rem;padding:.8rem 1rem;border:0;border-radius:.35rem;background:#e50914;color:#fff;font-size:1.05rem;font-weight:700;cursor:pointer}
+.media-editor-add:hover{background:#f41a25}
+.media-editor-list{display:grid;gap:.7rem;margin-top:1rem}
+.media-editor-empty{padding:1.5rem;border:1px dashed #555;border-radius:.4rem;color:#999;text-align:center;font-size:.95rem;line-height:1.5}
+.media-editor-item{display:flex;align-items:center;gap:.8rem;min-width:0;padding:.55rem;border:1px solid #333;border-radius:.45rem;background:#202020}
+.media-editor-thumb{width:4rem;height:3.2rem;flex:none;object-fit:cover;border-radius:.25rem;background:#080808}
+.media-editor-item-name{min-width:0;flex:1;overflow:hidden;color:#eee;font-size:.95rem;text-overflow:ellipsis;white-space:nowrap}
+.media-editor-item-kind{display:block;margin-top:.15rem;color:#888;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase}
+.media-editor-remove{width:2rem;height:2rem;flex:none;border:1px solid #444;border-radius:50%;background:transparent;color:#ccc;font-size:1.2rem;cursor:pointer}
+.media-editor-remove:hover{background:rgba(229,9,20,.2);border-color:#e50914;color:#fff}
+.media-editor-footer{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:1.2rem;color:#777;font-size:.82rem}
+.media-editor-preview{padding:.55rem .95rem;border:1px solid #555;border-radius:999px;background:transparent;color:#fff;font-size:.85rem;cursor:pointer}
+.media-editor-preview:disabled{opacity:.35;cursor:default}
+.media-editor-preview:not(:disabled):hover{border-color:#fff}
+@media(max-width:600px){.media-editor{padding:1rem}.media-editor-card{padding:1.3rem}.media-editor-card h2{font-size:1.7rem}.media-editor-thumb{width:3.4rem;height:2.8rem}}
+
 @media (max-width:600px){
   .player-bottom{padding:4.2rem 5vw calc(2.4rem + env(safe-area-inset-bottom,0px))}
   .player-actions{gap:clamp(.9rem,4vw,1.8rem)}
@@ -217,17 +251,15 @@ body.paper-stish-editing .memory-editable[contenteditable="true"]:focus{outline-
   </div>
 </section>
 
-<section class="player-screen" hidden aria-label="Player">
-  <div class="player-stage">
-    <div class="player-shot" id="playerShot">Photo 3</div>
+<section class="player-screen" hidden aria-label="Memory player">
+  <div class="player-stage" id="playerStage">
+    <div class="player-shot" id="playerShot">No photos or videos have been added yet.</div>
   </div>
   <button class="player-close" type="button" aria-label="Back to memory details">×</button>
   <div class="player-bottom">
     <div class="player-panel" id="episodesPanel" hidden>
-      <h3>Episodes</h3>
-      <button type="button" data-episode="1">Photo 1</button>
-      <button type="button" data-episode="2">Photo 2</button>
-      <button type="button" data-episode="3" class="selected">Photo 3</button>
+      <h3>Memories</h3>
+      <div id="episodesItems"></div>
     </div>
     <div class="player-panel" id="audioPanel" hidden>
       <h3>Audio &amp; Subtitles</h3>
@@ -235,21 +267,40 @@ body.paper-stish-editing .memory-editable[contenteditable="true"]:focus{outline-
       <button type="button">Subtitles: Off</button>
     </div>
     <div class="player-progress">
-      <input id="playerProgress" type="range" min="0" max="100" value="12" aria-label="Playback progress">
+      <input id="playerProgress" type="range" min="0" max="100" value="0" aria-label="Playback progress" disabled>
     </div>
     <div class="player-actions">
-      <button class="player-action" id="episodesButton" type="button" aria-expanded="false">
+      <button class="player-action" id="episodesButton" type="button" aria-expanded="false" disabled>
         <svg viewBox="0 0 24 24"><rect x="6" y="4" width="14" height="14"/><path d="M3 7v14h14"/></svg>
-        <span>Episodes</span>
+        <span>Memories</span>
       </button>
       <button class="player-action" id="audioButton" type="button" aria-expanded="false">
         <svg viewBox="0 0 24 24"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3h13A2.5 2.5 0 0 1 21 5.5v9a2.5 2.5 0 0 1-2.5 2.5H10l-5 4v-4.5A2.5 2.5 0 0 1 3 14z"/><path d="M7 8h10M7 12h7"/></svg>
         <span>Audio &amp; Subtitles</span>
       </button>
-      <button class="player-action" id="nextEpisodeButton" type="button">
+      <button class="player-action" id="nextEpisodeButton" type="button" disabled>
         <svg viewBox="0 0 24 24"><path d="M4 5v14l11-7z" fill="currentColor" stroke="none"/><path d="M19 5v14"/></svg>
-        <span>Next Episode</span>
+        <span>Next</span>
       </button>
+    </div>
+  </div>
+</section>
+
+<section class="media-editor" id="mediaEditor" hidden role="dialog" aria-modal="true" aria-labelledby="mediaEditorTitle">
+  <div class="media-editor-card">
+    <div class="media-editor-heading">
+      <div>
+        <p class="media-editor-kicker">SETFLIX STUDIO</p>
+        <h2 id="mediaEditorTitle">Add to your Memory Lane</h2>
+      </div>
+      <button class="media-editor-close" id="mediaEditorClose" type="button" aria-label="Close media editor">×</button>
+    </div>
+    <p class="media-editor-copy">Choose the photos and videos people will see when they press Play on your published website.</p>
+    <button class="media-editor-add" id="addMediaButton" type="button">+ Add photos &amp; videos</button>
+    <div class="media-editor-list" id="mediaEditorList"></div>
+    <div class="media-editor-footer">
+      <span id="mediaEditorCount">0 of 12 memories added</span>
+      <button class="media-editor-preview" id="previewMemoryButton" type="button" disabled>Preview player</button>
     </div>
   </div>
 </section>
