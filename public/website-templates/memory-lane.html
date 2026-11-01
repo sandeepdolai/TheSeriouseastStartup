@@ -899,7 +899,7 @@ const openPlayer=fromEditorPreview=>{
   requestAnimationFrame(()=>playerScreen.classList.add('active'));
 };
 /* Dedicated Setflix Memory Lane collage interaction. */
-(function () {
+{
   const canvas = document.getElementById("memoryCanvas");
   const board = document.getElementById("memoryCanvasBoard");
   const contextBar = document.getElementById("memoryCanvasContext");
@@ -1242,7 +1242,7 @@ const openPlayer=fromEditorPreview=>{
     closeCanvas,
     render
   };
-})();
+}
 document.querySelector('.pl').addEventListener('click',()=>{
   if(paperStishEditing){
     if(window.__setflixMemoryCanvas)window.__setflixMemoryCanvas.openEditor();
