@@ -59,6 +59,24 @@ export interface MemoryLaneProfile {
   photoUrl: string | null;
 }
 
+/** Media used by the Setflix-style Memory Lane player.
+ *  Local drafts keep a Blob on-device; published snapshots contain only a durable URL. */
+export type MemoryLaneMediaItem =
+  | {
+      id: string;
+      type: "image" | "video";
+      name: string;
+      url: string;
+      file?: never;
+    }
+  | {
+      id: string;
+      type: "image" | "video";
+      name: string;
+      file: Blob;
+      url?: never;
+    };
+
 /** Editable values of a normal template (Birthday, Love of My Life). */
 export interface TemplatePublicationValues {
   heading?: string;
@@ -88,6 +106,8 @@ export interface TemplatePublicationValues {
   letterParagraphs?: string[];
   /** Profiles (year, hero title and optional image) inside Memory Lane. */
   memoryLaneProfiles?: MemoryLaneProfile[];
+  /** Photos/videos that play in the Memory Lane viewer. Files remain device-local until publishing. */
+  memoryLaneMedia?: MemoryLaneMediaItem[];
   /** Four editable scrapbook notes used by the Our Calendar template. */
   calendarNotes?: string[];
   /** The date marked by the movable heart on Our Calendar. */
@@ -142,6 +162,8 @@ function boundedString(value: unknown, max: number): string | undefined {
 
 const PHOTO_URL_RE =
   /^(data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+|https?:\/\/[^\s"'<>]+)$/;
+const MEMORY_LANE_MEDIA_URL_RE =
+  /^(data:(?:image|video)\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+|https:\/\/[^\s"'<>]+)$/;
 
 /** Validate untrusted normal-template values (same rules everywhere). */
 export function validateTemplateValues(raw: unknown): TemplatePublicationValues | null {
@@ -206,6 +228,24 @@ export function validateTemplateValues(raw: unknown): TemplatePublicationValues 
     }
   }
 
+  let memoryLaneMedia: MemoryLaneMediaItem[] | undefined;
+  if (v.memoryLaneMedia !== undefined) {
+    if (!Array.isArray(v.memoryLaneMedia) || v.memoryLaneMedia.length > 12) return null;
+    memoryLaneMedia = [];
+    for (const item of v.memoryLaneMedia) {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+      const media = item as Record<string, unknown>;
+      const id = boundedString(media.id, 80);
+      const type = media.type;
+      const name = boundedString(media.name, 120);
+      const url = boundedString(media.url, 2048);
+      if (!id || !/^[A-Za-z0-9_-]+$/.test(id)) return null;
+      if (type !== "image" && type !== "video") return null;
+      if (name === undefined || !url || !MEMORY_LANE_MEDIA_URL_RE.test(url)) return null;
+      memoryLaneMedia.push({ id, type, name, url });
+    }
+  }
+
   let calendarNotes: string[] | undefined;
   if (v.calendarNotes !== undefined) {
     if (!Array.isArray(v.calendarNotes) || v.calendarNotes.length > 4) return null;
@@ -242,6 +282,7 @@ export function validateTemplateValues(raw: unknown): TemplatePublicationValues 
     captions,
     letterParagraphs,
     memoryLaneProfiles,
+    memoryLaneMedia,
     calendarNotes,
     calendarHeart,
   };
