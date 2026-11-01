@@ -10,8 +10,6 @@ import {
   publishWebsite,
   slugPart,
   type PublishedRecord,
-  type MemoryLaneCanvasLayout,
-  type MemoryLaneMediaItem,
   type MemoryLaneProfile,
   type TemplatePublicationValues,
 } from "@/lib/publications";
@@ -53,32 +51,12 @@ type EditableWebsiteField =
 
 const MAX_ALBUM_PHOTOS = 6;
 const MAX_PHOTO_DATA_LENGTH = 560_000;
-const MAX_MEMORY_LANE_MEDIA_ITEMS = 12;
-const MAX_MEMORY_LANE_MEDIA_FILE_BYTES = 15 * 1024 * 1024;
-const MAX_MEMORY_LANE_MEDIA_TOTAL_BYTES = 60 * 1024 * 1024;
-
-function normalizeMemoryLaneCanvasLayout(value: unknown): MemoryLaneCanvasLayout | undefined {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
-  const raw = value as Record<string, unknown>;
-  const { x, y, width, height, rotation, z, fit } = raw;
-  if (typeof x !== "number" || !Number.isFinite(x) || x < 0 || x > 100 ||
-      typeof y !== "number" || !Number.isFinite(y) || y < 0 || y > 100 ||
-      typeof width !== "number" || !Number.isFinite(width) || width < 10 || width > 100 ||
-      typeof height !== "number" || !Number.isFinite(height) || height < 10 || height > 100 ||
-      x + width > 100.01 || y + height > 100.01 ||
-      typeof rotation !== "number" || !Number.isFinite(rotation) || rotation < -30 || rotation > 30 ||
-      typeof z !== "number" || !Number.isFinite(z) || z < 0 || z > 100 ||
-      (fit !== "cover" && fit !== "contain")) return undefined;
-  return { x, y, width, height, rotation, z, fit };
-}
-
 const REOPEN_PUBLISH_KEY = "paper-stish-reopen-website-publish";
 
 const TEXT_DEFAULTS: Record<WebsiteEditorTemplateSlug, TemplatePublicationValues> = {
   "memory-lane": {
     heading: "Memory Lane",
     memoryLaneProfiles: MEMORY_LANE_DEFAULT_PROFILES,
-    memoryLaneMedia: [],
     memoryLaneTagline: "Little moments, big memories",
     memoryLaneDescription: "Dear world, I am grateful to be alive in you,\nand I am thankful for another year of better times\nand even better memories with the ones I love.",
     memoryLaneStarring: "27-05-2021",
@@ -263,7 +241,6 @@ export function WebsiteEditor({
   const migratedLegacyDraft = useRef(false);
   const mountedRef = useRef(false);
   const [photoLoading, setPhotoLoading] = useState(false);
-  const [mediaLoading, setMediaLoading] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState("");
   const [published, setPublished] = useState<PublishedRecord | null>(null);
@@ -506,26 +483,6 @@ export function WebsiteEditor({
           memoryLaneDescription: text("memoryLaneDescription", defaults.memoryLaneDescription ?? "", 800),
           memoryLaneStarring: text("memoryLaneStarring", defaults.memoryLaneStarring ?? "", 60),
           memoryLaneGenres: text("memoryLaneGenres", defaults.memoryLaneGenres ?? "", 100),
-          memoryLaneMedia: Array.isArray(raw.memoryLaneMedia)
-            ? raw.memoryLaneMedia.slice(0, MAX_MEMORY_LANE_MEDIA_ITEMS).flatMap((item): MemoryLaneMediaItem[] => {
-                if (!item || typeof item !== "object" || Array.isArray(item)) return [];
-                const media = item as Record<string, unknown>;
-                const id = typeof media.id === "string" ? media.id.slice(0, 80) : "";
-                const type = media.type === "image" || media.type === "video" ? media.type : null;
-                const name = typeof media.name === "string" ? media.name.slice(0, 120) : "";
-                const layout = normalizeMemoryLaneCanvasLayout(media.layout);
-                if (!id || !/^[A-Za-z0-9_-]+$/.test(id) || !type) return [];
-                if (typeof media.url === "string" && (media.url.startsWith("https://") || /^data:(?:image|video)\//i.test(media.url))) {
-                  return [{ id, type, name, ...(layout ? { layout } : {}), url: media.url }];
-                }
-                const file = media.file as Blob | undefined;
-                if (file && typeof file.arrayBuffer === "function" &&
-                    file.size <= MAX_MEMORY_LANE_MEDIA_FILE_BYTES && file.type.startsWith(type === "image" ? "image/" : "video/")) {
-                  return [{ id, type, name, ...(layout ? { layout } : {}), file }];
-                }
-                return [];
-              })
-            : [],
           photoUrl,
           images,
           captions,
@@ -658,64 +615,6 @@ export function WebsiteEditor({
     setHasUnpublishedChanges(true);
   };
 
-  const changeMemoryLaneMedia = (media: MemoryLaneMediaItem[]) => {
-    setValues((current) => ({ ...current, memoryLaneMedia: media }));
-    setHasUnpublishedChanges(true);
-  };
-
-  const addMemoryLaneMedia = async (selectedFiles: File[]) => {
-    if (selectedFiles.length === 0) return;
-    setMediaLoading(true);
-    setError("");
-    try {
-      const currentMedia = values.memoryLaneMedia ?? [];
-      if (currentMedia.length + selectedFiles.length > MAX_MEMORY_LANE_MEDIA_ITEMS) {
-        throw new Error(`Memory Lane supports up to ${MAX_MEMORY_LANE_MEDIA_ITEMS} photos and videos.`);
-      }
-      const existingBytes = currentMedia.reduce((total, item) => {
-        if ("file" in item && item.file) return total + item.file.size;
-        return total;
-      }, 0);
-      const additions: MemoryLaneMediaItem[] = [];
-      let totalBytes = existingBytes;
-      for (const file of selectedFiles) {
-        const isImage = file.type.startsWith("image/");
-        const isVideo = file.type.startsWith("video/");
-        if (!isImage && !isVideo) throw new Error("Choose photos or videos only.");
-        if (file.size > MAX_MEMORY_LANE_MEDIA_FILE_BYTES) {
-          throw new Error(`${file.name} is larger than 15 MB. Choose a smaller file.`);
-        }
-        let blob: Blob = file;
-        if (isImage) {
-          const optimizedDataUrl = await optimizePhoto(file);
-          blob = await (await fetch(optimizedDataUrl)).blob();
-        }
-        if (totalBytes + blob.size > MAX_MEMORY_LANE_MEDIA_TOTAL_BYTES) {
-          throw new Error("Memory Lane media is limited to 60 MB per website. Remove a file or choose smaller media.");
-        }
-        totalBytes += blob.size;
-        const id = typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID().replace(/-/g, "")
-          : `media${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
-        additions.push({
-          id,
-          type: isVideo ? "video" : "image",
-          name: file.name.slice(0, 120) || (isVideo ? "Video" : "Photo"),
-          file: blob,
-        });
-      }
-      setValues((current) => ({
-        ...current,
-        memoryLaneMedia: [...(current.memoryLaneMedia ?? []), ...additions],
-      }));
-      setHasUnpublishedChanges(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not add those photos or videos.");
-    } finally {
-      setMediaLoading(false);
-    }
-  };
-
   const changeCaption = (index: number, value: string) => {
     setValues((current) => {
       const captions = [
@@ -791,7 +690,7 @@ export function WebsiteEditor({
   };
 
   const publish = async () => {
-    if (status === "loading" || publishing || photoLoading || mediaLoading) return;
+    if (status === "loading" || publishing || photoLoading) return;
 
     const safeUsername = slugPart(username, "");
     const safeWebsiteName = slugPart(websiteName, "");
@@ -998,8 +897,6 @@ export function WebsiteEditor({
           values={values}
           editing
           onProfilesChange={changeMemoryLaneProfiles}
-          onMediaChange={changeMemoryLaneMedia}
-          onMediaFilesSelected={(files) => void addMemoryLaneMedia(files)}
           onTextChange={changeText}
           onExit={onClose}
         />
@@ -1133,7 +1030,6 @@ export function WebsiteEditor({
       </div>
 
       {photoLoading && <p className={styles.notice} role="status">Preparing photo…</p>}
-      {mediaLoading && <p className={styles.notice} role="status">Preparing photos and videos…</p>}
       {draftSaveError && <p className={styles.notice} role="alert">{draftSaveError}</p>}
       {error && !publishDialogOpen && <p className={styles.notice} role="alert">{error}</p>}
 
