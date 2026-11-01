@@ -195,8 +195,8 @@ export function templateValuesUnauthorizedReferences(
 /** Human-readable reference-policy error for the publish API. */
 export function unauthorizedMediaError(count: number): string {
   return (
-    `This website references ${count === 1 ? "a photo" : `${count} photos`} that do not belong to your account. ` +
-    "Re-add the photos from your device and try again."
+    `This website references ${count === 1 ? "a media file" : `${count} media files`} that do not belong to your account. ` +
+    "Re-add the photos or videos from your device and try again."
   );
 }
 
