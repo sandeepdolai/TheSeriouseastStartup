@@ -43,21 +43,10 @@ export function deploymentCloudName(): string {
 }
 
 const DATA_IMAGE_RE = /^data:image\//i;
-const DATA_VIDEO_RE = /^data:video\//i;
 
 /** True for embedded base64 image payloads (the storage we must reject). */
 export function isEmbeddedImage(value: unknown): value is string {
   return typeof value === "string" && DATA_IMAGE_RE.test(value);
-}
-
-/** True for embedded base64 video payloads. */
-export function isEmbeddedVideo(value: unknown): value is string {
-  return typeof value === "string" && DATA_VIDEO_RE.test(value);
-}
-
-/** Any binary media embedded directly in publication values. */
-export function isEmbeddedMedia(value: unknown): value is string {
-  return isEmbeddedImage(value) || isEmbeddedVideo(value);
 }
 
 export interface SmartEditDocumentLike {
@@ -69,7 +58,6 @@ export interface TemplateValuesLike {
   photoUrl?: string | null;
   images?: string[];
   memoryLaneProfiles?: Array<{ photoUrl?: string | null }>;
-  memoryLaneMedia?: Array<{ type?: string; url?: string }>;
 }
 
 /** Count embedded base64 IMAGES in a Smart Edit document.
@@ -95,16 +83,13 @@ export function templateValuesEmbeddedImageCount(values: TemplateValuesLike): nu
   for (const profile of values.memoryLaneProfiles ?? []) {
     if (isEmbeddedImage(profile.photoUrl)) count += 1;
   }
-  for (const media of values.memoryLaneMedia ?? []) {
-    if (isEmbeddedMedia(media.url)) count += 1;
-  }
   return count;
 }
 
 /** Human-readable storage-policy error for the publish API. */
 export function embeddedMediaError(count: number): string {
   return (
-    `This website has ${count} media ${count === 1 ? "file" : "files"} still stored on your device. ` +
+    `This website has ${count === 1 ? "a photo that is" : `${count} photos that are`} still stored on your device. ` +
     "Cloud storage must be available to publish it — check your connection and try again."
   );
 }
@@ -131,7 +116,7 @@ export const LEGACY_MEDIA_PREFIXES = [
 export function cloudinaryPublicIdFromUrl(url: string, cloudName: string): string | null {
   if (!cloudName) return null;
   const re = new RegExp(
-    `^https://res\\.cloudinary\\.com/${cloudName.replace(/[^a-zA-Z0-9_-]/g, "")}/(?:image|video)/upload/v\\d+/(.+)\\.[a-zA-Z0-9]+$`,
+    `^https://res\\.cloudinary\\.com/${cloudName.replace(/[^a-zA-Z0-9_-]/g, "")}/image/upload/v\\d+/(.+)\\.[a-zA-Z0-9]+$`,
   );
   const match = re.exec(url);
   return match ? match[1] : null;
@@ -186,17 +171,13 @@ export function templateValuesUnauthorizedReferences(
   for (const profile of values.memoryLaneProfiles ?? []) {
     if (typeof profile.photoUrl === "string" && !isEmbeddedImage(profile.photoUrl)) urls.push(profile.photoUrl);
   }
-  for (const media of values.memoryLaneMedia ?? []) {
-    if (typeof media.url === "string" && !isEmbeddedMedia(media.url)) urls.push(media.url);
-  }
   return unauthorizedReferences(urls, cloudName, userId);
 }
 
 /** Human-readable reference-policy error for the publish API. */
 export function unauthorizedMediaError(count: number): string {
   return (
-    `This website references ${count === 1 ? "a media file" : `${count} media files`} that do not belong to your account. ` +
-    "Re-add the photos or videos from your device and try again."
+    `This website references ${count === 1 ? "a photo" : `${count} photos`} that do not belong to your account. ` +
+    "Re-add the photos from your device and try again."
   );
 }
-
