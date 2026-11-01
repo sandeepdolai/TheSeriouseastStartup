@@ -258,7 +258,6 @@ export function WebsiteEditor({
   const [controlsDimmed, setControlsDimmed] = useState(false);
   const editorScreenRef = useRef<HTMLElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
-  const memoryLaneMediaInput = useRef<HTMLInputElement>(null);
   const publishedLinkInput = useRef<HTMLInputElement>(null);
   const targetPhotoIndex = useRef(0);
   const isMemoryLane = templateSlug === "memory-lane";
@@ -646,12 +645,7 @@ export function WebsiteEditor({
     setHasUnpublishedChanges(true);
   };
 
-  const openMemoryLaneMediaPicker = () => {
-    if (isMemoryLane) memoryLaneMediaInput.current?.click();
-  };
-
-  const addMemoryLaneMedia = async (fileList: FileList | null) => {
-    const selectedFiles = Array.from(fileList ?? []);
+  const addMemoryLaneMedia = async (selectedFiles: File[]) => {
     if (selectedFiles.length === 0) return;
     setMediaLoading(true);
     setError("");
@@ -701,7 +695,6 @@ export function WebsiteEditor({
       setError(err instanceof Error ? err.message : "Could not add those photos or videos.");
     } finally {
       setMediaLoading(false);
-      if (memoryLaneMediaInput.current) memoryLaneMediaInput.current.value = "";
     }
   };
 
@@ -974,15 +967,6 @@ export function WebsiteEditor({
       onClickCapture={blockDimmedControlActivation}
     >
       <input
-        ref={memoryLaneMediaInput}
-        className={styles.hiddenInput}
-        type="file"
-        accept="image/*,video/*"
-        multiple
-        aria-label="Choose Memory Lane photos and videos"
-        onChange={(event) => void addMemoryLaneMedia(event.currentTarget.files)}
-      />
-      <input
         ref={fileInput}
         className={styles.hiddenInput}
         type="file"
@@ -997,7 +981,7 @@ export function WebsiteEditor({
           editing
           onProfilesChange={changeMemoryLaneProfiles}
           onMediaChange={changeMemoryLaneMedia}
-          onRequestMediaPicker={openMemoryLaneMediaPicker}
+          onMediaFilesSelected={(files) => void addMemoryLaneMedia(files)}
           onTextChange={changeText}
           onExit={onClose}
         />
