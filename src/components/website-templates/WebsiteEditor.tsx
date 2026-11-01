@@ -673,13 +673,13 @@ export function WebsiteEditor({
         if (file.size > MAX_MEMORY_LANE_MEDIA_FILE_BYTES) {
           throw new Error(`${file.name} is larger than 15 MB. Choose a smaller file.`);
         }
-        if (totalBytes + file.size > MAX_MEMORY_LANE_MEDIA_TOTAL_BYTES) {
-          throw new Error("Memory Lane media is limited to 60 MB per website. Remove a file or choose smaller media.");
-        }
         let blob: Blob = file;
         if (isImage) {
           const optimizedDataUrl = await optimizePhoto(file);
           blob = await (await fetch(optimizedDataUrl)).blob();
+        }
+        if (totalBytes + blob.size > MAX_MEMORY_LANE_MEDIA_TOTAL_BYTES) {
+          throw new Error("Memory Lane media is limited to 60 MB per website. Remove a file or choose smaller media.");
         }
         totalBytes += blob.size;
         const id = typeof crypto !== "undefined" && "randomUUID" in crypto
