@@ -297,6 +297,7 @@ body.paper-stish-editing .memory-editable[contenteditable="true"]:focus{outline-
     </div>
     <p class="media-editor-copy">Choose the photos and videos people will see when they press Play on your published website.</p>
     <button class="media-editor-add" id="addMediaButton" type="button">+ Add photos &amp; videos</button>
+    <input id="memoryMediaInput" type="file" accept="image/*,video/*" multiple hidden>
     <div class="media-editor-list" id="mediaEditorList"></div>
     <div class="media-editor-footer">
       <span id="mediaEditorCount">0 of 12 memories added</span>
@@ -597,6 +598,7 @@ const mediaEditor=document.getElementById('mediaEditor');
 const mediaEditorList=document.getElementById('mediaEditorList');
 const mediaEditorCount=document.getElementById('mediaEditorCount');
 const previewMemoryButton=document.getElementById('previewMemoryButton');
+const memoryMediaInput=document.getElementById('memoryMediaInput');
 const PHOTO_DURATION_MS=7000;
 let memoryLaneMedia=[];
 let currentEpisode=0;
@@ -829,7 +831,14 @@ document.querySelector('.player-close').addEventListener('click',closePlayer);
 document.getElementById('mediaEditorClose').addEventListener('click',closeMediaEditor);
 document.getElementById('doneMediaButton')?.addEventListener('click',closeMediaEditor);
 document.getElementById('addMediaButton').addEventListener('click',()=>{
-  if(paperStishEditing)window.parent.postMessage({type:'paper-stish:request-media-picker'},'*');
+  if(paperStishEditing)memoryMediaInput.click();
+});
+memoryMediaInput.addEventListener('change',()=>{
+  const files=Array.from(memoryMediaInput.files||[]);
+  if(paperStishEditing&&files.length){
+    window.parent.postMessage({type:'paper-stish:media-files-selected',files},'*');
+  }
+  memoryMediaInput.value='';
 });
 previewMemoryButton.addEventListener('click',()=>{
   if(memoryLaneMedia.length&&paperStishEditing)openPlayer(true);
