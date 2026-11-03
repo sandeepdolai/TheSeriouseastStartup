@@ -558,6 +558,7 @@ window.closePaperStishVideoEditor=()=>{
   if(!videoEditorHost)return;
   videoEditorHost.hidden=true;
   document.body.style.overflow='';
+  window.parent.postMessage({type:'paper-stish:video-editor-state',open:false},'*');
 };
 const openPlayer=()=>{
   if(!videoEditorHost){console.error('[Memory Lane] Video editor host is missing.');return;}
@@ -567,6 +568,7 @@ const openPlayer=()=>{
   playerScreen.hidden=true;
   videoEditorHost.hidden=false;
   document.body.style.overflow='hidden';
+  window.parent.postMessage({type:'paper-stish:video-editor-state',open:true},'*');
   if(videoEditorInitialized)return;
   try{
   const editorRoot=videoEditorHost.shadowRoot||videoEditorHost.attachShadow({mode:'open'});
@@ -587,6 +589,7 @@ const openPlayer=()=>{
     console.error('[Memory Lane] Could not initialize the integrated video editor.',error);
     videoEditorHost.hidden=true;
     document.body.style.overflow='';
+    window.parent.postMessage({type:'paper-stish:video-editor-state',open:false},'*');
     const message=document.createElement('div');
     message.setAttribute('role','alert');
     message.textContent='The video editor could not be opened. Please reload this page and try again.';
