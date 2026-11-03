@@ -62,18 +62,15 @@ export function MemoryLaneTemplate({
   onProfilesChange,
   onTextChange,
   onVideoEditorStateChange,
-  onExit,
 }: {
   values?: TemplatePublicationValues;
   editing?: boolean;
   onProfilesChange?: (profiles: MemoryLaneProfile[]) => void;
   onTextChange?: (field: MemoryLaneTextField, value: string) => void;
   onVideoEditorStateChange?: (open: boolean) => void;
-  onExit?: () => void;
 }) {
   const [html, setHtml] = useState(EMPTY_DOCUMENT);
   const [sourceLoaded, setSourceLoaded] = useState(false);
-  const [videoEditorOpen, setVideoEditorOpen] = useState(false);
   const [sourceError, setSourceError] = useState("");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const iframeReady = useRef(false);
@@ -119,7 +116,6 @@ export function MemoryLaneTemplate({
       if (!frame || event.source !== frame.contentWindow || !event.data || typeof event.data !== "object") return;
       const data = event.data as { type?: unknown; profiles?: unknown; text?: unknown; field?: unknown; value?: unknown; open?: unknown };
       if (data.type === "paper-stish:video-editor-state" && typeof data.open === "boolean") {
-        setVideoEditorOpen(data.open);
         onVideoEditorStateChange?.(data.open);
         return;
       }
@@ -213,30 +209,6 @@ export function MemoryLaneTemplate({
           referrerPolicy="no-referrer"
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
         />
-      )}
-      {editing && onExit && !videoEditorOpen && (
-        <button
-          type="button"
-          onClick={onExit}
-          aria-label="Back to website templates"
-          style={{
-            position: "absolute",
-            zIndex: 2,
-            top: "max(14px, env(safe-area-inset-top))",
-            left: "max(14px, env(safe-area-inset-left))",
-            minHeight: 40,
-            padding: "0 15px",
-            border: "1px solid rgba(255,255,255,.22)",
-            borderRadius: 999,
-            color: "#fff",
-            background: "rgba(0,0,0,.62)",
-            font: "600 12px/1 system-ui",
-            cursor: "pointer",
-            backdropFilter: "blur(10px)",
-          }}
-        >
-          ← Templates
-        </button>
       )}
     </main>
   );
