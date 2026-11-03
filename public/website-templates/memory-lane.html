@@ -275,6 +275,14 @@ body.paper-stish-editing .memory-editable[contenteditable="true"]:focus{outline-
     <div class="btns"><button type="button" class="btn go">Add</button><button type="button" class="btn cancel">Cancel</button></div>
   </div>
 </div>
+<div id="paperStishVideoEditor" hidden>
+  <iframe
+    id="paperStishVideoEditorFrame"
+    title="Memory Lane Video Editor"
+    src="/website-templates/video-editor.html"
+    allow="fullscreen"
+  ></iframe>
+</div>
 <script>
 /* Build and play the opening N animation before revealing the profile screen. */
 const introContainer=document.getElementById('introAnimation');
