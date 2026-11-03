@@ -900,7 +900,6 @@ export function WebsiteEditor({
           onProfilesChange={changeMemoryLaneProfiles}
           onTextChange={changeText}
           onVideoEditorStateChange={setVideoEditorOpen}
-          onExit={onClose}
         />
       ) : templateSlug === "red-letter" ? (
         <RedLetterTemplate values={values} editing onTextChange={changeText} onExit={onClose} />
