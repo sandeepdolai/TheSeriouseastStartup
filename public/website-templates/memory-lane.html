@@ -279,7 +279,7 @@ body.paper-stish-editing .memory-editable[contenteditable="true"]:focus{outline-
   <iframe
     id="paperStishVideoEditorFrame"
     title="Memory Lane Video Editor"
-    src="/website-templates/video-editor.html"
+    sandbox="allow-scripts"
     allow="fullscreen"
   ></iframe>
 </div>
@@ -563,12 +563,42 @@ const closePlayer=()=>{
 };
 const videoEditorLayer=document.getElementById('paperStishVideoEditor');
 const videoEditorFrame=document.getElementById('paperStishVideoEditorFrame');
-const openPlayer=()=>{
+let videoEditorLoadPromise=null;
+const loadVideoEditor=()=>{
+  if(videoEditorFrame.dataset.ready==='true')return Promise.resolve();
+  if(videoEditorLoadPromise)return videoEditorLoadPromise;
+  const editorUrl=new URL('/website-templates/video-editor.html',document.baseURI).href;
+  videoEditorLoadPromise=fetch(editorUrl,{mode:'cors',credentials:'omit'})
+    .then(response=>{
+      if(!response.ok)throw new Error('Video Editor request failed: '+response.status);
+      return response.text();
+    })
+    .then(source=>new Promise((resolve,reject)=>{
+      videoEditorFrame.addEventListener('load',()=>{
+        videoEditorFrame.dataset.ready='true';
+        resolve();
+      },{once:true});
+      videoEditorFrame.addEventListener('error',reject,{once:true});
+      videoEditorFrame.srcdoc=source;
+    }))
+    .catch(error=>{
+      videoEditorLoadPromise=null;
+      throw error;
+    });
+  return videoEditorLoadPromise;
+};
+const openPlayer=async()=>{
   episodesPanel.hidden=true;
   audioPanel.hidden=true;
   playerScreen.classList.remove('active');
   playerScreen.hidden=true;
-  videoEditorLayer.hidden=false;
+  try{
+    await loadVideoEditor();
+    videoEditorLayer.hidden=false;
+  }catch(error){
+    console.error('Paper Stish Video Editor failed to load:',error);
+    alert('The Video Editor could not be loaded. Please try again.');
+  }
 };
 document.querySelector('.pl').addEventListener('click',openPlayer);
 window.addEventListener('message',event=>{
@@ -781,13 +811,6 @@ window.addEventListener('message',event=>{
 window.parent.postMessage({type:'paper-stish:template-ready'},'*');
 </script>
 
-<div id="paperStishVideoEditor" hidden>
-  <iframe
-    id="paperStishVideoEditorFrame"
-    title="Memory Lane Video Editor"
-    src="/website-templates/video-editor.html"
-    allow="fullscreen"
-  ></iframe>
-</div>
+
 </body>
 </html>
