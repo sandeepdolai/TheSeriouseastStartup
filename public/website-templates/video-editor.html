@@ -473,7 +473,7 @@ function asy(){for(const id in AU)if(!S.aud.some(c=>c.id==id)){AU[id].pause();de
 $('#eye').onclick=()=>{const h=$('#cv').classList.toggle('hid'),b=$('#eye');$('.tl').classList.toggle('vh',h);b.classList.toggle('off',h);b.setAttribute('aria-pressed',h);b.innerHTML=svg(h?'eyeoff':'eye');toast(h?'Video hidden':'Video visible')};
 $('#fs').onclick=()=>{try{const s=$('#stage');(s.requestFullscreen||s.webkitRequestFullscreen).call(s)}catch(e){}};
 
-$('.back').onclick=()=>window.parent.postMessage({source:'paper-stish-memory-lane-video-editor',type:'close'},'*');
+$('.back').onclick=()=>{if(history.length>1)history.back();else location.href='/website-templates'};
 render();setPlay();draw();select(0);
 </script>
 </body>
