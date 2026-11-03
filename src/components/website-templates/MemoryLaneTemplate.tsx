@@ -201,6 +201,7 @@ export function MemoryLaneTemplate({
           title="Memory Lane website template"
           srcDoc={html}
           sandbox="allow-scripts"
+          allow="fullscreen"
           referrerPolicy="no-referrer"
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
         />
