@@ -573,14 +573,10 @@ const loadVideoEditor=()=>{
       if(!response.ok)throw new Error('Video Editor request failed: '+response.status);
       return response.text();
     })
-    .then(source=>new Promise((resolve,reject)=>{
-      videoEditorFrame.addEventListener('load',()=>{
-        videoEditorFrame.dataset.ready='true';
-        resolve();
-      },{once:true});
-      videoEditorFrame.addEventListener('error',reject,{once:true});
+    .then(source=>{
       videoEditorFrame.srcdoc=source;
-    }))
+      videoEditorFrame.dataset.ready='true';
+    })
     .catch(error=>{
       videoEditorLoadPromise=null;
       throw error;
