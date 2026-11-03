@@ -250,6 +250,7 @@ export function WebsiteEditor({
   const [qrExpanded, setQrExpanded] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
   const [controlsDimmed, setControlsDimmed] = useState(false);
+  const [videoEditorOpen, setVideoEditorOpen] = useState(false);
   const editorScreenRef = useRef<HTMLElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const publishedLinkInput = useRef<HTMLInputElement>(null);
@@ -898,6 +899,7 @@ export function WebsiteEditor({
           editing
           onProfilesChange={changeMemoryLaneProfiles}
           onTextChange={changeText}
+          onVideoEditorStateChange={setVideoEditorOpen}
           onExit={onClose}
         />
       ) : templateSlug === "red-letter" ? (
@@ -1001,6 +1003,7 @@ export function WebsiteEditor({
         />
       )}
 
+      {!videoEditorOpen && (
       <div className={styles.editorActions} role="group" aria-label="Website editor controls">
           <button
             type="button"
@@ -1028,6 +1031,7 @@ export function WebsiteEditor({
           {published && !hasUnpublishedChanges ? "Share website" : "Publish website"}
         </button>
       </div>
+      )}
 
       {photoLoading && <p className={styles.notice} role="status">Preparing photo…</p>}
       {draftSaveError && <p className={styles.notice} role="alert">{draftSaveError}</p>}
