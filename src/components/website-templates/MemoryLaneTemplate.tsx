@@ -61,16 +61,19 @@ export function MemoryLaneTemplate({
   editing = false,
   onProfilesChange,
   onTextChange,
+  onVideoEditorStateChange,
   onExit,
 }: {
   values?: TemplatePublicationValues;
   editing?: boolean;
   onProfilesChange?: (profiles: MemoryLaneProfile[]) => void;
   onTextChange?: (field: MemoryLaneTextField, value: string) => void;
+  onVideoEditorStateChange?: (open: boolean) => void;
   onExit?: () => void;
 }) {
   const [html, setHtml] = useState(EMPTY_DOCUMENT);
   const [sourceLoaded, setSourceLoaded] = useState(false);
+  const [videoEditorOpen, setVideoEditorOpen] = useState(false);
   const [sourceError, setSourceError] = useState("");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const iframeReady = useRef(false);
@@ -114,7 +117,12 @@ export function MemoryLaneTemplate({
     const frame = iframeRef.current;
     const onMessage = (event: MessageEvent<unknown>) => {
       if (!frame || event.source !== frame.contentWindow || !event.data || typeof event.data !== "object") return;
-      const data = event.data as { type?: unknown; profiles?: unknown; text?: unknown; field?: unknown; value?: unknown };
+      const data = event.data as { type?: unknown; profiles?: unknown; text?: unknown; field?: unknown; value?: unknown; open?: unknown };
+      if (data.type === "paper-stish:video-editor-state" && typeof data.open === "boolean") {
+        setVideoEditorOpen(data.open);
+        onVideoEditorStateChange?.(data.open);
+        return;
+      }
       if (data.type === "paper-stish:template-ready") {
         iframeReady.current = true;
         const profiles = normalizeProfiles(latestProfiles.current);
@@ -160,7 +168,7 @@ export function MemoryLaneTemplate({
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [onProfilesChange, onTextChange]);
+  }, [onProfilesChange, onTextChange, onVideoEditorStateChange]);
 
   useEffect(() => {
     if (!iframeReady.current) return;
@@ -206,7 +214,7 @@ export function MemoryLaneTemplate({
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
         />
       )}
-      {editing && onExit && (
+      {editing && onExit && !videoEditorOpen && (
         <button
           type="button"
           onClick={onExit}
