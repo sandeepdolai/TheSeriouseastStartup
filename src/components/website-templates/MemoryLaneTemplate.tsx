@@ -71,6 +71,7 @@ export function MemoryLaneTemplate({
 }) {
   const [html, setHtml] = useState(EMPTY_DOCUMENT);
   const [sourceLoaded, setSourceLoaded] = useState(false);
+  const [frameReady, setFrameReady] = useState(false);
   const [sourceError, setSourceError] = useState("");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const iframeReady = useRef(false);
@@ -91,7 +92,7 @@ export function MemoryLaneTemplate({
 
   useEffect(() => {
     let alive = true;
-    fetch(TEMPLATE_URL, { cache: "force-cache" })
+    fetch(TEMPLATE_URL, { cache: "no-cache" })
       .then(async (response) => {
         if (!response.ok) throw new Error("Could not load the original Memory Lane template.");
         return response.text();
@@ -117,6 +118,7 @@ export function MemoryLaneTemplate({
       const data = event.data as { type?: unknown; profiles?: unknown; text?: unknown; field?: unknown; value?: unknown };
       if (data.type === "paper-stish:template-ready") {
         iframeReady.current = true;
+        setFrameReady(true);
         const profiles = normalizeProfiles(latestProfiles.current);
         lastSentProfiles.current = JSON.stringify(profiles);
         const text = latestText.current;
@@ -196,15 +198,22 @@ export function MemoryLaneTemplate({
           {sourceError}
         </div>
       ) : (
-        <iframe
-          ref={iframeRef}
-          title="Memory Lane website template"
-          srcDoc={html}
-          sandbox="allow-scripts"
-          allow="fullscreen"
-          referrerPolicy="no-referrer"
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
-        />
+        <>
+          <iframe
+            ref={iframeRef}
+            title="Memory Lane website template"
+            srcDoc={html}
+            sandbox="allow-scripts"
+            allow="fullscreen"
+            referrerPolicy="no-referrer"
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+          />
+          {!frameReady && (
+            <div role="status" aria-live="polite" style={{ position: "absolute", inset: 0, zIndex: 1, display: "grid", placeItems: "center", background: "#000", color: "#fff", font: "14px/1.5 system-ui" }}>
+              Loading Memory Lane…
+            </div>
+          )}
+        </>
       )}
       {editing && onExit && (
         <button
