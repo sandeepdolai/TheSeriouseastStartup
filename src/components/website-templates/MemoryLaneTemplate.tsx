@@ -200,7 +200,7 @@ export function MemoryLaneTemplate({
           ref={iframeRef}
           title="Memory Lane website template"
           srcDoc={html}
-          sandbox="allow-scripts"
+          sandbox="allow-scripts allow-top-navigation-by-user-activation"
           allow="fullscreen"
           referrerPolicy="no-referrer"
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
