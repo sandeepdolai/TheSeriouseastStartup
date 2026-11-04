@@ -208,6 +208,14 @@ export function MemoryLaneTemplate({
 
   useEffect(() => {
     if (!iframeReady.current) return;
+    iframeRef.current?.contentWindow?.postMessage({
+      type: "paper-stish:update-video-project",
+      videoProject: values?.memoryLaneVideoProject ?? null,
+    }, "*");
+  }, [values?.memoryLaneVideoProject]);
+
+  useEffect(() => {
+    if (!iframeReady.current) return;
     iframeRef.current?.contentWindow?.postMessage({ type: "paper-stish:set-editing", editing }, "*");
   }, [editing]);
 
