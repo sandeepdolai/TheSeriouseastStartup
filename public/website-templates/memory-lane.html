@@ -955,9 +955,10 @@ window.addEventListener('message',event=>{
   if(event.source!==window.parent||!event.data||typeof event.data!=='object')return;
   const data=event.data;
   if(data.type==='paper-stish:init' && typeof data.playerUiSource==='string')viewerPlayerSource=data.playerUiSource;
-  if(data.type==='paper-stish:init'){
+  if(data.type==='paper-stish:init'||data.type==='paper-stish:update-video-project'){
     viewerPlayerProject=data.videoProject&&typeof data.videoProject==='object'?data.videoProject:null;
     window.__paperStishInitialVideoProject=viewerPlayerProject;
+    if(data.type==='paper-stish:update-video-project')return;
   }
   if(data.type==='paper-stish:init'||data.type==='paper-stish:update-profiles'){
     if(Array.isArray(data.profiles))replaceProfiles(data.profiles);
