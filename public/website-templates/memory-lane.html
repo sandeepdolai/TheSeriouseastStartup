@@ -556,11 +556,15 @@ const closePlayer=()=>{
 const videoEditorHost=document.getElementById('videoEditorHost');
 const viewerPlayerHost=document.getElementById('viewerPlayerHost');
 let viewerPlayerSource='';
+let viewerPlayerProject=null;
 let viewerPlayerInitialized=false;
 const closeViewerPlayer=()=>{
   if(!viewerPlayerHost)return;
   viewerPlayerHost.hidden=true;
   document.body.style.overflow='';
+  const root=viewerPlayerHost.shadowRoot;
+  root?.querySelector('#viewerSourceVideo')?.pause();
+  if(window.__paperStishViewerAudio)window.__paperStishViewerAudio.forEach(audio=>audio.pause());
   tp.hidden=false;
 };
 const openViewerPlayer=()=>{
@@ -584,20 +588,120 @@ const openViewerPlayer=()=>{
     if(!sourceStyle||!sourceScript)throw new Error('The supplied player HTML is missing its style or runtime.');
     const playerRoot=viewerPlayerHost.attachShadow({mode:'open'});
     const playerStyle=document.createElement('style');
-    playerStyle.textContent=sourceStyle.textContent.replace(':root{',':host{')+'\n:host{display:block;position:fixed;inset:0;width:100%;height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--fg);font-family:var(--font);-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}\n:host([hidden]){display:none!important}';
+    playerStyle.textContent=sourceStyle.textContent.replace(':root{',':host{')+'\n:host{display:block;position:fixed;inset:0;width:100%;height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--fg);font-family:var(--font);-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}\n:host([hidden]){display:none!important}\n#stage.idle .viewer-media-layer{opacity:1!important;pointer-events:none!important}';
     playerRoot.appendChild(playerStyle);
     Array.from(playerDocument.body.children).forEach(node=>{
       if(node.tagName!=='SCRIPT')playerRoot.appendChild(document.importNode(node,true));
     });
+
+    const playerStage=playerRoot.querySelector('#stage');
+    if(!playerStage)throw new Error('The supplied player is missing its playback stage.');
+    const mediaLayer=document.createElement('div');
+    mediaLayer.className='viewer-media-layer';
+    mediaLayer.style.cssText='position:absolute;inset:0;z-index:0;overflow:hidden;background:#fff;display:grid;place-items:center;pointer-events:none';
+    const image=document.createElement('img');
+    image.alt='';
+    image.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none;background:#fff';
+    const video=document.createElement('video');
+    video.id='viewerSourceVideo';
+    video.playsInline=true;
+    video.preload='auto';
+    video.muted=false;
+    video.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none;background:#fff';
+    const caption=document.createElement('div');
+    caption.style.cssText='position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:5vw;color:#f02bd8;font:300 clamp(40px,9vw,120px)/1 "Helvetica Neue",Helvetica,Arial,sans-serif;letter-spacing:-.02em;text-align:center;white-space:pre-wrap;overflow-wrap:anywhere';
+    const overlay=document.createElement('div');
+    overlay.style.cssText='position:absolute;left:50%;top:74%;transform:translate(-50%,-50%);display:none;max-width:90%;color:#111;font:600 clamp(18px,4.5vw,44px)/1.1 "Helvetica Neue",Helvetica,Arial,sans-serif;text-align:center;white-space:pre-wrap;overflow-wrap:anywhere';
+    mediaLayer.append(image,video,caption,overlay);
+    playerStage.insertBefore(mediaLayer,playerStage.firstChild);
+
+    const project=viewerPlayerProject&&typeof viewerPlayerProject==='object'?viewerPlayerProject:null;
+    const projectDuration=project?Math.max(
+      1,
+      (Array.isArray(project.main)?project.main.reduce((sum,clip)=>sum+(Number(clip.d)||0),0):0),
+      ...(Array.isArray(project.text)?project.text.map(clip=>(Number(clip.s)||0)+(Number(clip.d)||0)):[0]),
+      ...(Array.isArray(project.aud)?project.aud.map(clip=>(Number(clip.s)||0)+(Number(clip.d)||0)):[0])
+    ):3116;
+    const audioPlayers=new Map();
+    window.__paperStishViewerAudio=audioPlayers;
+    const renderProjectFrame=(time,playing,speed)=>{
+      if(!project)return;
+      const main=Array.isArray(project.main)?project.main:[];
+      let clip=null,clipStart=0,cursor=0;
+      for(const item of main){
+        const end=cursor+(Number(item.d)||0);
+        if(time<end){clip=item;clipStart=cursor;break}
+        cursor=end;
+      }
+      if(!clip&&main.length){clip=main[main.length-1];clipStart=Math.max(0,projectDuration-(Number(clip.d)||0))}
+      const asset=clip&&clip.m&&project.media?project.media[clip.m]:null;
+      const localTime=clip?Math.max(0,(Number(clip.so)||0)+time-clipStart):0;
+      const hasImage=!!asset&&asset.k==='i';
+      const hasVideo=!!asset&&asset.k==='v';
+
+      if(hasImage){
+        video.pause();
+        video.style.display='none';
+        caption.style.display='none';
+        image.style.display='block';
+        if(image.dataset.source!==asset.src){image.src=asset.src;image.dataset.source=asset.src}
+      }else if(hasVideo){
+        image.style.display='none';
+        caption.style.display='none';
+        video.style.display='block';
+        if(video.dataset.source!==asset.src){video.pause();video.src=asset.src;video.dataset.source=asset.src;video.load()}
+        video.playbackRate=Math.max(.25,Math.min(4,Number(speed)||1));
+        if(Math.abs(video.currentTime-localTime)>.4&&!video.seeking){
+          try{video.currentTime=localTime}catch{}
+        }
+        if(playing){
+          if(video.paused)video.play().catch(()=>{});
+        }else if(!video.paused)video.pause();
+      }else{
+        image.style.display='none';
+        video.pause();
+        video.style.display='none';
+        caption.style.display=clip&&clip.l?'flex':'none';
+        caption.textContent=clip?.l||'';
+      }
+
+      const activeText=(Array.isArray(project.text)?project.text:[]).find(item=>time>=Number(item.s)&&time<Number(item.s)+Number(item.d));
+      overlay.style.display=activeText?'block':'none';
+      if(activeText)overlay.textContent=activeText.x||'';
+
+      const activeAudio=new Set();
+      for(const item of (Array.isArray(project.aud)?project.aud:[])){
+        const sound=project.media?.[item.m];
+        if(!sound||sound.k!=='a')continue;
+        const id=String(item.id);
+        activeAudio.add(id);
+        let player=audioPlayers.get(id);
+        if(!player){player=new Audio(sound.src);player.preload='auto';audioPlayers.set(id,player)}
+        const offset=(Number(item.so)||0)+time-Number(item.s);
+        if(playing&&offset>=0&&offset<Number(item.d)){
+          player.playbackRate=Math.max(.25,Math.min(4,Number(speed)||1));
+          if(Math.abs(player.currentTime-offset)>.4&&!player.seeking){
+            try{player.currentTime=offset}catch{}
+          }
+          if(player.paused)player.play().catch(()=>{});
+        }else if(!player.paused)player.pause();
+      }
+      for(const [id,player] of audioPlayers){
+        if(!activeAudio.has(id)&&!player.paused)player.pause();
+      }
+    };
+
     let playerRuntime=sourceScript.textContent||'';
     playerRuntime=playerRuntime
       .replace("const $=id=>document.getElementById(id),speeds=","const $=id=>root.querySelector('#'+id),speeds=")
+      .replace("let D=3116,t=0,playing=true,speed=1,","let D=playerDuration,t=0,playing=true,speed=1,")
+      .replace("$('time').textContent=fmt(D-t);","$('time').textContent=fmt(D-t);renderProjectFrame(t,playing,speed);")
       .replace("addEventListener('pointerdown',","root.addEventListener('pointerdown',")
       .replace("['pointermove','keydown'].forEach(n=>addEventListener(n,wake))","['pointermove','keydown'].forEach(n=>root.addEventListener(n,wake))")
       .replace("if(playing){t=Math.min(D,t+Math.min(n-last,1000)/1000*speed);if(t>=D)setPlay(false);render()}","if(playing&&!host.hidden){t=Math.min(D,t+Math.min(n-last,1000)/1000*speed);if(t>=D)setPlay(false);render()}");
     if(!playerRuntime.includes("root.querySelector('#'+id)"))throw new Error('The supplied player runtime could not be scoped to the template.');
     const runtime=document.createElement('script');
-    runtime.textContent="(()=>{const host=document.getElementById('viewerPlayerHost');const root=host.shadowRoot;\n"+playerRuntime+"\n})();";
+    runtime.textContent="(()=>{const host=document.getElementById('viewerPlayerHost');const root=host.shadowRoot;const playerDuration="+JSON.stringify(projectDuration)+";\n"+playerRuntime+"\n})();";
     document.body.appendChild(runtime);
     runtime.remove();
     const closeButton=playerRoot.querySelector('#close');
@@ -850,6 +954,10 @@ window.addEventListener('message',event=>{
   if(event.source!==window.parent||!event.data||typeof event.data!=='object')return;
   const data=event.data;
   if(data.type==='paper-stish:init' && typeof data.playerUiSource==='string')viewerPlayerSource=data.playerUiSource;
+  if(data.type==='paper-stish:init'){
+    viewerPlayerProject=data.videoProject&&typeof data.videoProject==='object'?data.videoProject:null;
+    window.__paperStishInitialVideoProject=viewerPlayerProject;
+  }
   if(data.type==='paper-stish:init'||data.type==='paper-stish:update-profiles'){
     if(Array.isArray(data.profiles))replaceProfiles(data.profiles);
     if(data.type==='paper-stish:init'){
