@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Player UI – S4:E1</title>
+<style>
+:root{--bg:#000;--fg:#fff;--track:#5b5b5b;--red:#d13f37;--font:Roboto,"Helvetica Neue",Helvetica,Arial,sans-serif;color-scheme:dark;box-sizing:border-box;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+html{height:100%;background:var(--bg);scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font-family:var(--font);-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+#wrap{position:relative;width:100%;height:100%;overflow:hidden}
+#stage{position:absolute;left:50%;top:50%;width:1556px;height:716px;background:var(--bg)}
+#stage>*,#bar button{transition:opacity .25s}
+#stage>*{position:absolute}
+button{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation;color:var(--fg)}
+button:active{opacity:.55}
+button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+svg{display:block;overflow:visible}
+.ico{fill:none;stroke:var(--fg);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+text{font:600 25px var(--font);fill:var(--fg);text-anchor:middle}
+.spin{transform-origin:36px 38px}
+#cast{left:38px;top:48px;width:60px;height:60px}
+#close{left:1464px;top:48px;width:60px;height:60px}
+#title{left:0;right:0;top:62px;text-align:center;font:700 24px/32px var(--font)}
+#back{left:365px;top:298px;width:120px;height:120px}
+#play{left:708px;top:288px;width:140px;height:140px}
+#fwd{left:1073px;top:298px;width:120px;height:120px}
+#seek{left:48px;top:539px;width:1366px;height:60px;touch-action:none}
+#track{position:absolute;left:24px;top:25px;width:1318px;height:10px;border-radius:5px;background:var(--track)}
+#played{position:absolute;left:0;top:0;height:100%;width:0;border-radius:5px;background:var(--red)}
+#knob{position:absolute;top:-19px;left:0;width:48px;height:48px;margin-left:-24px;border-radius:50%;background:var(--red);box-shadow:0 0 16px rgba(209,63,55,.55)}
+#time{left:1405px;top:543px;width:110px;padding:10px 0;text-align:center;font:500 22px/32px var(--font);cursor:pointer}
+#bar{left:0;right:0;top:617px;height:48px;display:flex;justify-content:center;gap:56px}
+#bar button{gap:12px;height:48px;font:700 21px/48px var(--font);white-space:nowrap}
+#stage.locked>*:not(#bar),#stage.locked #bar button:not(#lock){opacity:0;pointer-events:none}
+@media (prefers-reduced-motion:reduce){#stage>*,#bar button{transition:none}}
+#stage.idle{cursor:none}
+#stage.idle>*,#stage.idle #bar button{opacity:0;pointer-events:none;transition-duration:.6s}
+#len{position:fixed;inset:0;z-index:5;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.72)}
+#len.open{display:flex}
+#card{box-sizing:border-box;width:min(88vw,340px);padding:20px;border-radius:12px;background:#1f1f1f}
+#card h2{margin:0 0 14px;font:700 18px/24px var(--font)}
+#card .row{display:flex;gap:10px;margin-bottom:16px}
+#card .act{justify-content:flex-end;gap:8px;margin:0}
+#card label{flex:1;font:500 12px/16px var(--font);color:#b3b3b3}
+#card input{display:block;box-sizing:border-box;width:100%;margin-top:4px;padding:10px 4px;border:0;border-radius:6px;background:#333;color:var(--fg);font:600 18px var(--font);text-align:center;-webkit-user-select:text;user-select:text}
+#card button{padding:10px 18px;border-radius:6px;background:#333;font:600 15px var(--font)}
+#card #set{background:var(--fg);color:#000}
+#stage.portrait{left:0;top:0;width:100%;height:100%}
+#stage.portrait #cast,#stage.portrait #close{top:8px;width:48px;height:48px}
+#stage.portrait #cast{left:8px}
+#stage.portrait #close{left:auto;right:8px}
+#stage.portrait #cast svg{width:28px;height:28px}
+#stage.portrait #close svg{width:22px;height:22px}
+#stage.portrait #title{left:64px;right:64px;top:21px;font:700 clamp(15px,4.2vw,19px)/22px var(--font)}
+#stage.portrait #back,#stage.portrait #play,#stage.portrait #fwd{top:calc(50% - 56px);width:112px;height:112px}
+#stage.portrait #back{left:calc(20% - 56px)}
+#stage.portrait #play{left:calc(50% - 56px)}
+#stage.portrait #fwd{left:calc(80% - 56px)}
+#stage.portrait #back svg,#stage.portrait #fwd svg{width:64px;height:64px}
+#stage.portrait #pz{width:34px;height:48px}
+#stage.portrait #pl{width:42px;height:48px}
+#stage.portrait #seek{left:8px;right:8px;top:auto;bottom:132px;width:auto;height:44px}
+#stage.portrait #track{left:14px;right:14px;top:18px;width:auto;height:8px}
+#stage.portrait #knob{top:-10px;width:28px;height:28px;margin-left:-14px}
+#stage.portrait #time{left:auto;right:20px;top:auto;bottom:104px;width:auto;text-align:right;font:500 15px/24px var(--font)}
+#stage.portrait #bar{top:auto;bottom:12px;left:6px;right:6px;height:auto;display:grid;grid-template-columns:repeat(5,1fr);gap:0}
+#stage.portrait #bar button{flex-direction:column;gap:6px;height:auto;padding:8px 2px;font:700 clamp(11px,3.1vw,14px)/1.2 var(--font);white-space:normal;text-align:center}
+#stage.portrait #bar svg{width:28px;height:28px}
+</style>
+</head>
+<body>
+<div id="wrap">
+<div id="stage">
+
+  
+
+  <button id="cast" aria-label="Cast"><svg class="ico" width="44" height="44" viewBox="0 0 24 24"><path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6M2 12a9 9 0 0 1 8 8M2 16a5 5 0 0 1 4 4M2 20h.01"/></svg></button>
+
+  <div id="title">S4:E1 “Joe Takes a Holiday”</div>
+
+  <button id="close" aria-label="Close"><svg class="ico" width="30" height="30" viewBox="0 0 24 24" style="stroke-width:2.2"><path d="M4 4l16 16M20 4L4 20"/></svg></button>
+
+  
+
+  <button id="back" aria-label="Back 10 seconds"><svg width="82" height="82" viewBox="0 2 72 72"><g class="spin"><g class="ico" style="stroke-width:3.4"><path d="M26 10H36A28 28 0 1 1 8 38M33 3L26 10l7 7"/></g></g><text x="36" y="47">10</text></svg></button>
+
+  <button id="play" aria-label="Pause or play">
+    <svg id="pz" width="50" height="70" viewBox="0 0 50 70" fill="#fff"><rect width="17" height="70"/><rect x="33" width="17" height="70"/></svg>
+    <svg id="pl" width="62" height="70" viewBox="0 0 62 70" style="display:none"><path d="M7 7l48 28L7 63z" fill="#fff" stroke="#fff" stroke-width="10" stroke-linejoin="round"/></svg>
+  </button>
+
+  <button id="fwd" aria-label="Forward 10 seconds"><svg width="82" height="82" viewBox="0 2 72 72"><g class="spin"><g class="ico" style="stroke-width:3.4" transform="matrix(-1 0 0 1 72 0)"><path d="M26 10H36A28 28 0 1 1 8 38M33 3L26 10l7 7"/></g></g><text x="36" y="47">10</text></svg></button>
+
+  <div id="seek"><div id="track"><div id="played"></div><div id="knob"></div></div></div>
+  <div id="time">51:56</div>
+
+  <div id="bar">
+    <button id="speed"><svg class="ico" width="36" height="36" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 12l4.5-4.5"/><circle cx="12" cy="12" r="1.3" fill="#fff"/></svg><span id="spd">Speed (1x)</span></button>
+    <button id="lock"><svg class="ico" width="36" height="36" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path id="shackle" d="M8 11V7.5a4 4 0 0 1 7.8-1.2M12 15v2.5"/></svg><span id="lk">Lock</span></button>
+    <button id="eps"><svg class="ico" width="36" height="36" viewBox="0 0 24 24"><path d="M8 7V4.5A1.5 1.5 0 0 1 9.5 3h11A1.5 1.5 0 0 1 22 4.5v11a1.5 1.5 0 0 1-1.5 1.5H17"/><rect x="2" y="7" width="15" height="14" rx="1.5"/></svg>Episodes</button>
+    <button id="subs"><svg class="ico" width="36" height="36" viewBox="0 0 24 24"><path d="M3.5 3h17A1.5 1.5 0 0 1 22 4.5v10a1.5 1.5 0 0 1-1.5 1.5H10l-5 4.5V16H3.5A1.5 1.5 0 0 1 2 14.5v-10A1.5 1.5 0 0 1 3.5 3zM6 8h4M13 8h5M6 12h6M15 12h3"/></svg>Audio &amp; Subtitles</button>
+    <button id="next"><svg class="ico" width="36" height="36" viewBox="0 0 24 24"><path d="M4 4.5l13 7.5-13 7.5zM21 4.5v15"/></svg>Next Ep.</button>
+  </div>
+
+</div>
+</div>
+<div id="len"><div id="card" role="dialog" aria-label="Movie length">
+  <h2>Movie length</h2>
+  <div class="row"><label>Hours<input id="ih" type="number" inputmode="numeric" min="0" max="99"></label><label>Minutes<input id="im" type="number" inputmode="numeric" min="0" max="59"></label><label>Seconds<input id="is" type="number" inputmode="numeric" min="0" max="59"></label></div>
+  <div class="row act"><button id="cancel">Cancel</button><button id="set">Set length</button></div>
+</div></div>
+<script>
+(()=>{
+const $=id=>document.getElementById(id),speeds=[1,1.25,1.5,2,.5,.75];
+let D=3116,t=0,playing=true,speed=1,locked=false,idleT,busy=false;
+const clamp=v=>Math.min(1,Math.max(0,v));
+const fmt=s=>{s=Math.max(0,Math.ceil(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),r=s%60;return(h?h+':'+String(m).padStart(2,'0'):m)+':'+String(r).padStart(2,'0')};
+
+function fit(){
+  const w=$('wrap').clientWidth,h=$('wrap').clientHeight;
+  const p=h>w;$('stage').classList.toggle('portrait',p);
+  const s=Math.min(w/1556,h/716);
+  $('stage').style.transform=p?'':'translate(-50%,-50%) scale('+s+')';
+}
+function render(){
+  const p=t/D*100;
+  $('played').style.width=p+'%';
+  $('knob').style.left=p+'%';
+  $('time').textContent=fmt(D-t);
+}
+function setPlay(v){playing=v;$('pz').style.display=v?'':'none';$('pl').style.display=v?'none':'';wake()}
+function spin(id,dir){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  $(id).querySelector('.spin').animate([{transform:'rotate(0deg)'},{transform:'rotate('+dir*360+'deg)'}],{duration:450,easing:'ease-out'});
+}
+function frac(e,el){
+  const r=el.getBoundingClientRect();
+  return clamp((e.clientX-r.left)/r.width);
+}
+function drag(el,fn){
+  let on=false;
+  el.addEventListener('pointerdown',e=>{on=busy=true;el.setPointerCapture(e.pointerId);fn(e)});
+  el.addEventListener('pointermove',e=>{if(on)fn(e)});
+  ['pointerup','pointercancel'].forEach(n=>el.addEventListener(n,()=>{on=busy=false;wake()}));
+}
+
+drag($('seek'),e=>{t=frac(e,$('track'))*D;render()});
+$('play').onclick=()=>setPlay(!playing);
+const lenBox=$('len');
+$('time').onclick=()=>{
+  $('ih').value=Math.floor(D/3600);$('im').value=Math.floor(D%3600/60);$('is').value=D%60;
+  lenBox.classList.add('open');
+};
+$('cancel').onclick=()=>lenBox.classList.remove('open');
+lenBox.onclick=e=>{if(e.target===lenBox)lenBox.classList.remove('open')};
+$('set').onclick=()=>{
+  const s=Math.round((+$('ih').value||0)*3600+(+$('im').value||0)*60+(+$('is').value||0));
+  if(s>0){D=Math.min(s,359999);t=0;render()}
+  lenBox.classList.remove('open');
+};
+$('back').onclick=()=>{t=Math.max(0,t-10);spin('back',-1);render()};
+$('fwd').onclick=()=>{t=Math.min(D,t+10);spin('fwd',1);render()};
+$('speed').onclick=()=>{speed=speeds[(speeds.indexOf(speed)+1)%speeds.length];$('spd').textContent='Speed ('+speed+'x)'};
+$('lock').onclick=()=>{
+  locked=!locked;
+  $('stage').classList.toggle('locked',locked);
+  $('lk').textContent=locked?'Unlock':'Lock';
+  $('shackle').setAttribute('d',locked?'M8 11V7.5a4 4 0 0 1 8 0V11M12 15v2.5':'M8 11V7.5a4 4 0 0 1 7.8-1.2M12 15v2.5');
+};
+
+function wake(){
+  const st=$('stage');
+  st.classList.remove('idle');
+  clearTimeout(idleT);
+  if(playing&&!busy)idleT=setTimeout(()=>st.classList.add('idle'),4000);
+}
+let wasIdle=false;
+addEventListener('pointerdown',()=>{wasIdle=$('stage').classList.contains('idle');wake()});
+['pointermove','keydown'].forEach(n=>addEventListener(n,wake));
+$('stage').addEventListener('click',e=>{if(!wasIdle&&!e.target.closest('button,#seek,#time'))$('stage').classList.add('idle')});
+wake();
+let last=performance.now();
+setInterval(()=>{
+  const n=performance.now();
+  if(playing){t=Math.min(D,t+Math.min(n-last,1000)/1000*speed);if(t>=D)setPlay(false);render()}
+  last=n;
+},250);
+addEventListener('resize',fit);
+fit();render();
+})();
+</script>
+</body>
+</html>
