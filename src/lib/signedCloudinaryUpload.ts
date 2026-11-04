@@ -75,6 +75,7 @@ export async function requestUploadGrant(
 export async function uploadWithGrant(
   blob: Blob,
   grant: UploadGrant,
+  resourceType: "image" | "video" = "image",
 ): Promise<SignedCloudinaryUpload> {
   const form = new FormData();
   form.append("file", blob);
@@ -91,7 +92,7 @@ export async function uploadWithGrant(
   let response: Response;
   try {
     response = await fetch(
-      `https://api.cloudinary.com/v1_1/${encodeURIComponent(grant.cloudName)}/image/upload`,
+      `https://api.cloudinary.com/v1_1/${encodeURIComponent(grant.cloudName)}/${resourceType}/upload`,
       { method: "POST", body: form },
     );
   } catch {
@@ -122,6 +123,7 @@ export async function authorizedUpload(
   blob: Blob,
   purpose: SignedUploadPurpose,
   projectId?: string,
+  resourceType: "image" | "video" = "image",
 ): Promise<SignedCloudinaryUpload> {
-  return uploadWithGrant(blob, await requestUploadGrant(purpose, projectId));
+  return uploadWithGrant(blob, await requestUploadGrant(purpose, projectId), resourceType);
 }
