@@ -20,7 +20,7 @@ import type { TemplatePublicationValues } from "@/lib/publications";
 import { authorizedUpload } from "@/lib/signedCloudinaryUpload";
 
 /** Matches the editor's input bound (assets.ts IMAGE_MAX_INPUT_BYTES). */
-const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 
 export function cloudinaryClientConfig(): { cloudName: string } | null {
   const cloudName = process.env.NEXT_PUBLIC_SMART_EDIT_CLOUDINARY_CLOUD_NAME?.trim();
@@ -36,14 +36,17 @@ function dataUrlToBlob(dataUrl: string): Blob {
   const base64 = dataUrl.slice(comma + 1);
   const bytes = Uint8Array.from(atob(base64), (ch) => ch.charCodeAt(0));
   if (bytes.byteLength > MAX_UPLOAD_BYTES) {
-    throw new Error("That photo is too large (15 MB max). Use a smaller photo.");
+    throw new Error("That media file is too large (100 MB max). Use a smaller file.");
   }
   return new Blob([bytes], { type: mime });
 }
 
 /** Upload one data-URL image through the server-authorized signed flow. */
-export async function uploadDataUrlToCloudinary(dataUrl: string): Promise<string> {
-  const uploaded = await authorizedUpload(dataUrlToBlob(dataUrl), "template-photos");
+export async function uploadDataUrlToCloudinary(
+  dataUrl: string,
+  resourceType: "image" | "video" = "image",
+): Promise<string> {
+  const uploaded = await authorizedUpload(dataUrlToBlob(dataUrl), "template-photos", undefined, resourceType);
   return uploaded.url;
 }
 
@@ -84,6 +87,17 @@ export async function durableTemplateValues(
       profiles.push({ ...profile, photoUrl });
     }
     next.memoryLaneProfiles = profiles;
+  }
+
+  if (next.memoryLaneVideoProject) {
+    const media: typeof next.memoryLaneVideoProject.media = {};
+    for (const [key, asset] of Object.entries(next.memoryLaneVideoProject.media)) {
+      const src = typeof asset.src === "string" && asset.src.startsWith("data:")
+        ? await uploadDataUrlToCloudinary(asset.src, asset.k === "i" ? "image" : "video")
+        : asset.src;
+      media[key] = { ...asset, src };
+    }
+    next.memoryLaneVideoProject = { ...next.memoryLaneVideoProject, media };
   }
 
   return next;
