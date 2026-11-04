@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { MemoryLaneProfile, TemplatePublicationValues } from "@/lib/publications";
+import type { MemoryLaneProfile, MemoryLaneVideoProject, TemplatePublicationValues } from "@/lib/publications";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const TEMPLATE_URL = `${BASE_PATH}/website-templates/memory-lane.html`;
@@ -63,6 +63,7 @@ export function MemoryLaneTemplate({
   onProfilesChange,
   onTextChange,
   onVideoEditorStateChange,
+  onVideoProjectChange,
   onExit,
 }: {
   values?: TemplatePublicationValues;
@@ -70,6 +71,7 @@ export function MemoryLaneTemplate({
   onProfilesChange?: (profiles: MemoryLaneProfile[]) => void;
   onTextChange?: (field: MemoryLaneTextField, value: string) => void;
   onVideoEditorStateChange?: (open: boolean) => void;
+  onVideoProjectChange?: (project: MemoryLaneVideoProject) => void;
   onExit?: () => void;
 }) {
   const [html, setHtml] = useState(EMPTY_DOCUMENT);
@@ -80,6 +82,7 @@ export function MemoryLaneTemplate({
   const iframeReady = useRef(false);
   const latestPlayerUISource = useRef("");
   const latestProfiles = useRef<MemoryLaneProfile[]>(normalizeProfiles(values?.memoryLaneProfiles));
+  const latestVideoProject = useRef<MemoryLaneVideoProject | undefined>(values?.memoryLaneVideoProject);
   const latestEditing = useRef(editing);
   const latestText = useRef(resolveMemoryLaneText(values));
   const lastSentProfiles = useRef("");
@@ -91,6 +94,7 @@ export function MemoryLaneTemplate({
   );
   const currentTextSnapshot = JSON.stringify(currentText);
   latestProfiles.current = normalizeProfiles(values?.memoryLaneProfiles);
+  latestVideoProject.current = values?.memoryLaneVideoProject;
   latestEditing.current = editing;
   latestText.current = currentText;
 
@@ -125,7 +129,11 @@ export function MemoryLaneTemplate({
     const frame = iframeRef.current;
     const onMessage = (event: MessageEvent<unknown>) => {
       if (!frame || event.source !== frame.contentWindow || !event.data || typeof event.data !== "object") return;
-      const data = event.data as { type?: unknown; profiles?: unknown; text?: unknown; field?: unknown; value?: unknown; open?: unknown };
+      const data = event.data as { type?: unknown; profiles?: unknown; text?: unknown; field?: unknown; value?: unknown; open?: unknown; videoProject?: unknown };
+      if (data.type === "paper-stish:video-project-change" && latestEditing.current && data.videoProject && typeof data.videoProject === "object") {
+        onVideoProjectChange?.(data.videoProject as MemoryLaneVideoProject);
+        return;
+      }
       if (data.type === "paper-stish:video-editor-state" && typeof data.open === "boolean") {
         setVideoEditorOpen(data.open);
         onVideoEditorStateChange?.(data.open);
@@ -143,6 +151,7 @@ export function MemoryLaneTemplate({
           profiles,
           text,
           playerUiSource: latestPlayerUISource.current,
+          videoProject: latestVideoProject.current ?? null,
         }, "*");
         return;
       }
@@ -177,7 +186,7 @@ export function MemoryLaneTemplate({
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [onProfilesChange, onTextChange, onVideoEditorStateChange]);
+  }, [onProfilesChange, onTextChange, onVideoEditorStateChange, onVideoProjectChange]);
 
   useEffect(() => {
     if (!iframeReady.current) return;
