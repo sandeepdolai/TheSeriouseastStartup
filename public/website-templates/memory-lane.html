@@ -701,6 +701,9 @@ const openViewerPlayer=()=>{
       .replace("setInterval(()=>{","window.__paperStishViewerPlayerTimer=setInterval(()=>{");
     if(!playerRuntime.includes("root.querySelector('#'+id)"))throw new Error('The supplied player runtime could not be scoped to the template.');
     window.__paperStishRenderProjectFrame=renderProjectFrame;
+    tp.hidden=true;
+    viewerPlayerHost.hidden=false;
+    document.body.style.overflow='hidden';
     const runtime=document.createElement('script');
     runtime.textContent="(()=>{const host=document.getElementById('viewerPlayerHost');const root=host.shadowRoot;const playerDuration="+JSON.stringify(projectDuration)+";\n"+playerRuntime+"\n})();";
     document.body.appendChild(runtime);
@@ -710,9 +713,6 @@ const openViewerPlayer=()=>{
     closeButton.addEventListener('click',closeViewerPlayer);
     playerRoot.onkeydown=event=>{if(event.key==='Escape')closeViewerPlayer()};
     viewerPlayerInitialized=true;
-    tp.hidden=true;
-    viewerPlayerHost.hidden=false;
-    document.body.style.overflow='hidden';
     playerRoot.dispatchEvent(new Event('pointermove'));
   }catch(error){
     viewerPlayerHost.hidden=true;
