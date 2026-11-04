@@ -90,7 +90,7 @@ export async function durableTemplateValues(
   }
 
   if (next.memoryLaneVideoProject) {
-    const media: typeof next.memoryLaneVideoProject.media = {};
+    const media: NonNullable<TemplatePublicationValues["memoryLaneVideoProject"]>["media"] = {};
     for (const [key, asset] of Object.entries(next.memoryLaneVideoProject.media)) {
       const src = typeof asset.src === "string" && asset.src.startsWith("data:")
         ? await uploadDataUrlToCloudinary(asset.src, asset.k === "i" ? "image" : "video")
