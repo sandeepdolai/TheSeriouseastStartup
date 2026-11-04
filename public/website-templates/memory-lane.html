@@ -695,11 +695,12 @@ const openViewerPlayer=()=>{
     playerRuntime=playerRuntime
       .replace("const $=id=>document.getElementById(id),speeds=","const $=id=>root.querySelector('#'+id),speeds=")
       .replace("let D=3116,t=0,playing=true,speed=1,","let D=playerDuration,t=0,playing=true,speed=1,")
-      .replace("$('time').textContent=fmt(D-t);","$('time').textContent=fmt(D-t);renderProjectFrame(t,playing,speed);")
+      .replace("$('time').textContent=fmt(D-t);","$('time').textContent=fmt(D-t);window.__paperStishRenderProjectFrame?.(t,playing,speed);")
       .replace("addEventListener('pointerdown',","root.addEventListener('pointerdown',")
       .replace("['pointermove','keydown'].forEach(n=>addEventListener(n,wake))","['pointermove','keydown'].forEach(n=>root.addEventListener(n,wake))")
       .replace("if(playing){t=Math.min(D,t+Math.min(n-last,1000)/1000*speed);if(t>=D)setPlay(false);render()}","if(playing&&!host.hidden){t=Math.min(D,t+Math.min(n-last,1000)/1000*speed);if(t>=D)setPlay(false);render()}");
     if(!playerRuntime.includes("root.querySelector('#'+id)"))throw new Error('The supplied player runtime could not be scoped to the template.');
+    window.__paperStishRenderProjectFrame=renderProjectFrame;
     const runtime=document.createElement('script');
     runtime.textContent="(()=>{const host=document.getElementById('viewerPlayerHost');const root=host.shadowRoot;const playerDuration="+JSON.stringify(projectDuration)+";\n"+playerRuntime+"\n})();";
     document.body.appendChild(runtime);
