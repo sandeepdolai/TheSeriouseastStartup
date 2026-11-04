@@ -59,6 +59,24 @@ export interface MemoryLaneProfile {
   photoUrl: string | null;
 }
 
+/** The actual editable Video Editor project shown by the published Setflix player. */
+export interface MemoryLaneVideoMedia {
+  /** i = image, v = video, a = audio */
+  k: "i" | "v" | "a";
+  src: string;
+  /** Original source duration for video/audio media when available. */
+  vd?: number;
+  /** Number of thumbnail frames retained for the editor filmstrip. */
+  n?: number;
+}
+export interface MemoryLaneVideoProject {
+  version: 1;
+  main: Array<{ id: number; l: string; d: number; m?: string; so?: number }>;
+  text: Array<{ id: number; s: number; d: number; x: string }>;
+  aud: Array<{ id: number; s: number; d: number; n: string; m: string; so?: number }>;
+  media: Record<string, MemoryLaneVideoMedia>;
+}
+
 /** Editable values of a normal template (Birthday, Love of My Life). */
 export interface TemplatePublicationValues {
   heading?: string;
@@ -88,6 +106,8 @@ export interface TemplatePublicationValues {
   letterParagraphs?: string[];
   /** Profiles (year, hero title and optional image) inside Memory Lane. */
   memoryLaneProfiles?: MemoryLaneProfile[];
+  /** Device-local video project while editing; media is made durable at publish time. */
+  memoryLaneVideoProject?: MemoryLaneVideoProject;
   /** Four editable scrapbook notes used by the Our Calendar template. */
   calendarNotes?: string[];
   /** The date marked by the movable heart on Our Calendar. */
@@ -206,6 +226,71 @@ export function validateTemplateValues(raw: unknown): TemplatePublicationValues 
     }
   }
 
+  let memoryLaneVideoProject: MemoryLaneVideoProject | undefined;
+  if (v.memoryLaneVideoProject !== undefined) {
+    const rawProject = v.memoryLaneVideoProject;
+    if (!rawProject || typeof rawProject !== "object" || Array.isArray(rawProject)) return null;
+    const project = rawProject as Record<string, unknown>;
+    if (project.version !== 1 || !Array.isArray(project.main) || !Array.isArray(project.text) ||
+        !Array.isArray(project.aud) || !project.media || typeof project.media !== "object" ||
+        Array.isArray(project.media) || project.main.length > 100 || project.text.length > 100 ||
+        project.aud.length > 50 || Object.keys(project.media).length > 150) return null;
+
+    const media: Record<string, MemoryLaneVideoMedia> = {};
+    for (const [key, item] of Object.entries(project.media as Record<string, unknown>)) {
+      if (!/^[a-zA-Z0-9_-]{1,80}$/.test(key) || !item || typeof item !== "object" || Array.isArray(item)) return null;
+      const rawMedia = item as Record<string, unknown>;
+      const kind = rawMedia.k;
+      const src = boundedString(rawMedia.src, 20_000_000);
+      if ((kind !== "i" && kind !== "v" && kind !== "a") || !src ||
+          !/^(data:(image|video|audio)\/[a-z0-9.+-]+;base64,[a-z0-9+/=]+|https:\/\/[^\s"'<>]+)$/i.test(src)) return null;
+      const vd = rawMedia.vd === undefined ? undefined : rawMedia.vd;
+      const n = rawMedia.n === undefined ? undefined : rawMedia.n;
+      if (vd !== undefined && (typeof vd !== "number" || !Number.isFinite(vd) || vd < 0 || vd > 86_400)) return null;
+      if (n !== undefined && (typeof n !== "number" || !Number.isInteger(n) || n < 0 || n > 100)) return null;
+      media[key] = { k: kind, src, ...(vd !== undefined ? { vd } : {}), ...(n !== undefined ? { n } : {}) };
+    }
+
+    const main: MemoryLaneVideoProject["main"] = [];
+    for (const item of project.main) {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+      const c = item as Record<string, unknown>;
+      const id = c.id, l = boundedString(c.l, 255), d = c.d, m = c.m, so = c.so;
+      if (typeof id !== "number" || !Number.isInteger(id) || id < 0 ||
+          l === undefined || typeof d !== "number" || !Number.isFinite(d) || d <= 0 || d > 3600) return null;
+      if (m !== undefined && (typeof m !== "string" || !media[m] || (media[m].k !== "i" && media[m].k !== "v"))) return null;
+      if (so !== undefined && (typeof so !== "number" || !Number.isFinite(so) || so < 0 || so > 86_400)) return null;
+      main.push({ id, l, d, ...(typeof m === "string" ? { m } : {}), ...(typeof so === "number" ? { so } : {}) });
+    }
+
+    const text: MemoryLaneVideoProject["text"] = [];
+    for (const item of project.text) {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+      const c = item as Record<string, unknown>;
+      if (typeof c.id !== "number" || !Number.isInteger(c.id) || c.id < 0 ||
+          typeof c.s !== "number" || !Number.isFinite(c.s) || c.s < 0 || c.s > 86_400 ||
+          typeof c.d !== "number" || !Number.isFinite(c.d) || c.d <= 0 || c.d > 86_400) return null;
+      const x = boundedString(c.x, 2000);
+      if (x === undefined) return null;
+      text.push({ id: c.id, s: c.s, d: c.d, x });
+    }
+
+    const aud: MemoryLaneVideoProject["aud"] = [];
+    for (const item of project.aud) {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+      const c = item as Record<string, unknown>;
+      const n = boundedString(c.n, 255);
+      if (typeof c.id !== "number" || !Number.isInteger(c.id) || c.id < 0 ||
+          typeof c.s !== "number" || !Number.isFinite(c.s) || c.s < 0 || c.s > 86_400 ||
+          typeof c.d !== "number" || !Number.isFinite(c.d) || c.d <= 0 || c.d > 86_400 ||
+          n === undefined || typeof c.m !== "string" || !media[c.m] || media[c.m].k !== "a") return null;
+      if (c.so !== undefined && (typeof c.so !== "number" || !Number.isFinite(c.so) || c.so < 0 || c.so > 86_400)) return null;
+      aud.push({ id: c.id, s: c.s, d: c.d, n, m: c.m, ...(typeof c.so === "number" ? { so: c.so } : {}) });
+    }
+
+    memoryLaneVideoProject = { version: 1, main, text, aud, media };
+  }
+
   let calendarNotes: string[] | undefined;
   if (v.calendarNotes !== undefined) {
     if (!Array.isArray(v.calendarNotes) || v.calendarNotes.length > 4) return null;
@@ -242,6 +327,7 @@ export function validateTemplateValues(raw: unknown): TemplatePublicationValues 
     captions,
     letterParagraphs,
     memoryLaneProfiles,
+    memoryLaneVideoProject,
     calendarNotes,
     calendarHeart,
   };
