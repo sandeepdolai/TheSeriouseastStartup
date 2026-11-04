@@ -616,6 +616,14 @@ export function WebsiteEditor({
     setHasUnpublishedChanges(true);
   };
 
+  const changeMemoryLaneVideoProject = (project: NonNullable<TemplatePublicationValues["memoryLaneVideoProject"]>) => {
+    setValues((current) => {
+      if (JSON.stringify(current.memoryLaneVideoProject) === JSON.stringify(project)) return current;
+      return { ...current, memoryLaneVideoProject: project };
+    });
+    setHasUnpublishedChanges(true);
+  };
+
   const changeCaption = (index: number, value: string) => {
     setValues((current) => {
       const captions = [
@@ -900,6 +908,7 @@ export function WebsiteEditor({
           onProfilesChange={changeMemoryLaneProfiles}
           onTextChange={changeText}
           onVideoEditorStateChange={setVideoEditorOpen}
+          onVideoProjectChange={changeMemoryLaneVideoProject}
           onExit={onClose}
         />
       ) : templateSlug === "red-letter" ? (
