@@ -64,6 +64,8 @@ export interface MemoryLaneVideoMedia {
   /** i = image, v = video, a = audio */
   k: "i" | "v" | "a";
   src: string;
+  /** Display name used to restore uploaded audio tracks in the editor. */
+  name?: string;
   /** Original source duration for video/audio media when available. */
   vd?: number;
   /** Number of thumbnail frames retained for the editor filmstrip. */
@@ -244,11 +246,19 @@ export function validateTemplateValues(raw: unknown): TemplatePublicationValues 
       const src = boundedString(rawMedia.src, 20_000_000);
       if ((kind !== "i" && kind !== "v" && kind !== "a") || !src ||
           !/^(data:(image|video|audio)\/[a-z0-9.+-]+;base64,[a-z0-9+/=]+|https:\/\/[^\s"'<>]+)$/i.test(src)) return null;
+      const name = rawMedia.name === undefined ? undefined : boundedString(rawMedia.name, 255);
       const vd = rawMedia.vd === undefined ? undefined : rawMedia.vd;
       const n = rawMedia.n === undefined ? undefined : rawMedia.n;
+      if (rawMedia.name !== undefined && name === undefined) return null;
       if (vd !== undefined && (typeof vd !== "number" || !Number.isFinite(vd) || vd < 0 || vd > 86_400)) return null;
       if (n !== undefined && (typeof n !== "number" || !Number.isInteger(n) || n < 0 || n > 100)) return null;
-      media[key] = { k: kind, src, ...(vd !== undefined ? { vd } : {}), ...(n !== undefined ? { n } : {}) };
+      media[key] = {
+        k: kind,
+        src,
+        ...(name !== undefined ? { name } : {}),
+        ...(vd !== undefined ? { vd } : {}),
+        ...(n !== undefined ? { n } : {}),
+      };
     }
 
     const main: MemoryLaneVideoProject["main"] = [];
