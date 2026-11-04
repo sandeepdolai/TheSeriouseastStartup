@@ -13,6 +13,9 @@ import {
   isEmbeddedImage,
   smartEditEmbeddedImageCount,
   templateValuesEmbeddedImageCount,
+  templateValuesEmbeddedMediaCount,
+  cloudinaryPublicIdFromUrl,
+  templateValuesUnauthorizedReferences,
 } from "../src/lib/publishedMediaPolicy.ts";
 
 const DATA_URL = "data:image/webp;base64,UklGRhoAABXRUJQVlA4TA";
@@ -101,7 +104,37 @@ test("cloudinaryMediaConfigured requires the SERVER-side Cloudinary credentials"
   }
 });
 
+test("templateValuesEmbeddedMediaCount includes Setflix video and audio assets", () => {
+  assert.equal(templateValuesEmbeddedMediaCount({
+    memoryLaneVideoProject: {
+      media: {
+        clip: { src: "data:video/mp4;base64,AAAA" },
+        sound: { src: "data:audio/mpeg;base64,AAAA" },
+        image: { src: "data:image/webp;base64,AAAA" },
+        remote: { src: "https://res.cloudinary.com/demo-cloud/video/upload/v123/paper-stish/published-websites/u/user/clip.mp4" },
+      },
+    },
+  }), 3);
+});
+
+test("Cloudinary reference policy accepts authorized video delivery URLs", () => {
+  const url = "https://res.cloudinary.com/demo-cloud/video/upload/v123/paper-stish/published-websites/u/user-1/clip.mp4";
+  assert.equal(cloudinaryPublicIdFromUrl(url, "demo-cloud"), "paper-stish/published-websites/u/user-1/clip");
+  assert.deepEqual(
+    templateValuesUnauthorizedReferences({
+      memoryLaneVideoProject: { media: { clip: { src: url } } },
+    }, "demo-cloud", "user-1"),
+    [],
+  );
+  assert.deepEqual(
+    templateValuesUnauthorizedReferences({
+      memoryLaneVideoProject: { media: { clip: { src: url } } },
+    }, "demo-cloud", "user-2"),
+    ["paper-stish/published-websites/u/user-1/clip"],
+  );
+});
+
 test("embeddedMediaError renders singular and plural messages", () => {
-  assert.match(embeddedMediaError(1), /a photo that is/);
-  assert.match(embeddedMediaError(3), /3 photos that are/);
+  assert.match(embeddedMediaError(1), /a media file that is/);
+  assert.match(embeddedMediaError(3), /3 media files that are/);
 });
