@@ -5,6 +5,7 @@ import type { MemoryLaneProfile, TemplatePublicationValues } from "@/lib/publica
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const TEMPLATE_URL = `${BASE_PATH}/website-templates/memory-lane.html`;
+const PLAYER_UI_URL = `${BASE_PATH}/website-templates/player-ui-s4-e1.html`;
 const EMPTY_DOCUMENT = '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{width:100%;height:100%;margin:0;background:#000;overflow:hidden}</style></head><body></body></html>';
 
 export const MEMORY_LANE_TEXT_DEFAULTS = {
@@ -77,6 +78,7 @@ export function MemoryLaneTemplate({
   const [sourceError, setSourceError] = useState("");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const iframeReady = useRef(false);
+  const latestPlayerUISource = useRef("");
   const latestProfiles = useRef<MemoryLaneProfile[]>(normalizeProfiles(values?.memoryLaneProfiles));
   const latestEditing = useRef(editing);
   const latestText = useRef(resolveMemoryLaneText(values));
@@ -94,20 +96,26 @@ export function MemoryLaneTemplate({
 
   useEffect(() => {
     let alive = true;
-    fetch(TEMPLATE_URL, { cache: "no-cache" })
-      .then(async (response) => {
+    Promise.all([
+      fetch(TEMPLATE_URL, { cache: "no-cache" }).then(async (response) => {
         if (!response.ok) throw new Error("Could not load the original Memory Lane template.");
         return response.text();
-      })
-      .then((source) => {
+      }),
+      fetch(PLAYER_UI_URL, { cache: "force-cache" }).then(async (response) => {
+        if (!response.ok) throw new Error("Could not load the supplied Setflix viewer player.");
+        return response.text();
+      }),
+    ])
+      .then(([source, playerUISource]) => {
         if (!alive) return;
+        latestPlayerUISource.current = playerUISource;
         setHtml(source);
         setSourceLoaded(true);
         setSourceError("");
       })
       .catch((error: unknown) => {
         const message = error instanceof Error ? error.message : String(error);
-        console.error("[MemoryLaneTemplate] Failed to load the original template HTML.", error);
+        console.error("[MemoryLaneTemplate] Failed to load the Setflix template or viewer player.", error);
         if (alive) setSourceError(message);
       });
     return () => { alive = false; };
@@ -134,6 +142,7 @@ export function MemoryLaneTemplate({
           editing: latestEditing.current,
           profiles,
           text,
+          playerUiSource: latestPlayerUISource.current,
         }, "*");
         return;
       }
