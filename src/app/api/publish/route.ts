@@ -16,7 +16,7 @@ import {
   embeddedMediaError,
   smartEditEmbeddedImageCount,
   smartEditUnauthorizedReferences,
-  templateValuesEmbeddedImageCount,
+  templateValuesEmbeddedMediaCount,
   templateValuesUnauthorizedReferences,
   unauthorizedMediaError,
 } from "@/lib/publishedMediaPolicy";
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
       return jsonError(413, "This website is too large to publish (the photo may be too big). Use a smaller photo and try again.");
     }
     dataJson = JSON.stringify({ values });
-    embeddedImages = templateValuesEmbeddedImageCount(values);
+    embeddedImages = templateValuesEmbeddedMediaCount(values);
     unauthorizedRefs = templateValuesUnauthorizedReferences(values, cloudName, user.id);
   }
 
